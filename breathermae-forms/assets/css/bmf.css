@@ -1,0 +1,263 @@
+.bmf-form{border:1px solid #e3e3e3;padding:16px;border-radius:8px}
+.bmf-section{margin-bottom:24px;padding-bottom:16px;border-bottom:1px dashed #ddd}
+.bmf-section-title{margin:0 0 6px;font-size:1.2rem}
+/*.bmf-section-expl{color:#555;margin-bottom:6px} */
+/*.bmf-section-prompt{color:#333;margin-bottom:10px} */
+.bmf-q{margin:10px 0}
+/*.bmf-q-choices label{display:inline-block;margin-right:14px}*/
+/*.bmf-error{color:#b00020}*/
+
+/* Paging: only show the active section panel */
+.bmf-section-panel { display: none; }
+.bmf-section-panel.active { display: block; }
+
+
+/* ============ Color tokens (for quick updates) ============ */
+:root {
+  --bmf-primary: #6EC1E4;   /* site primary */
+  --bmf-primary-hover: #FD5A38;
+  --bmf-text-strong: #222;
+  --bmf-text: #333;
+  --bmf-text-subtle: #555;
+  --bmf-border: #e3e3e3;
+}
+
+/* ============ Container ============ */
+.bmf-form{
+  border:1px solid var(--bmf-border);
+  padding:16px;
+  border-radius:8px;
+}
+
+/* ============ Typography scale ============ */
+/* Keep section title size as-is (inherits theme font-size) */
+.bmf-section-title{
+  margin:0 0 6px;
+  font-weight:600;
+  line-height:1.25;
+  color:var(--bmf-text-strong);
+}
+
+/* Explanation: smaller than title */
+.bmf-section-expl{
+  color:var(--bmf-text-subtle);
+  font-size:0.98rem;   /* smaller than base */
+  line-height:1.45;
+  margin-top:24px;
+  margin-bottom:24px;
+}
+
+/* Prompt: smaller than explanation */
+.bmf-section-prompt{
+  color:var(--bmf-text);
+  font-size:0.95rem;    /* smaller again */
+  font-weight: 600;      /* ✅ makes it bold without being heavy */
+  line-height:1.4;
+  margin-bottom:10px;
+  position:relative;
+  text-align:center; /* center text to align visually with centered divider */
+}
+
+/* Divider: 80% centered line after the prompt */
+.bmf-section-prompt::after{
+  content:"";
+  display:block;
+  width:80%;
+  height:0;
+  margin:10px auto 0 auto; /* space above questions */
+  border-top:1px solid var(--bmf-border);
+}
+
+/* Questions: slightly smaller body text */
+.bmf-questions{
+  font-size:0.95rem;   /* keep questions and choices compact */
+}
+
+/* Individual question block */
+.bmf-q{
+  margin:10px 0;
+}
+
+.bmf-q-choices label {
+  display: block;
+  margin-bottom: 6px;   /* vertical spacing between choices */
+}
+
+/* Required indicator already inline in markup; keep contrast */
+.bmf-required{ color:#b00020; }
+
+/* Inline error for required validation */
+.bmf-q-error{
+  color:#b00020;
+  margin-top:4px;
+}
+
+/* Highlight missing required (from JS) */
+.bmf-q.bmf-missing{
+  outline:2px groove #b00020;   /* unify with “groove” styling theme */
+  outline-offset:4px;
+  border-radius:6px;
+  padding:4px;
+}
+
+/* ============ Section paging visibility ============ */
+.bmf-section-panel { display:none; }
+.bmf-section-panel.active { display:block; }
+
+/* Progress text */
+.bmf-progress{
+  font-size:0.95rem;
+  color:var(--bmf-text-subtle);
+}
+
+/* ============ Buttons ============ */
+/* WordPress buttons we output (.button / .button-primary) + our custom classes */
+.bmf-submit-wrap .button,
+.bmf-panel-nav .button {
+  /* Make buttons look tactile with a groove border */
+  border-style:groove;
+  border-width:2px;
+  border-color:var(--bmf-primary);
+  color:#fff;
+  background-color:var(--bmf-primary);
+  box-shadow:none;
+  text-shadow:none;
+  transition:all .15s ease-in-out;
+}
+
+.bmf-submit-wrap .button:hover,
+.bmf-panel-nav .button:hover {
+  border-color:var(--bmf-primary-hover);
+  background-color:var(--bmf-primary-hover);
+  color:#fff;
+  cursor:pointer;
+}
+
+/* If you want secondary (non-primary) buttons (e.g., Previous) to be outlined */
+.bmf-panel-nav .bmf-prev-section {
+  color:var(--bmf-primary);
+  background:#fff;
+  border-color:var(--bmf-primary);
+}
+.bmf-panel-nav .bmf-prev-section:hover {
+  color:#fff;
+  background:var(--bmf-primary-hover);
+  border-color:var(--bmf-primary-hover);
+}
+
+/* Keep primary action (Next/Submit) filled */
+.bmf-panel-nav .bmf-next-section,
+.bmf-submit-wrap .bmf-submit {
+  color:#fff;
+  background:var(--bmf-primary);
+  border-color:var(--bmf-primary);
+}
+.bmf-panel-nav .bmf-next-section:hover,
+.bmf-submit-wrap .bmf-submit:hover {
+  background:var(--bmf-primary-hover);
+  border-color:var(--bmf-primary-hover);
+}
+
+/* Align panel navigation nicely */
+.bmf-panel-nav{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Subtle message area next to Submit */
+.bmf-submit-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:center;
+}
+
+/* ===== Progress Bar ===== */
+:root {
+  --bmf-primary: #6EC1E4;
+  --bmf-primary-hover: #FD5A38;
+  --bmf-progress-track: #e9eef2;   /* soft neutral track */
+  --bmf-progress-text: #555;
+}
+
+.bmf-progress {
+  display: grid;
+  gap: 6px;
+}
+
+/* Bar container */
+.bmf-progress-bar {
+  width: 100%;
+  height: 10px;
+  background: var(--bmf-progress-track);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Bar fill */
+.bmf-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--bmf-primary);
+  transition: width .25s ease-in-out, background-color .15s ease-in-out;
+}
+
+/* Optional: when user is interacting, give a tiny accent */
+.bmf-progress-bar:active .bmf-progress-fill {
+  background: linear-gradient(90deg, var(--bmf-primary) 0%, var(--bmf-primary-hover) 100%);
+}
+
+/* Meta line: label and percent */
+.bmf-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--bmf-progress-text);
+  font-size: 0.9rem;
+}
+
+.bmf-progress-label { white-space: nowrap; }
+.bmf-progress-percent { font-weight: 600; color: var(--bmf-primary); }
+
+.bmf-rank-controls button {
+    margin-left: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+
+.bmf-rsi-history-select {
+    font-size: 12px;
+    max-width: 220px;
+}
+
+.bmf-rsi-history-select label {
+    display: block;
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bmf-rsi-history-select select {
+    width: 100%;
+    font-size: 12px;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.bmf-rsi-history-select select:hover {
+    border-color: #888;
+}
+
+.bmf-rsi-history-select select:focus {
+    outline: none;
+    border-color: #2c7be5;
+    box-shadow: 0 0 0 1px #2c7be5;
+}
