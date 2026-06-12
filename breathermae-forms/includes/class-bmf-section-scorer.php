@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 /**
  * Future-proof section scorer for "new" forms (form_id > 9).
  * Enhanced with range support (Q1:Q10) and sum/Total helpers.
+ * Legacy forms (form_id 1-9) will continue with old logic unless formula is defined.
  */
 class BMF_Section_Scorer {
 
