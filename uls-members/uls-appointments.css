@@ -1,0 +1,149 @@
+/* Match notes-panel overall look */
+.uls-appts-panel {
+    border: 1px solid #e2e2e2;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 16px 0;
+    background: #fff;
+
+    font-size: 12px;       /* match notes */
+    line-height: 1.3;      /* match notes */
+}
+
+/* Title spacing (optional smaller title like notes not having <h3>) */
+.uls-appts-panel h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Status area */
+.uls-appts-status {
+    margin: 4px 0 6px;
+    min-height: 16px;
+    font-size: 12px;   /* keep small */
+}
+
+/* List container */
+.uls-appts-list {
+    margin-bottom: 10px;
+    max-height: 125px;
+    overflow-y: auto;
+
+}
+
+/* Empty list message */
+.uls-appts-empty {
+    color: #666;
+    font-style: italic;
+}
+
+/* Appointment item – match density of notes list */
+.uls-appt-item {
+    padding: 8px 10px;          /* match notes padding */
+    margin-bottom: 8px;
+    background: #fafcff;        /* similar to notes light blue background */
+    border-left: 3px solid #0070c0;
+    border-radius: 4px;
+}
+
+/* Top row: subject + when */
+.uls-appt-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;         /* tighten */
+}
+
+.uls-appt-subj {
+    font-weight: 600;
+    color: #222;
+    font-size: 12px;            /* match notes-meta size */
+}
+
+.uls-appt-when {
+    color: #444;
+    font-size: 12px;            /* smaller */
+}
+
+/* Location + Description */
+.uls-appt-loc {
+    color: #555;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.uls-appt-desc-txt {
+    margin-top: 4px;
+    white-space: pre-wrap;
+    font-size: 12px;
+}
+
+/* Action buttons row */
+.uls-appt-actions {
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+}
+
+/* Match notes button look */
+.uls-appt-actions .uls-appt-ics,
+.uls-appt-actions .uls-appt-del,
+.uls-appt-save {
+    background-color: #6EC1E4;
+    color: #ffffff;
+    border: 2px groove #6EC1E4;
+    padding: 4px 10px;
+    font-size: 12px;        /* match notes button text */
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.uls-appt-actions .uls-appt-ics:hover,
+.uls-appt-actions .uls-appt-del:hover,
+.uls-appt-save:hover {
+    background-color: #fd5a38;
+    border-color: #fd5a38;
+}
+
+/* Editor section */
+.uls-appts-editor {
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.uls-appt-row {
+    margin-bottom: 8px;
+}
+
+.uls-appt-row-inline {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.uls-appt-row label {
+    display: block;
+    font-size: 11px;          /* smaller label, notes uses small text */
+    color: #555;
+    margin-bottom: 2px;
+}
+
+/* Inputs */
+.uls-appt-row input[type="text"],
+.uls-appt-row input[type="date"],
+.uls-appt-row input[type="time"],
+.uls-appt-row textarea {
+    width: 100%;
+    max-width: 520px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;          /* match notes */
+}
+
+/* Optional — maintain your existing display logic */
+.uls-appts--list-only .uls-appts-editor { display: none; }
+.uls-appts--editor-only .uls-appts-list { display: none; }

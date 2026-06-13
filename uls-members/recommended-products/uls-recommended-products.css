@@ -1,0 +1,90 @@
+.uls-rec-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
+}
+
+
+.uls-rec-table,
+.uls-selected-table,
+.uls-member-rec-products {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.uls-rec-table td,
+.uls-selected-table td,
+.uls-member-rec-products td {
+    padding: 4px;
+    vertical-align: middle;
+}
+
+.uls-thumb img,
+.uls-member-rec-products img {
+    object-fit: contain;
+    display: block;
+}
+
+.uls-rec-more {
+    margin-top: 6px;
+    padding: 4px 8px;
+}
+
+
+.uls-rec-selected {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.uls-rec-picker {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.uls-rec-pagination {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.uls-rec-pagination a {
+    padding: 4px 8px;
+    text-decoration: none;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.uls-rec-pagination a:hover {
+    background: #f5f5f5;
+}
+
+.uls-rec-pagination .current {
+    padding: 4px 8px;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.uls-selected-products-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.uls-selected-products-table td {
+    padding: 4px;
+    vertical-align: middle;
+}
+
+.uls-selected-products-table .uls-thumb {
+    width: auto;           /* allow size to be defined inline */
+    white-space: nowrap;
+}
+
+.uls-selected-products-table img {
+    display: block;
+    object-fit: contain;
+}

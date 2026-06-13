@@ -1,0 +1,228 @@
+/* ULS Files styling (aligned with Notes styles) */
+
+.uls-files-panel {
+  border: 1px solid #e2e2e2;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.uls-files-head {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.uls-files-head .u-sub { color:#666; font-weight: normal; }
+
+/* Match the Notes "Save" button style for our Upload button */
+.uls-files-controls .uls-file-upload {
+  margin-top: 6px;
+  background-color: #6EC1E4; /* same blue as notes */
+  color: #ffffff;
+  border: 2px groove #6EC1E4;
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.uls-files-controls .uls-file-upload:hover {
+  background-color: #fd5a38; /* orange hover like notes */
+  border-color: #fd5a38;
+}
+
+/* Hide the "Visible to member" checkbox on the upload row */
+.uls-files-controls label { display: none; }
+
+/* Status */
+.uls-files-status { margin-top: 8px; color: #3b7e23; }
+
+/* Table spacing + readability */
+.uls-files-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.uls-files-table thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: #333;
+  background: #f7f7f7;
+  border-bottom: 1px solid #e2e2e2;
+  padding: 8px 10px;
+}
+.uls-files-table tbody td {
+  padding: 8px 10px;                 /* ← breathing room */
+  border-bottom: 1px solid #f0f0f0;  /* subtle separators */
+  vertical-align: top;
+  font-size: 12px;
+}
+.uls-files-table tbody tr:hover {
+  background: #fafcff;               /* subtle row hover */
+}
+
+/* Compact cells */
+.uls-files-table .c2, .uls-files-table .c3, .uls-files-table .c4, .uls-files-table .c5, .uls-files-table .c6, .uls-files-table .c7 {
+  white-space: nowrap;
+}
+
+/* "No files yet." placeholder */
+.uls-files-list .u-empty {
+  padding: 8px 10px;
+  color: #666;
+}
+/* ===============================
+   Member-only upload styling
+   =============================== */
+
+/* Upload button (member upload only) */
+.uls-member-upload .uls-file-upload {
+    background-color: #6EC1E4;
+    color: #ffffff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.uls-member-upload .uls-file-upload:hover {
+    background-color: #5bb0d6; /* slightly darker hover */
+}
+
+/* Help text under upload */
+.uls-member-upload .uls-upload-help {
+    margin-top: 4px;
+    font-size: 0.5em;
+    color: #cc0000;
+    line-height: 1.2;
+}
+/* Member-facing "No files available" message */
+.uls-member-files {
+    font-size: 0.5em;
+    color: #cc0000;
+}
+
+.uls-files-table .c-ai button {
+  font-size: 11px;
+  padding: 3px 8px;
+  margin-right: 4px;
+}
+
+.uls-ai-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.uls-ai-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+}
+
+.uls-ai-modal-content {
+  position: relative;
+  margin: 5vh auto;
+  max-width: 900px;
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.uls-ai-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.uls-ai-modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.uls-ai-modal-meta {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #666;
+  border-bottom: 1px solid #eee;
+}
+
+.uls-ai-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Narrative summary spacing */
+.uls-ai-narrative {
+  margin-bottom: 1.25em;   /* key spacing improvement */
+  line-height: 1.7;        /* improves readability */
+}
+
+.uls-file-view svg,
+.uls-files-list a svg {
+  vertical-align: middle;
+  margin-right: 6px;
+  color: #555;
+}
+
+.uls-file-view:hover svg {
+  color: #000;
+}
+
+.uls-file-viewer {
+  max-width: 90vw;
+}
+
+.uls-modal-body iframe {
+  background: #fff;
+}
+
+.uls-file-actions {
+  display: inline-flex; 
+  gap: 6px;
+  vertical-align: middle;
+  align-items: center;
+  margin-left: 6px;
+}
+
+.uls-file-actions button {
+  z-index: 2;
+  position: relative;
+}
+
+.uls-file-name-wrap {
+  display: inline;
+}
+
+.uls-ai-modal-header {
+  position: relative;
+}
+
+.uls-ai-copy {
+  margin-right: auto;   /* 👈 pushes everything else right */
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  line-height: 1.2;       /* 👈 tighter text box */
+  height: auto;
+
+}
+
+.uls-ai-meta-disclaimer {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #666;
+}

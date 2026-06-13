@@ -1,0 +1,188 @@
+/* ---------------------------------------------------------
+   ULS NOTES — updated to match ULS FILES table styling
+   --------------------------------------------------------- */
+
+/* Main panel (unchanged, aligned with Files panel) */
+.uls-notes-panel {
+  border: 1px solid #e2e2e2;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+  background: #fff;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+/* List container */
+.uls-notes-list {
+  margin-bottom: 10px;
+}
+
+/* Individual note (editor list view, not shortcode table) */
+.uls-note {
+  padding: 8px 10px;
+  border-left: 3px solid #0070c0;
+  background: #fafcff;
+  margin-bottom: 8px;
+}
+
+.uls-note-meta {
+  font-size: 10px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+/* Note editor textarea */
+.uls-notes-editor textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Save button (matches Files upload button) */
+.uls-notes-save {
+  margin-top: 6px;
+  background-color: #6EC1E4;       /* blue */
+  color: #ffffff;
+  border: 2px groove #6EC1E4;
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.uls-notes-save:hover {
+  background-color: #fd5a38;       /* orange hover */
+  border-color: #fd5a38;
+}
+
+.uls-notes-status {
+  margin-top: 6px;
+  color: #3b7e23;
+}
+
+/* ---------------------------------------------------------
+   MATCHED FILE-TABLE STYLE FOR SHORTCODE TABLE
+   (This is the important part you're asking for)
+   --------------------------------------------------------- */
+
+/* Table container (shortcode output) */
+
+.uls-note-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+
+/* Header row styling */
+.uls-notes-table thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 10px;
+  color: #333;
+  background: #f7f7f7;
+  border-bottom: 1px solid #e2e2e2;
+  padding: 8px 10px;                /* ← same padding as files */
+}
+
+/* Body cell styling */
+.uls-notes-table tbody td {
+  padding: 8px 10px;                /* ← same padding as files */
+  border-bottom: 1px solid #f0f0f0; /* subtle row separators */
+  vertical-align: top;
+  font-size: 10px;
+}
+
+/* Row hover effect (same as Files) */
+.uls-notes-table tbody tr:hover {
+  background: #fafcff;
+}
+
+/* Optional: keep long note text wrapping cleanly */
+.uls-notes-table td {
+  word-break: break-word;
+}
+
+/* When no notes are available */
+.uls-notes-empty {
+    padding: 8px 10px;
+    font-size: 0.5em;
+    color: #cc0000;
+}
+/* Member-facing "No notes available" message */
+.uls-member-notes {
+    font-size: 0.5em;
+    color: #cc0000;
+}
+
+.uls-notes-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.uls-notes-dictate {
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.uls-notes-dictate.active {
+  color: #c00;
+}
+
+
+.uls-note-header td {
+  font-size: 10px;
+  color: #555;
+  padding: 6px 8px;
+  border-bottom: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+.uls-note-body td {
+  padding: 10px 8px;
+  font-size: 10px;
+  color: #222;
+}
+
+.uls-note-action label {
+  font-size: 13px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.uls-note-action input[type="checkbox"] {
+  margin-right: 4px;
+}
+
+.uls-member-notes,
+.uls-member-notes table {
+  width: 100%;
+}
+
+
+/* Keep fixed layout so widths are respected */
+.uls-member-notes table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Author column */
+.uls-member-notes th:nth-child(2),
+.uls-member-notes td:nth-child(2) {
+  width: 15%;
+  white-space: nowrap;
+}
+
+/* Created Date column */
+.uls-member-notes th:nth-child(3),
+.uls-member-notes td:nth-child(3) {
+  width: 15%;
+  white-space: nowrap;
+}
+
+/* Note / Message column (main content) */
+.uls-member-notes th:nth-child(1),
+.uls-member-notes td:nth-child(1) {
+  width: 70%;
+}
