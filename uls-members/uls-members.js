@@ -139,6 +139,49 @@
     $box.html(html);
   }
 
+    // ---- TAG EDITOR ----
+    function initTagEditor() {
+        $(document).off('dblclick.uls', 'td[data-col="matched_tags"]').on('dblclick.uls', 'td[data-col="matched_tags"]', function(e) {
+            e.stopImmediatePropagation();
+
+            var $td = $(this);
+            var userId = parseInt($td.data('user-id'), 10);
+            var currentTags = $td.text().trim();
+
+            if (!userId) {
+                alert('Cannot edit tags – missing user ID.');
+                return;
+            }
+
+            var newTags = prompt(
+                'Edit tags (comma-separated):\n\nCurrent tags:\n' + currentTags,
+                currentTags
+            );
+
+            if (newTags === null) return; // user cancelled
+
+            console.log('[uls] Updating tags for user', userId, '→', newTags);
+
+            jQuery.post(ULS_MEMBERS.ajaxurl, {
+                action: 'uls_update_user_tags',
+                user_id: userId,
+                tags: newTags,
+                nonce: ULS_MEMBERS.nonce
+            }, function(resp) {
+                if (resp && resp.success) {
+                    console.log('[uls] Tags updated successfully');
+                    // Refresh the whole table (simple & reliable)
+                    location.reload();
+                    // TODO: For true partial refresh, re-fetch the row and update only the td
+                } else {
+                    alert('Failed to update tags: ' + (resp?.data?.message || 'Unknown error'));
+                }
+            }).fail(function() {
+                alert('AJAX error while updating tags.');
+            });
+        });
+    }
+
 // ---- RENDER: Results Link ----
 // ---- RENDER: Results Link (with heavy debugging) ----
 function updateScopedResultsLink(memberId) {
@@ -477,6 +520,8 @@ function updateScopedResultsLink(memberId) {
       $('.uls-members').each(function(){
           initPager($(this));
       });
+      
+      initTagEditor();
   }
 
   $(bindAll);

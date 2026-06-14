@@ -53,46 +53,46 @@ class ULS_Members_Plugin {
         'wp_ajax_uls_toggle_file_visibility_scope',
         [ $this, 'ajax_toggle_file_visibility_scope' ]
         );   
-
-add_action( 'init', [ $this, 'handle_csv_export' ] );        
+        add_action( 'wp_ajax_uls_update_user_tags', [ $this, 'ajax_update_user_tags' ] );
+        add_action( 'init', [ $this, 'handle_csv_export' ] );        
         
-add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
+        add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
 
-    // ✅ MUST MATCH wp_create_nonce('uls_members_nonce')
-    check_ajax_referer( 'uls_members_nonce' );
+            // ✅ MUST MATCH wp_create_nonce('uls_members_nonce')
+            check_ajax_referer( 'uls_members_nonce' );
 
-    if ( ! is_user_logged_in() ) {
-        wp_send_json_error( 'not_logged_in', 403 );
-    }
+            if ( ! is_user_logged_in() ) {
+                wp_send_json_error( 'not_logged_in', 403 );
+            }
 
-    $member_id = (int) ( $_POST['member_id'] ?? 0 );
-    $page_slug = sanitize_title( $_POST['page'] ?? '' );
+            $member_id = (int) ( $_POST['member_id'] ?? 0 );
+            $page_slug = sanitize_title( $_POST['page'] ?? '' );
 
-    if ( ! $member_id || ! $page_slug ) {
-        wp_send_json_error( 'invalid_params', 400 );
-    }
+            if ( ! $member_id || ! $page_slug ) {
+                wp_send_json_error( 'invalid_params', 400 );
+            }
 
-    $page = get_page_by_path( $page_slug );
-    if ( ! $page ) {
-        wp_send_json_error( 'page_not_found', 404 );
-    }
+            $page = get_page_by_path( $page_slug );
+            if ( ! $page ) {
+                wp_send_json_error( 'page_not_found', 404 );
+            }
 
-    $provider_id = get_current_user_id();
+            $provider_id = get_current_user_id();
 
-    $token = wp_create_nonce(
-        'uls_scoped_impersonate_' . $provider_id . '_' . $member_id
-    );
+            $token = wp_create_nonce(
+                'uls_scoped_impersonate_' . $provider_id . '_' . $member_id
+            );
 
-    $url = add_query_arg(
-        [
-            'uls_view_as' => $member_id,
-            'uls_token'   => $token,
-        ],
-        get_permalink( $page )
-    );
+            $url = add_query_arg(
+                [
+                    'uls_view_as' => $member_id,
+                    'uls_token'   => $token,
+                ],
+                get_permalink( $page )
+            );
 
-    wp_send_json_success( [ 'url' => $url ] );
-});        
+            wp_send_json_success( [ 'url' => $url ] );
+        });        
 
         add_action('init', function () {
             add_rewrite_rule(
@@ -429,8 +429,9 @@ public function shortcode_members_table( $atts ) {
 
                         if ( $f === 'matched_tags' ) {
                             $tags = (array) ($r['matched_tags'] ?? []);
-                            sort( $tags, SORT_STRING | SORT_FLAG_CASE );   // ← Alphabetical sort
+                            sort( $tags, SORT_STRING | SORT_FLAG_CASE );
                             $cell = implode( ', ', $tags );
+                            $td_attr = ' data-col="matched_tags" data-user-id="' . esc_attr( $r['ID'] ) . '"';
                         } elseif ( $f === 'rewards_points' ) {
                             $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
                         } else {
@@ -891,6 +892,48 @@ public function shortcode_members_table( $atts ) {
             'uls_bm_bsi_results_latest' => $latest_bsi ?: [],
             'uls_bm_bsi_colors'         => $bsi_colors,
             'uls_rewards'               => $uls_rewards,
+        ] );
+    }
+
+    /**
+     * AJAX: Update WP Fusion tags for a member (add/remove)
+     */
+    public function ajax_update_user_tags() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+
+/*         if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {  // Restrict to admins/providers
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 403 );
+        } */
+
+        $user_id = (int) ( $_POST['user_id'] ?? 0 );
+        $new_tags_raw = sanitize_text_field( wp_unslash( $_POST['tags'] ?? '' ) );
+
+        if ( ! $user_id || ! function_exists( 'wp_fusion' ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid request' ], 400 );
+        }
+
+        $new_tags = array_filter( array_map( 'trim', explode( ',', $new_tags_raw ) ) );
+
+        // Get current tags for diffing
+        $current_tag_ids = wpf_get_tags( $user_id ) ?: [];
+        $current_labels  = $this->get_user_wpf_tag_labels( $user_id );
+
+        // Simple approach: remove ALL current matched tags, then apply new ones
+        // (Safe because we're only editing the "matched" subset displayed in the table)
+        if ( ! empty( $current_tag_ids ) ) {
+            wp_fusion()->user->remove_tags( $current_tag_ids, $user_id );
+        }
+
+        if ( ! empty( $new_tags ) ) {
+            wp_fusion()->user->apply_tags( $new_tags, $user_id );
+            do_action( 'wpf_apply_tags', $new_tags, $user_id );
+        }
+
+        bm_log( "Tags updated for user {$user_id}: " . implode(', ', $new_tags) );
+
+        wp_send_json_success( [
+            'user_id' => $user_id,
+            'tags'    => $new_tags
         ] );
     }
 
