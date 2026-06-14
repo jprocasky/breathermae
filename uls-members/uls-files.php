@@ -809,169 +809,119 @@ class ULS_Member_Files_Module {
     
 
     /* ------------------------ Shortcode: Member View & Upload ------------------------ */
-    public function shortcode_member_file_upload( $atts ) {
-        if ( ! is_user_logged_in() ) {
-            return '';
-        }
+        public function shortcode_member_files( $atts ) {
+            if ( ! is_user_logged_in() ) return '';
 
-        $atts = shortcode_atts(
-            [
-                'note_name' => '',          // Optional category
-                'label'     => 'Upload a file',
-                'help'      => 'Files uploaded here are visible only to your provider.',
-            ],
-            $atts,
-            'uls_member_file_upload'
-        );
+            $atts = shortcode_atts( [
+                'note_name'       => '',
+                'all'             => 0,
+                'max'             => 200,
+                'show_note'       => 0,
+                'document_type_id'=> 0,      // legacy / numeric filter
+                'document_slug'   => '',     // ← NEW: preferred slug-based filter
+            ], $atts, 'uls_member_files' );
 
-        $current_user = wp_get_current_user();
-        if ( ! $current_user || ! is_email( $current_user->user_email ) ) {
-            return '';
-        }
+            $email = wp_get_current_user()->user_email;
 
-        ob_start();
-        ?>
-        <div class="uls-member-upload"
-            data-email="<?php echo esc_attr( $current_user->user_email ); ?>"
-            data-note-name="<?php echo esc_attr( $atts['note_name'] ); ?>">
+            global $wpdb; 
+            $table       = $this->table;
+            $users_table = $wpdb->users;
+            $types_table = $wpdb->prefix . 'ai_document_types';
 
-            <label class="uls-member-upload-label">
-                <?php echo esc_html( $atts['label'] ); ?>
-            </label>
+            $sql = "
+                SELECT
+                    f.id,
+                    f.note_name,
+                    f.original_name,
+                    f.mime_type,
+                    f.file_size,
+                    f.uploaded_at,
+                    f.uploaded_by,
+                    f.ai_document_type_id,
+                    COALESCE(u.display_name, u.user_login) AS uploaded_by_name,
+                    COALESCE(t.label, '—') AS document_type_label,
+                    COALESCE(t.slug, '')   AS document_slug
+                FROM `{$table}` f
+                LEFT JOIN `{$users_table}` u ON u.ID = f.uploaded_by
+                LEFT JOIN `{$types_table}` t ON t.id = f.ai_document_type_id
+                WHERE
+                    f.member_email = %s
+                    AND f.is_deleted = 0
+                    AND f.is_member_visible = 1
+            ";
+            $params = [ $email ];
 
-            <input type="file" class="uls-file-input" />
+            // Note name filter
+            if ( ! (int) $atts['all'] && $atts['note_name'] !== '' ) {
+                $sql    .= " AND `note_name` = %s";
+                $params[] = $this->normalize_note_name( $atts['note_name'] );
+            }
 
-            <button type="button" class="uls-file-upload">
-                Upload
-            </button>
+            // Document Type filters (slug preferred)
+            $doc_slug = sanitize_title( $atts['document_slug'] );
+            if ( $doc_slug !== '' ) {
+                $sql    .= " AND t.slug = %s";
+                $params[] = $doc_slug;
+            } elseif ( (int) $atts['document_type_id'] > 0 ) {
+                $sql    .= " AND f.ai_document_type_id = %d";
+                $params[] = (int) $atts['document_type_id'];
+            }
 
-            <div class="uls-upload-help">
-                <?php echo esc_html( $atts['help'] ); ?>
+            $sql .= " ORDER BY `uploaded_at` DESC LIMIT " . (int) $atts['max'];
+
+            $rows = $wpdb->get_results( $wpdb->prepare( $sql, ...$params ), ARRAY_A );
+
+            if ( empty( $rows ) ) {
+                return '<div class="uls-member-files">No files available.</div>';
+            }
+
+            $fmt = $this->dtfmt();
+
+            $ajax_base = admin_url( 'admin-ajax.php' );
+            $nonce     = wp_create_nonce( 'uls_member_files' );
+
+            ob_start(); ?>
+            <div class="uls-member-files">
+            <table class="uls-files-table">
+                <thead>
+                <tr>
+                    <?php if ( (int) $atts['show_note'] ) : ?><th>Category</th><?php endif; ?>
+                    <th style="width: 40px">Actions</th>
+                    <th>File</th>
+                    <th>Uploaded By</th>
+                    <th>Document Type</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $rows as $r ) : ?>
+                <tr>
+                    <?php if ( (int) $atts['show_note'] ) : ?><td><?php echo esc_html( $r['note_name'] ); ?></td><?php endif; ?>
+                    <td class="uls-file-actions">
+                    <a href="#" class="uls-file-view" data-id="<?php echo (int) $r['id']; ?>" title="View file">👁️</a>
+                    <a href="<?php echo esc_url( $ajax_base . '?action=uls_download_member_file&nonce=' . $nonce . '&id=' . (int) $r['id'] ); ?>" title="Download file">⬇️</a>
+                    </td>
+
+                    <td>
+                    <a href="<?php echo esc_url( $ajax_base . '?action=uls_download_member_file&nonce=' . $nonce . '&id=' . (int) $r['id'] ); ?>">
+                        <?php echo esc_html( $r['original_name'] ); ?>
+                    </a>
+                    </td>
+
+                    <td><?php echo esc_html( $r['uploaded_by_name'] !== '' ? $r['uploaded_by_name'] : '—' ); ?></td>
+                    <td><?php echo esc_html( $r['document_type_label'] ); ?></td>
+                    <td><?php echo esc_html( size_format( (int) $r['file_size'] ) ); ?></td>
+                    <td><?php echo esc_html( date_i18n( $fmt, strtotime( $r['uploaded_at'] ) ) ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
             </div>
+            <?php
 
-            <div class="uls-files-status"></div>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
-    public function shortcode_member_files( $atts ) {
-        if ( ! is_user_logged_in() ) return '';
-        $atts = shortcode_atts( [
-            'note_name' => '',
-            'all'       => 0,
-            'max'       => 200,
-            'show_note' => 0,
-        ], $atts, 'uls_member_files' );
-
-        $email = wp_get_current_user()->user_email;
-
-        global $wpdb; $table = $this->table;
-        $users_table = $wpdb->users;
-
-        $sql = "
-            SELECT
-                f.id,
-                f.note_name,
-                f.original_name,
-                f.mime_type,
-                f.file_size,
-                f.uploaded_at,
-                f.uploaded_by,
-                COALESCE(u.display_name, u.user_login) AS uploaded_by_name
-            FROM `{$table}` f
-            LEFT JOIN `{$users_table}` u
-                ON u.ID = f.uploaded_by
-            WHERE
-                f.member_email = %s
-                AND f.is_deleted = 0
-                AND f.is_member_visible = 1
-        ";
-        $params = [ $email ];
-
-
-        if ( ! (int) $atts['all'] && $atts['note_name'] !== '' ) {
-            $sql    .= " AND `note_name` = %s";
-            $params[] = $this->normalize_note_name( $atts['note_name'] );
+            return ob_get_clean();
         }
-
-        $sql .= " ORDER BY `uploaded_at` DESC LIMIT " . (int) $atts['max'];
-        $rows = $wpdb->get_results( $wpdb->prepare( $sql, ...$params ), ARRAY_A );
-        if ( empty( $rows ) ) return '<div class="uls-member-files">No files available.</div>';
-
-        $fmt = $this->dtfmt();
-
-        $ajax_base = admin_url( 'admin-ajax.php' );
-        $nonce     = wp_create_nonce( 'uls_member_files' );
-
-        ob_start(); ?>
-<div class="uls-member-files">
-  <table class="uls-files-table">
-    <thead>
-      <tr>
-        <?php if ( (int) $atts['show_note'] ) : ?><th>Category</th><?php endif; ?>
-        <th style="width: 40px">Actions</th>
-        <th>File</th>
-        <th>Uploaded By</th>
-        <th>Type</th>
-        <th>Size</th>
-        <th>Uploaded</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ( $rows as $r ) : ?>
-      <tr>
-        <?php if ( (int) $atts['show_note'] ) : ?><td><?php echo esc_html( $r['note_name'] ); ?></td><?php endif; ?>
-        <td  class="uls-file-actions">
-        <a href="#"
-            class="uls-file-view"
-            data-id="<?php echo (int) $r['id']; ?>"
-            title="View file">
-            👁️
-        </a>
-
-
-        <a href="<?php echo esc_url(
-            $ajax_base . '?action=uls_download_member_file'
-            . '&nonce=' . $nonce
-            . '&id=' . (int) $r['id']
-        ); ?>"
-            title="Download file">
-            ⬇️
-        </a>
-        </td>
-
-        <td>
-        <a href="<?php echo esc_url(
-            $ajax_base . '?action=uls_download_member_file'
-            . '&nonce=' . $nonce
-            . '&id=' . (int) $r['id']
-        ); ?>">
-            <?php echo esc_html( $r['original_name'] ); ?>
-        </a>
-        </td>
-        <td>
-        <?php
-            echo esc_html(
-                $r['uploaded_by_name'] !== ''
-                    ? $r['uploaded_by_name']
-                    : '—'
-            );
-        ?>
-        </td>
-
-        <td><?php echo esc_html( $r['mime_type'] ); ?></td>
-        <td><?php echo esc_html( size_format( (int) $r['file_size'] ) ); ?></td>
-        <td><?php echo esc_html( date_i18n( $fmt, strtotime( $r['uploaded_at'] ) ) ); ?></td>
-      </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
-</div>
-<?php
-
-        return ob_get_clean();
-    }
-
 
 }
 

@@ -240,7 +240,7 @@
             '<th>Uploaded By</th>',
             '<th>Uploaded</th>',
             '<th>Private</th>',
-            '<th>AI Prompt Type</th>',
+            '<th>Document Type</th>',
             '<th>AI Summary</th>',
             (W.canEdit ? '<th>Member Visible</th><th></th>' : '<th></th><th></th>'),
           '</tr>',
