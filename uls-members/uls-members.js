@@ -139,10 +139,10 @@
     $box.html(html);
   }
 
-    // ---- TAG EDITOR (double-click on Matched Tags) ----
+    // ---- TAG EDITOR (double-click on All Tags) ----
     function initTagEditor() {
-        $(document).off('dblclick.ulsTags', 'td[data-col="matched_tags"]')
-                .on('dblclick.ulsTags', 'td[data-col="matched_tags"]', function(e) {
+        $(document).off('dblclick.ulsTags', 'td[data-col="all_tags"]')
+                .on('dblclick.ulsTags', 'td[data-col="all_tags"]', function(e) {
             e.stopImmediatePropagation();
 
             var $td     = $(this);

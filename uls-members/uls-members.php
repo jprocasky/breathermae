@@ -54,7 +54,7 @@ class ULS_Members_Plugin {
         [ $this, 'ajax_toggle_file_visibility_scope' ]
         );   
         add_action( 'wp_ajax_uls_update_user_tags', [ $this, 'ajax_update_user_tags' ] );
-        
+
         add_action( 'init', [ $this, 'handle_csv_export' ] );        
         
         add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
@@ -277,196 +277,190 @@ class ULS_Members_Plugin {
 
         wp_enqueue_script('uls-ai-modal-js');        
 
-
     }
 
-/** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
-/** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
-/** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
-public function shortcode_members_table( $atts ) {
+    
+    /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
+    /** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
+    /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name,all_tags" ...] */
+    public function shortcode_members_table( $atts ) {
 
-    $atts = shortcode_atts(
-        [
-            'per_page'         => 10,
-            'fields'           => '',
-            'headers'          => '',
-            'patterns'         => '',
-            'exclude_patterns' => '',
-            'export'           => 'no',
-        ],
-        $atts,
-        'uls_members_table'
-    );
+        $atts = shortcode_atts(
+            [
+                'per_page'         => 10,
+                'fields'           => '',
+                'headers'          => '',
+                'patterns'         => '',
+                'exclude_patterns' => '',
+                'export'           => 'no',
+            ],
+            $atts,
+            'uls_members_table'
+        );
 
-    $allow_export = ( $atts['export'] === 'yes' );
+        $allow_export = ( $atts['export'] === 'yes' );
 
-    if ( ! is_user_logged_in() ) {
-        return '<p>Please log in to view related members.</p>';
-    }
-
-    // Allowed + default fields
-    $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'matched_tags', 'rewards_points' ];
-    $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
-
-    // Parse requested fields
-    $requested = array_filter( array_map( 'trim', explode( ',', (string) $atts['fields'] ) ) );
-    $fields    = ! empty( $requested )
-        ? array_values( array_intersect( $requested, $allowed_fields ) )
-        : $default_fields;
-
-    if ( empty( $fields ) ) {
-        $fields = $default_fields;
-    }
-
-    // Labels
-    $labels_map = [
-        'email'        => 'Email',
-        'display_name' => 'Name',
-        'first_name'   => 'First Name',
-        'last_name'    => 'Last Name',
-        'first_visit'  => 'First Visit',
-        'last_visit'   => 'Last Visit',
-        'matched_tags' => 'Matched Tags',
-        'rewards_points' => 'Reward Points',
-    ];
-
-    $headers = [];
-    if ( (string) $atts['headers'] !== '' ) {
-        $custom = array_map( 'trim', explode( ',', (string) $atts['headers'] ) );
-        foreach ( $fields as $i => $f ) {
-            $headers[] = isset( $custom[ $i ] ) && $custom[ $i ] !== ''
-                ? $custom[ $i ]
-                : $labels_map[ $f ];
-        }
-    } else {
-        foreach ( $fields as $f ) {
-            $headers[] = $labels_map[ $f ];
-        }
-    }
-
-    // Patterns (inclusion)
-    $override_patterns = array_filter(
-        array_map( 'trim', explode( ',', (string) $atts['patterns'] ) )
-    );
-
-    // Exclude patterns
-    $exclude_patterns = array_filter(
-        array_map( 'trim', explode( ',', (string) $atts['exclude_patterns'] ) )
-    );
-
-    $current_user_id = get_current_user_id();
-
-    if ( ! empty( $override_patterns ) ) {
-        $child_patterns = $override_patterns;
-    } else {
-        $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
-
-        if ( empty( $current_tag_labels ) ) {
-            return '<div style="text-align: center; color: red; font-size: 0.5em;">No Tags found for your account.</div>';
+        if ( ! is_user_logged_in() ) {
+            return '<p>Please log in to view related members.</p>';
         }
 
-        $child_patterns = $this->get_child_patterns_for_parents( $current_tag_labels );
+        // Allowed + default fields — added all_tags
+        $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'all_tags', 'rewards_points' ];
+        $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
-        if ( empty( $child_patterns ) ) {
-            return '<div style="text-align: center; color: red; font-size: 0.5em;">No related members found for your tags.</div>';
+        // Parse requested fields
+        $requested = array_filter( array_map( 'trim', explode( ',', (string) $atts['fields'] ) ) );
+        $fields    = ! empty( $requested )
+            ? array_values( array_intersect( $requested, $allowed_fields ) )
+            : $default_fields;
+
+        if ( empty( $fields ) ) {
+            $fields = $default_fields;
         }
-    }
 
-    // Find users
-    $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns );
+        // Labels
+        $labels_map = [
+            'email'        => 'Email',
+            'display_name' => 'Name',
+            'first_name'   => 'First Name',
+            'last_name'    => 'Last Name',
+            'first_visit'  => 'First Visit',
+            'last_visit'   => 'Last Visit',
+            'all_tags'     => 'All Tags',           // ← changed
+            'rewards_points' => 'Reward Points',
+        ];
 
-    if ( empty( $matched_users ) ) {
-        return '<p>No matching members were found.</p>';
-    }
+        $headers = [];
+        if ( (string) $atts['headers'] !== '' ) {
+            $custom = array_map( 'trim', explode( ',', (string) $atts['headers'] ) );
+            foreach ( $fields as $i => $f ) {
+                $headers[] = isset( $custom[ $i ] ) && $custom[ $i ] !== ''
+                    ? $custom[ $i ]
+                    : $labels_map[ $f ];
+            }
+        } else {
+            foreach ( $fields as $f ) {
+                $headers[] = $labels_map[ $f ];
+            }
+        }
 
-    // Attach visits
-    $rows = $this->attach_visits_from_view( $matched_users );
+        // ... (patterns logic unchanged) ...
 
-    // Attach rewards + names
-    foreach ( $rows as &$r ) {
-        $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
-        $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
-        $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
-    }
-    unset( $r );
+        $current_user_id = get_current_user_id();
 
-    // Render
-    $per_page = intval( $atts['per_page'] );
-    if ( $per_page <= 0 ) { $per_page = 10; }
+        if ( ! empty( $override_patterns ) ) {
+            $child_patterns = $override_patterns;
+        } else {
+            $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
 
-    ob_start(); ?>
-    <div class="uls-members" data-per-page="<?php echo esc_attr( $per_page ); ?>">
+            if ( empty( $current_tag_labels ) ) {
+                return '<div style="text-align: center; color: red; font-size: 0.5em;">No Tags found for your account.</div>';
+            }
 
-        <?php if ( $allow_export ): ?>
-            <?php $export_url = add_query_arg( 'uls_export', '1' ); ?>
-            <div style="margin-bottom:10px;">
-                <a href="<?php echo esc_url( $export_url ); ?>" class="button button-primary">
-                    Export CSV
-                </a>
+            $child_patterns = $this->get_child_patterns_for_parents( $current_tag_labels );
+
+            if ( empty( $child_patterns ) ) {
+                return '<div style="text-align: center; color: red; font-size: 0.5em;">No related members found for your tags.</div>';
+            }
+        }
+
+        $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns );
+
+        if ( empty( $matched_users ) ) {
+            return '<p>No matching members were found.</p>';
+        }
+
+        // Attach visits
+        $rows = $this->attach_visits_from_view( $matched_users );
+
+        // Attach rewards + names + ALL tags
+        foreach ( $rows as &$r ) {
+            $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
+            $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
+            $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
+            
+            // NEW: Fetch ALL tags for this user
+            $r['all_tags'] = $this->get_user_wpf_tag_labels( $r['ID'] );
+        }
+        unset( $r );
+
+        // Render (rest unchanged except cell logic)
+        $per_page = intval( $atts['per_page'] );
+        if ( $per_page <= 0 ) { $per_page = 10; }
+
+        ob_start(); ?>
+        <div class="uls-members" data-per-page="<?php echo esc_attr( $per_page ); ?>">
+
+            <?php if ( $allow_export ): ?>
+                <div style="margin-bottom:10px;">
+                    <a href="<?php echo esc_url( add_query_arg( 'uls_export', '1' ) ); ?>" class="button button-primary">
+                        Export CSV
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <div class="uls-members__search">
+                <input type="text" class="uls-members__search-input" placeholder="Search members…" autocomplete="off" />
+                <button type="button" class="uls-members__search-clear">&times;</button>
             </div>
-        <?php endif; ?>
 
-        <div class="uls-members__search">
-            <input type="text" class="uls-members__search-input" placeholder="Search members…" autocomplete="off" />
-            <button type="button" class="uls-members__search-clear">&times;</button>
-        </div>
-
-        <table class="uls-members__table">
-            <thead>
-                <tr>
-                    <?php foreach ( $headers as $h ): ?>
-                        <th><?php echo esc_html( $h ); ?></th>
-                    <?php endforeach; ?>
-                </tr>
-            </thead>
-
-            <tbody class="uls-members__tbody">
-                <?php foreach ( $rows as $r ): ?>
-                    <tr class="uls-members__row" data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>">
-                    <?php foreach ( $fields as $f ): ?>
-
-                        <?php
-                        $key = ($f === 'email') ? 'user_email' : $f;
-
-                        if ( $f === 'matched_tags' ) {
-                            $tags = (array) ($r['matched_tags'] ?? []);
-                            sort( $tags, SORT_STRING | SORT_FLAG_CASE );
-                            $cell = implode( ', ', $tags );
-                            $td_attr = ' data-col="matched_tags" data-user-id="' . esc_attr( $r['ID'] ) . '"';
-                        } elseif ( $f === 'rewards_points' ) {
-                            $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
-                        } else {
-                            $cell = $r[$key] ?? '';
-                            $td_attr = ($f === 'email') ? ' data-col="email"' : '';
-                        }
-
-                        $td_attr = ($f === 'email') ? ' data-col="email"' : '';
-                        ?>
-
-                        <td<?php echo $td_attr; ?>>
-                            <?php echo esc_html( $cell ); ?>
-                        </td>
-
-                    <?php endforeach; ?>
+            <table class="uls-members__table">
+                <thead>
+                    <tr>
+                        <?php foreach ( $headers as $h ): ?>
+                            <th><?php echo esc_html( $h ); ?></th>
+                        <?php endforeach; ?>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
 
-        <div class="uls-members__pager">
-            <button type="button" class="uls-pager__prev">Prev</button>
-            <span class="page-info">
-                <span class="uls-pager__current">1</span> of <span class="uls-pager__total">1</span>
-            </span>
-            <button type="button" class="uls-pager__next">Next</button>
+                <tbody class="uls-members__tbody">
+                    <?php foreach ( $rows as $r ): ?>
+                        <tr class="uls-members__row" data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>">
+                        <?php foreach ( $fields as $f ): ?>
+
+                            <?php
+                            $key = ($f === 'email') ? 'user_email' : $f;
+                            $td_attr = '';
+
+                            if ( $f === 'all_tags' ) {
+                                $tags = (array) ($r['all_tags'] ?? []);
+                                sort( $tags, SORT_STRING | SORT_FLAG_CASE );
+                                $cell = implode( ', ', $tags );
+                                $td_attr = ' data-col="all_tags" data-user-id="' . esc_attr( $r['ID'] ) . '"';
+                            } elseif ( $f === 'rewards_points' ) {
+                                $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
+                            } else {
+                                $cell = $r[$key] ?? '';
+                                if ( $f === 'email' ) {
+                                    $td_attr = ' data-col="email"';
+                                }
+                            }
+                            ?>
+
+                            <td<?php echo $td_attr; ?>>
+                                <?php echo esc_html( $cell ); ?>
+                            </td>
+
+                        <?php endforeach; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <!-- pager unchanged -->
+            <div class="uls-members__pager">
+                <button type="button" class="uls-pager__prev">Prev</button>
+                <span class="page-info">
+                    <span class="uls-pager__current">1</span> of <span class="uls-pager__total">1</span>
+                </span>
+                <button type="button" class="uls-pager__next">Next</button>
+            </div>
+
         </div>
+        <?php
 
-    </div>
-    <?php
-
-    return ob_get_clean();
-}
-
+        return ob_get_clean();
+    }
 
     /** Get a user's WP Fusion tag labels (translate IDs → labels). */
     private function get_user_wpf_tag_labels( $user_id ) {
