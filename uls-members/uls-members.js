@@ -319,7 +319,7 @@ function updateScopedResultsLink(memberId) {
       var bsiColors = resp.data['uls_bm_bsi_colors'] || {};
       var rsiColors = resp.data['uls_bm_rsi_colors'] || {};
       var dataRewards = resp.data['uls_rewards'] || {};
-``
+
 
       $('.uls-member-field').each(function(){
         var $el = $(this), src = ($el.data('src') || '').toString(), key = ($el.data('key') || '').toString();
