@@ -783,6 +783,9 @@ public function shortcode_members_table( $atts ) {
      * - vw_wc_orders_full (billing_email = Email) → list of rows with order_date, product_id, product_name
      * - uls_key_essentials ("User Email" = Email) → list with Datetime, Form Id (transformed), Average Score (0–100%)
      */
+    /**
+     * AJAX: get details for a selected member by email
+     */
     public function ajax_get_member_details() {
         check_ajax_referer( 'uls_members_nonce', 'nonce' );
         if ( ! is_user_logged_in() ) {
@@ -796,14 +799,14 @@ public function shortcode_members_table( $atts ) {
 
         global $wpdb;
 
-        // Build a user-friendly combined format from site settings (same approach you used in attach_visits_from_view)
+        // Date format (unchanged)
         $dt_format = trim( sprintf(
             '%s %s',
             (string) get_option( 'date_format', 'M j, Y' ),
             (string) get_option( 'time_format', 'g:i a' )
         ) );
 
-        // --- existing queries ---
+        // --- Core queries ---
         $row_wptm   = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM `uls_wptm_tbl_4` WHERE `col2` = %s LIMIT 1", $email
         ), ARRAY_A );
@@ -815,16 +818,22 @@ public function shortcode_members_table( $atts ) {
         $member_user = get_user_by( 'email', $email );
         $member_user_id = $member_user ? (int) $member_user->ID : 0;
 
+        // === DEBUG LOGGING (for the failing users) ===
+        bm_log('ajax_get_member_details for email: ' . $email);
+        bm_log('  - WP user ID: ' . $member_user_id);
+        bm_log('  - uls_ULS_CF_BIO row exists: ' . ( $row_profile ? 'YES' : 'NO' ));
+        if ( $row_profile ) {
+            bm_log('  - user_id in profile: ' . ( $row_profile['user_id'] ?? 'MISSING' ));
+            bm_log('  - profile keys: ' . implode(', ', array_keys( $row_profile ) ));
+        }
+        // =============================================
+
         $latest_rsi = $this->get_latest_rsi_by_email( $email );
         $latest_bsi = $this->get_latest_bsi_by_email( $email );
 
-        $bsi_colors = $latest_bsi
-            ? $this->get_bsi_colors_for_row( $latest_bsi )
-            : [];
-        $rsi_colors = $latest_rsi
-            ? $this->get_bsi_colors_for_row( $latest_rsi )
-            : [];
-        // Include line_total as you already did
+        $bsi_colors = $latest_bsi ? $this->get_bsi_colors_for_row( $latest_bsi ) : [];
+        $rsi_colors = $latest_rsi ? $this->get_bsi_colors_for_row( $latest_rsi ) : [];
+
         $orders = $wpdb->get_results( $wpdb->prepare(
             "SELECT `order_date`, `product_id`, `product_name`, `line_total`
             FROM `vw_wc_orders_full`
@@ -833,11 +842,10 @@ public function shortcode_members_table( $atts ) {
             LIMIT 200", $email
         ), ARRAY_A );
 
-        // ✨ NEW: format order_date for each row using the site's formats/timezone/locale
+        // Format order dates...
         if ( is_array( $orders ) ) {
             foreach ( $orders as &$o ) {
                 if ( ! empty( $o['order_date'] ) ) {
-                    // Try strtotime() to normalize; if you already store UNIX timestamps, cast to int instead.
                     $ts = is_numeric( $o['order_date'] ) ? (int) $o['order_date'] : strtotime( (string) $o['order_date'] );
                     if ( $ts ) {
                         $o['order_date'] = date_i18n( $dt_format, $ts );
@@ -847,7 +855,6 @@ public function shortcode_members_table( $atts ) {
             unset( $o );
         }
 
-        // Keys table (unchanged)
         $raw_keys = $wpdb->get_results( $wpdb->prepare(
             "SELECT `Datetime`, `Form_Id`, `Average_Score`
             FROM `uls_key_essentials`
@@ -857,27 +864,35 @@ public function shortcode_members_table( $atts ) {
         ), ARRAY_A );
 
         $keys = is_array( $raw_keys ) ? $raw_keys : [];
-        // ... your existing transformation for Key Essentials and BSI ...
 
         $uls_rewards = [
             'reward_points_balance' => $member_user_id
                 ? (int) get_user_meta( $member_user_id, 'reward_points_balance', true )
                 : 0
-        ];        
+        ];
+
+        // === ENSURE user_id is always in the profile object ===
+        if ( is_array( $row_profile ) ) {
+            if ( empty( $row_profile['user_id'] ) ) {
+                $row_profile['user_id'] = $member_user_id;   // ← fallback
+            }
+        } else {
+            // No profile row at all → create minimal one
+            $row_profile = [ 'user_id' => $member_user_id, 'email' => $email ];
+        }
 
         wp_send_json_success( [
             'uls_wptm_tbl_4'            => $row_wptm ?: [],
-            'uls_uls_cf_bio'            => $row_profile ?: [],
+            'uls_uls_cf_bio'            => $row_profile,           // now guaranteed to have user_id
             'vw_wc_orders_full'         => is_array( $orders ) ? $orders : [],
             'uls_key_essentials'        => $keys,
             'uls_bm_rsi_results_latest' => $latest_rsi ?: [],
             'uls_bm_rsi_colors'         => $rsi_colors,
             'uls_bm_bsi_results_latest' => $latest_bsi ?: [],
             'uls_bm_bsi_colors'         => $bsi_colors,
-            'uls_rewards'               => $uls_rewards, 
+            'uls_rewards'               => $uls_rewards,
         ] );
     }
-
     /**
      * AJAX: persist the selected user (by email) for the current logged-in user.
      * Stores:

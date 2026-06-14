@@ -140,58 +140,59 @@
   }
 
 // ---- RENDER: Results Link ----
-// ---- RENDER: Results Link ----
+// ---- RENDER: Results Link (with heavy debugging) ----
 function updateScopedResultsLink(memberId) {
+    console.log('[uls] updateScopedResultsLink called with memberId:', memberId);
 
     document.querySelectorAll('.uls-view-selected-member-link').forEach(el => {
-
         const page = el.dataset.page;
-        if (!page || !memberId) {
+        if (!page) {
+            console.warn('[uls] link missing data-page attribute');
             return;
         }
+
+        // Always attach memberId to the element itself
+        el.dataset.memberId = memberId || '';
 
         el.onclick = function (e) {
             e.preventDefault();
             e.stopPropagation();
 
-            console.log('[uls] span click fired – using jQuery.ajax');
+            const mid = parseInt(this.dataset.memberId || memberId || 0, 10);
+            console.log('[uls] span clicked → memberId:', mid, 'page:', page);
+
+            if (!mid || mid <= 0) {
+                console.error('[uls] ❌ No valid member_id for impersonation');
+                alert('Cannot generate link – missing member ID for this user. Check console.');
+                return;
+            }
 
             jQuery.post(
                 ULS_MEMBERS.ajaxurl,
                 {
                     action: 'uls_get_scoped_impersonation_url',
-                    member_id: memberId,
+                    member_id: mid,
                     page: page,
                     _ajax_nonce: ULS_MEMBERS.nonce
                 },
                 function (resp) {
-                    console.log('[uls] impersonation response', resp);
-
-                    if (
-                        resp &&
-                        resp.success &&
-                        resp.data &&
-                        resp.data.url
-                    ) {
+                    console.log('[uls] ✅ impersonation AJAX response:', resp);
+                    if (resp && resp.success && resp.data && resp.data.url) {
+                        console.log('[uls] Redirecting to:', resp.data.url);
                         window.location.assign(resp.data.url);
                     } else {
-                        console.error('[uls] unexpected response shape', resp);
+                        console.error('[uls] ❌ Bad response shape:', resp);
+                        alert('Failed to generate view link. See console for details.');
                     }
                 },
-                'json' // ✅ FORCE JSON parsing
-            )
-            .fail(function (xhr, status, error) {
-                console.error(
-                    '[uls] AJAX failed',
-                    status,
-                    error,
-                    xhr.responseText
-                );
+                'json'
+            ).fail(function (xhr, status, error) {
+                console.error('[uls] ❌ AJAX FAILED:', status, error, xhr.responseText);
+                alert('Error generating impersonation link. See console.');
             });
         };
     });
 }
-
 
   function renderKeysTable(list){
     var $box = $(SEL.keysTarget); if (!$box.length) return;
@@ -338,11 +339,18 @@ function updateScopedResultsLink(memberId) {
 
       console.log('Selected member response:', resp);
 
-      const memberId = resp.data?.uls_uls_cf_bio?.user_id;
+      const dataProfile = resp.data['uls_uls_cf_bio'] || {};
 
-      if (memberId) {
-          console.log('Updating scoped results link for member:', memberId);
+      const memberId = dataProfile.user_id 
+                    || resp.data?.member_id 
+                    || resp.data?.user_id 
+                    || 0;
+
+      if (memberId > 0) {
+          console.log('[uls] Found memberId:', memberId);
           updateScopedResultsLink(memberId);
+      } else {
+          console.warn('[uls] ⚠️ Still no member_id for this user! WP user may not exist.');
       }
 
 
@@ -356,7 +364,7 @@ function updateScopedResultsLink(memberId) {
     }).fail(function(xhr){ console.error('[uls-members] details AJAX failed', xhr); });
 
     persistSelection(email); // fire-and-forget
-    updateScopedResultsLink(resp?.data?.member_id || resp?.data?.user_id);
+    //updateScopedResultsLink(resp?.data?.member_id || resp?.data?.user_id);
   }
   
 
