@@ -281,15 +281,17 @@ add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
 
 /** Shortcode: [uls_members_table per_page="10"] */
 /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
+/** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
 public function shortcode_members_table( $atts ) {
 
     $atts = shortcode_atts(
         [
-            'per_page' => 10,
-            'fields'   => '',
-            'headers'  => '',
-            'patterns' => '',
-            'export'   => 'no',
+            'per_page'         => 10,
+            'fields'           => '',
+            'headers'          => '',
+            'patterns'         => '',
+            'exclude_patterns' => '',   // ← NEW
+            'export'           => 'no',
         ],
         $atts,
         'uls_members_table'
@@ -301,7 +303,7 @@ public function shortcode_members_table( $atts ) {
         return '<p>Please log in to view related members.</p>';
     }
 
-    // Allowed + default fields
+    // Allowed + default fields (unchanged from your previous update)
     $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'matched_tags', 'rewards_points' ];
     $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
@@ -341,12 +343,14 @@ public function shortcode_members_table( $atts ) {
         }
     }
 
-    // Patterns (unchanged)
+    // === Patterns (inclusion) ===
     $override_patterns = array_filter(
-        array_map(
-            'trim',
-            explode(',', (string) $atts['patterns'])
-        )
+        array_map( 'trim', explode( ',', (string) $atts['patterns'] ) )
+    );
+
+    // === NEW: Exclude patterns ===
+    $exclude_patterns = array_filter(
+        array_map( 'trim', explode( ',', (string) $atts['exclude_patterns'] ) )
     );
 
     $current_user_id = get_current_user_id();
@@ -354,7 +358,6 @@ public function shortcode_members_table( $atts ) {
     if ( ! empty( $override_patterns ) ) {
         $child_patterns = $override_patterns;
     } else {
-
         $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
 
         if ( empty( $current_tag_labels ) ) {
@@ -368,8 +371,8 @@ public function shortcode_members_table( $atts ) {
         }
     }
 
-    // Find users
-    $matched_users = $this->find_users_matching_child_patterns( $child_patterns );
+    // Find users (now with exclusion)
+    $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns );
 
     if ( empty( $matched_users ) ) {
         return '<p>No matching members were found.</p>';
@@ -378,20 +381,15 @@ public function shortcode_members_table( $atts ) {
     // Attach visits
     $rows = $this->attach_visits_from_view( $matched_users );
 
-    // Attach rewards + first/last name
+    // Attach rewards + names
     foreach ( $rows as &$r ) {
-        $r['rewards_points'] = (int) get_user_meta(
-            $r['ID'],
-            'reward_points_balance',
-            true
-        );
-
-        $r['first_name'] = (string) get_user_meta( $r['ID'], 'first_name', true );
-        $r['last_name']  = (string) get_user_meta( $r['ID'], 'last_name', true );
+        $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
+        $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
+        $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
     }
-    unset($r);
+    unset( $r );
 
-    // Render
+    // Render (unchanged)
     $per_page = intval( $atts['per_page'] );
     if ( $per_page <= 0 ) { $per_page = 10; }
 
@@ -554,9 +552,11 @@ public function shortcode_members_table( $atts ) {
 
         return $colors;
     }
-    /** Find users where ANY of their tag labels match ANY child wildcard pattern. */
-    private function find_users_matching_child_patterns( array $child_patterns ) {
-        $regexes = array_map( [ $this, 'wildcard_to_regex' ], $child_patterns );
+
+    /** Find users where ANY of their tag labels match ANY child wildcard pattern, AND none match exclude patterns. */
+    private function find_users_matching_child_patterns( array $child_patterns, array $exclude_patterns = [] ) {
+        $include_regexes = array_map( [ $this, 'wildcard_to_regex' ], $child_patterns );
+        $exclude_regexes = array_map( [ $this, 'wildcard_to_regex' ], $exclude_patterns );
 
         $meta_query = [];
         if ( defined( 'WPF_TAGS_META_KEY' ) ) {
@@ -570,31 +570,52 @@ public function shortcode_members_table( $atts ) {
         ] );
 
         $matched = [];
-        $users = $user_query->get_results();
+        $users   = $user_query->get_results();
+
         foreach ( $users as $u ) {
             $labels = $this->get_user_wpf_tag_labels( $u->ID );
             if ( empty( $labels ) ) { continue; }
+
+            // Check inclusion
             $hits = [];
             foreach ( $labels as $label ) {
-                foreach ( $regexes as $rx ) {
+                foreach ( $include_regexes as $rx ) {
                     if ( preg_match( $rx, $label ) ) {
-                        $hits[] = $label; break;
+                        $hits[] = $label;
+                        break;
                     }
                 }
             }
-            if ( ! empty( $hits ) ) {
-                $matched[] = [
-                    'ID'              => $u->ID,
-                    'user_email'      => $u->user_email,
-                    'display_name'    => $u->display_name,
-                    'user_registered' => $u->user_registered,
-                    'matched_tags'    => array_values( array_unique( $hits ) ),
-                ];
+            if ( empty( $hits ) ) {
+                continue; // must match at least one include
             }
+
+            // NEW: Check exclusion
+            $excluded = false;
+            if ( ! empty( $exclude_regexes ) ) {
+                foreach ( $labels as $label ) {
+                    foreach ( $exclude_regexes as $rx ) {
+                        if ( preg_match( $rx, $label ) ) {
+                            $excluded = true;
+                            break 2;
+                        }
+                    }
+                }
+            }
+            if ( $excluded ) {
+                continue;
+            }
+
+            $matched[] = [
+                'ID'              => $u->ID,
+                'user_email'      => $u->user_email,
+                'display_name'    => $u->display_name,
+                'user_registered' => $u->user_registered,
+                'matched_tags'    => array_values( array_unique( $hits ) ),
+            ];
         }
         return $matched;
     }
-
     /** Helper: normalize any cell into a UNIX timestamp (supports "count|timestamp", single values, and CRLF/newline). */
     private function parse_visit_ts( $val ) {
         if ( $val === null ) return null;
