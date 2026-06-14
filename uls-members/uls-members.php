@@ -279,7 +279,7 @@ class ULS_Members_Plugin {
 
     }
 
-    
+
     /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
     /** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
     /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name,all_tags" ...] */
@@ -304,7 +304,7 @@ class ULS_Members_Plugin {
             return '<p>Please log in to view related members.</p>';
         }
 
-        // Allowed + default fields — added all_tags
+        // Allowed + default fields
         $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'all_tags', 'rewards_points' ];
         $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
@@ -326,7 +326,7 @@ class ULS_Members_Plugin {
             'last_name'    => 'Last Name',
             'first_visit'  => 'First Visit',
             'last_visit'   => 'Last Visit',
-            'all_tags'     => 'All Tags',           // ← changed
+            'all_tags'     => 'All Tags',
             'rewards_points' => 'Reward Points',
         ];
 
@@ -344,7 +344,14 @@ class ULS_Members_Plugin {
             }
         }
 
-        // ... (patterns logic unchanged) ...
+        // Patterns
+        $override_patterns = array_filter(
+            array_map( 'trim', explode( ',', (string) $atts['patterns'] ) )
+        );
+
+        $exclude_patterns = array_filter(
+            array_map( 'trim', explode( ',', (string) $atts['exclude_patterns'] ) )
+        );
 
         $current_user_id = get_current_user_id();
 
@@ -364,7 +371,8 @@ class ULS_Members_Plugin {
             }
         }
 
-        $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns );
+        // Find users - now safe
+        $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns ?? [] );
 
         if ( empty( $matched_users ) ) {
             return '<p>No matching members were found.</p>';
@@ -378,13 +386,11 @@ class ULS_Members_Plugin {
             $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
             $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
             $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
-            
-            // NEW: Fetch ALL tags for this user
-            $r['all_tags'] = $this->get_user_wpf_tag_labels( $r['ID'] );
+            $r['all_tags']       = $this->get_user_wpf_tag_labels( $r['ID'] );
         }
         unset( $r );
 
-        // Render (rest unchanged except cell logic)
+        // Render
         $per_page = intval( $atts['per_page'] );
         if ( $per_page <= 0 ) { $per_page = 10; }
 
@@ -392,8 +398,9 @@ class ULS_Members_Plugin {
         <div class="uls-members" data-per-page="<?php echo esc_attr( $per_page ); ?>">
 
             <?php if ( $allow_export ): ?>
+                <?php $export_url = add_query_arg( 'uls_export', '1' ); ?>
                 <div style="margin-bottom:10px;">
-                    <a href="<?php echo esc_url( add_query_arg( 'uls_export', '1' ) ); ?>" class="button button-primary">
+                    <a href="<?php echo esc_url( $export_url ); ?>" class="button button-primary">
                         Export CSV
                     </a>
                 </div>
@@ -447,7 +454,6 @@ class ULS_Members_Plugin {
                 </tbody>
             </table>
 
-            <!-- pager unchanged -->
             <div class="uls-members__pager">
                 <button type="button" class="uls-pager__prev">Prev</button>
                 <span class="page-info">
@@ -461,7 +467,6 @@ class ULS_Members_Plugin {
 
         return ob_get_clean();
     }
-
     /** Get a user's WP Fusion tag labels (translate IDs → labels). */
     private function get_user_wpf_tag_labels( $user_id ) {
         $tags = function_exists( 'wpf_get_tags' ) ? wpf_get_tags( $user_id ) : [];
