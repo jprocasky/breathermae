@@ -279,8 +279,8 @@ add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
 
     }
 
-/** Shortcode: [uls_members_table per_page="10"] */
 /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
+/** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
 /** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
 public function shortcode_members_table( $atts ) {
 
@@ -290,7 +290,7 @@ public function shortcode_members_table( $atts ) {
             'fields'           => '',
             'headers'          => '',
             'patterns'         => '',
-            'exclude_patterns' => '',   // ← NEW
+            'exclude_patterns' => '',
             'export'           => 'no',
         ],
         $atts,
@@ -303,7 +303,7 @@ public function shortcode_members_table( $atts ) {
         return '<p>Please log in to view related members.</p>';
     }
 
-    // Allowed + default fields (unchanged from your previous update)
+    // Allowed + default fields
     $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'matched_tags', 'rewards_points' ];
     $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
@@ -343,12 +343,12 @@ public function shortcode_members_table( $atts ) {
         }
     }
 
-    // === Patterns (inclusion) ===
+    // Patterns (inclusion)
     $override_patterns = array_filter(
         array_map( 'trim', explode( ',', (string) $atts['patterns'] ) )
     );
 
-    // === NEW: Exclude patterns ===
+    // Exclude patterns
     $exclude_patterns = array_filter(
         array_map( 'trim', explode( ',', (string) $atts['exclude_patterns'] ) )
     );
@@ -371,7 +371,7 @@ public function shortcode_members_table( $atts ) {
         }
     }
 
-    // Find users (now with exclusion)
+    // Find users
     $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns );
 
     if ( empty( $matched_users ) ) {
@@ -389,7 +389,7 @@ public function shortcode_members_table( $atts ) {
     }
     unset( $r );
 
-    // Render (unchanged)
+    // Render
     $per_page = intval( $atts['per_page'] );
     if ( $per_page <= 0 ) { $per_page = 10; }
 
@@ -428,9 +428,11 @@ public function shortcode_members_table( $atts ) {
                         $key = ($f === 'email') ? 'user_email' : $f;
 
                         if ( $f === 'matched_tags' ) {
-                            $cell = implode(', ', (array) ($r['matched_tags'] ?? []));
+                            $tags = (array) ($r['matched_tags'] ?? []);
+                            sort( $tags, SORT_STRING | SORT_FLAG_CASE );   // ← Alphabetical sort
+                            $cell = implode( ', ', $tags );
                         } elseif ( $f === 'rewards_points' ) {
-                            $cell = number_format((int) ($r['rewards_points'] ?? 0));
+                            $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
                         } else {
                             $cell = $r[$key] ?? '';
                         }
@@ -461,6 +463,7 @@ public function shortcode_members_table( $atts ) {
 
     return ob_get_clean();
 }
+
 
     /** Get a user's WP Fusion tag labels (translate IDs → labels). */
     private function get_user_wpf_tag_labels( $user_id ) {
@@ -890,7 +893,7 @@ public function shortcode_members_table( $atts ) {
             'uls_rewards'               => $uls_rewards,
         ] );
     }
-    
+
     /**
      * AJAX: persist the selected user (by email) for the current logged-in user.
      * Stores:

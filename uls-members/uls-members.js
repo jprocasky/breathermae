@@ -273,7 +273,7 @@ function updateScopedResultsLink(memberId) {
     postDetails(email).done(function(resp){
       if (!resp || !resp.success || !resp.data) { console.warn('[uls-members] details missing/invalid', resp); return; }
       var dataWptm    = resp.data['uls_wptm_tbl_4']            || {};
-      var dataProfile = resp.data['uls_uls_cf_bio']            || {};
+      const dataProfile = resp.data?.uls_uls_cf_bio            || {};
       var dataOrders  = resp.data['vw_wc_orders_full']         || [];
       var dataKeys    = resp.data['uls_key_essentials']        || [];
       var dataBsi     = resp.data['uls_bm_bsi_results_latest'] || null;
@@ -339,7 +339,7 @@ function updateScopedResultsLink(memberId) {
 
       console.log('Selected member response:', resp);
 
-      const dataProfile = resp.data?.uls_uls_cf_bio || {};
+      
       const memberId = parseInt( dataProfile.user_id || 0, 10 );
 
       if (memberId > 0) {
