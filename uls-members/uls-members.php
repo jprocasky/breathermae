@@ -280,6 +280,7 @@ add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
     }
 
 /** Shortcode: [uls_members_table per_page="10"] */
+/** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
 public function shortcode_members_table( $atts ) {
 
     $atts = shortcode_atts(
@@ -301,8 +302,8 @@ public function shortcode_members_table( $atts ) {
     }
 
     // Allowed + default fields
-    $allowed_fields = [ 'email', 'display_name', 'first_visit', 'last_visit', 'matched_tags', 'rewards_points' ];
-    $default_fields = [ 'email', 'display_name', 'first_visit', 'last_visit' ];
+    $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'matched_tags', 'rewards_points' ];
+    $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
     // Parse requested fields
     $requested = array_filter( array_map( 'trim', explode( ',', (string) $atts['fields'] ) ) );
@@ -316,12 +317,14 @@ public function shortcode_members_table( $atts ) {
 
     // Labels
     $labels_map = [
-        'email'           => 'Email',
-        'display_name'    => 'Name',
-        'first_visit'     => 'First Visit',
-        'last_visit'      => 'Last Visit',
-        'matched_tags'    => 'Matched Tags',
-        'rewards_points'  => 'Reward Points',
+        'email'        => 'Email',
+        'display_name' => 'Name',
+        'first_name'   => 'First Name',
+        'last_name'    => 'Last Name',
+        'first_visit'  => 'First Visit',
+        'last_visit'   => 'Last Visit',
+        'matched_tags' => 'Matched Tags',
+        'rewards_points' => 'Reward Points',
     ];
 
     $headers = [];
@@ -338,7 +341,7 @@ public function shortcode_members_table( $atts ) {
         }
     }
 
-    // Patterns
+    // Patterns (unchanged)
     $override_patterns = array_filter(
         array_map(
             'trim',
@@ -375,13 +378,16 @@ public function shortcode_members_table( $atts ) {
     // Attach visits
     $rows = $this->attach_visits_from_view( $matched_users );
 
-    // Attach rewards
+    // Attach rewards + first/last name
     foreach ( $rows as &$r ) {
         $r['rewards_points'] = (int) get_user_meta(
             $r['ID'],
             'reward_points_balance',
             true
         );
+
+        $r['first_name'] = (string) get_user_meta( $r['ID'], 'first_name', true );
+        $r['last_name']  = (string) get_user_meta( $r['ID'], 'last_name', true );
     }
     unset($r);
 
@@ -457,7 +463,6 @@ public function shortcode_members_table( $atts ) {
 
     return ob_get_clean();
 }
-
 
     /** Get a user's WP Fusion tag labels (translate IDs → labels). */
     private function get_user_wpf_tag_labels( $user_id ) {
