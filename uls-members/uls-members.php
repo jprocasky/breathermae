@@ -786,6 +786,9 @@ public function shortcode_members_table( $atts ) {
     /**
      * AJAX: get details for a selected member by email
      */
+    /**
+     * AJAX: get details for a selected member by email
+     */
     public function ajax_get_member_details() {
         check_ajax_referer( 'uls_members_nonce', 'nonce' );
         if ( ! is_user_logged_in() ) {
@@ -799,15 +802,15 @@ public function shortcode_members_table( $atts ) {
 
         global $wpdb;
 
-        // Date format (unchanged)
+        // Date format
         $dt_format = trim( sprintf(
             '%s %s',
             (string) get_option( 'date_format', 'M j, Y' ),
             (string) get_option( 'time_format', 'g:i a' )
         ) );
 
-        // --- Core queries ---
-        $row_wptm   = $wpdb->get_row( $wpdb->prepare(
+        // Core queries
+        $row_wptm = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM `uls_wptm_tbl_4` WHERE `col2` = %s LIMIT 1", $email
         ), ARRAY_A );
 
@@ -817,16 +820,6 @@ public function shortcode_members_table( $atts ) {
 
         $member_user = get_user_by( 'email', $email );
         $member_user_id = $member_user ? (int) $member_user->ID : 0;
-
-        // === DEBUG LOGGING (for the failing users) ===
-        bm_log('ajax_get_member_details for email: ' . $email);
-        bm_log('  - WP user ID: ' . $member_user_id);
-        bm_log('  - uls_ULS_CF_BIO row exists: ' . ( $row_profile ? 'YES' : 'NO' ));
-        if ( $row_profile ) {
-            bm_log('  - user_id in profile: ' . ( $row_profile['user_id'] ?? 'MISSING' ));
-            bm_log('  - profile keys: ' . implode(', ', array_keys( $row_profile ) ));
-        }
-        // =============================================
 
         $latest_rsi = $this->get_latest_rsi_by_email( $email );
         $latest_bsi = $this->get_latest_bsi_by_email( $email );
@@ -842,7 +835,7 @@ public function shortcode_members_table( $atts ) {
             LIMIT 200", $email
         ), ARRAY_A );
 
-        // Format order dates...
+        // Format order dates
         if ( is_array( $orders ) ) {
             foreach ( $orders as &$o ) {
                 if ( ! empty( $o['order_date'] ) ) {
@@ -871,19 +864,23 @@ public function shortcode_members_table( $atts ) {
                 : 0
         ];
 
-        // === ENSURE user_id is always in the profile object ===
+        // === CRITICAL FIX: Guarantee user_id for impersonation links ===
         if ( is_array( $row_profile ) ) {
-            if ( empty( $row_profile['user_id'] ) ) {
-                $row_profile['user_id'] = $member_user_id;   // ← fallback
+            if ( empty( $row_profile['user_id'] ) || (int) $row_profile['user_id'] === 0 ) {
+                $row_profile['user_id'] = $member_user_id;
             }
         } else {
-            // No profile row at all → create minimal one
-            $row_profile = [ 'user_id' => $member_user_id, 'email' => $email ];
+            // No profile row → minimal object
+            $row_profile = [
+                'user_id' => $member_user_id,
+                'email'   => $email
+            ];
         }
+        // ===============================================================
 
         wp_send_json_success( [
             'uls_wptm_tbl_4'            => $row_wptm ?: [],
-            'uls_uls_cf_bio'            => $row_profile,           // now guaranteed to have user_id
+            'uls_uls_cf_bio'            => $row_profile,
             'vw_wc_orders_full'         => is_array( $orders ) ? $orders : [],
             'uls_key_essentials'        => $keys,
             'uls_bm_rsi_results_latest' => $latest_rsi ?: [],
@@ -893,6 +890,7 @@ public function shortcode_members_table( $atts ) {
             'uls_rewards'               => $uls_rewards,
         ] );
     }
+    
     /**
      * AJAX: persist the selected user (by email) for the current logged-in user.
      * Stores:

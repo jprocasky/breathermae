@@ -339,18 +339,14 @@ function updateScopedResultsLink(memberId) {
 
       console.log('Selected member response:', resp);
 
-      const dataProfile = resp.data['uls_uls_cf_bio'] || {};
-
-      const memberId = dataProfile.user_id 
-                    || resp.data?.member_id 
-                    || resp.data?.user_id 
-                    || 0;
+      const dataProfile = resp.data?.uls_uls_cf_bio || {};
+      const memberId = parseInt( dataProfile.user_id || 0, 10 );
 
       if (memberId > 0) {
           console.log('[uls] Found memberId:', memberId);
           updateScopedResultsLink(memberId);
       } else {
-          console.warn('[uls] ⚠️ Still no member_id for this user! WP user may not exist.');
+          console.warn('[uls] ⚠️ No member_id for this user');
       }
 
 
