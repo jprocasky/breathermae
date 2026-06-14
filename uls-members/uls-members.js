@@ -322,52 +322,63 @@ function updateScopedResultsLink(memberId) {
 
 
       $('.uls-member-field').each(function(){
-        var $el = $(this), src = ($el.data('src') || '').toString(), key = ($el.data('key') || '').toString();
-        function read(obj,k){ if (!obj || !k) return ''; if (Object.prototype.hasOwnProperty.call(obj,k)) return obj[k]; var kl = k.toLowerCase(); for (var p in obj){ if(!Object.prototype.hasOwnProperty.call(obj,p)) continue; if (p.toLowerCase() === kl) return obj[p]; } return ''; }
+        var $el = $(this), 
+            src = ($el.data('src') || '').toString().trim(), 
+            key = ($el.data('key') || '').toString().trim();
+
+        function read(obj, k){ 
+            if (!obj || !k) return ''; 
+            if (Object.prototype.hasOwnProperty.call(obj, k)) return obj[k]; 
+            var kl = k.toLowerCase(); 
+            for (var p in obj){ 
+                if(!Object.prototype.hasOwnProperty.call(obj,p)) continue; 
+                if (p.toLowerCase() === kl) return obj[p]; 
+            } 
+            return ''; 
+        }
         
-        // Apply lookup color per field
+        // Apply lookup color per field (existing)
         if (src === 'bsi' && key && bsiColors[key]) {
             $el.css('color', bsiColors[key]);
         }
         if (src === 'rsi' && key && rsiColors[key]) {
             $el.css('color', rsiColors[key]);
         }        
+
         var val = '';
+
         if (src === 'uls_wptm_tbl_4')      val = read(dataWptm, key);
         else if (src === 'uls_ULS_CF_BIO') val = read(dataProfile, key);
         else if (src === 'bsi')            val = read(dataBsi || {}, key);
         else if (src === 'rsi')            val = read(dataRsi || {}, key);
         else if (src === 'uls_rewards')    val = read(dataRewards, key);
-        else                               val = read(dataWptm, key);
-          
-          // --- Normalize & round percent values for BSI and RSI ---
-          if (src === 'bsi' || src === 'rsi') {
-              var num = parseFloat(val);
-              if (Number.isFinite(num)) {
-                  // Normalize BSI fractional scores (0–1 → 0–100)
-                  if (src === 'bsi' && num > 0 && num <= 1) {
-                      num = num * 100;
-                  }
+        else if (src === 'usermeta')       val = read(resp.data.usermeta || {}, key);  // ← NEW
+        else                               val = read(dataWptm, key);  // fallback
 
-                  // Integer percent display (applies to both BSI + RSI)
-                  val = Math.round(num);
-              }
-          }
+        // Normalize BSI/RSI percentages (unchanged)
+        if (src === 'bsi' || src === 'rsi') {
+            var num = parseFloat(val);
+            if (Number.isFinite(num)) {
+                if (src === 'bsi' && num > 0 && num <= 1) num = num * 100;
+                val = Math.round(num);
+            }
+        }
 
-          var out = (val == null ? '' : String(val)).trim();
+        var out = (val == null ? '' : String(val)).trim();
 
-          if (!out) {
-              var emptyText = ($el.data('empty') || '').toString();
-              if (emptyText) {
-                  out = emptyText;
-                  $el.addClass('uls-empty');
-              }
-          } else {
-              $el.removeClass('uls-empty');
-          }
+        if (!out) {
+            var emptyText = ($el.data('empty') || '').toString();
+            if (emptyText) {
+                out = emptyText;
+                $el.addClass('uls-empty');
+            }
+        } else {
+            $el.removeClass('uls-empty');
+        }
 
-          $el.text(out);
+        $el.text(out);
       });
+      
 
       colorizeMemberFields();
       renderOrdersTable(dataOrders); // includes Price column

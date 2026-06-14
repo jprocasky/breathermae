@@ -807,14 +807,14 @@ class ULS_Members_Plugin {
 
         global $wpdb;
 
-        // Date format
+        // Date format (unchanged)
         $dt_format = trim( sprintf(
             '%s %s',
             (string) get_option( 'date_format', 'M j, Y' ),
             (string) get_option( 'time_format', 'g:i a' )
         ) );
 
-        // Core queries
+        // Core queries (unchanged)
         $row_wptm = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM `uls_wptm_tbl_4` WHERE `col2` = %s LIMIT 1", $email
         ), ARRAY_A );
@@ -840,7 +840,7 @@ class ULS_Members_Plugin {
             LIMIT 200", $email
         ), ARRAY_A );
 
-        // Format order dates
+        // Format order dates (unchanged)
         if ( is_array( $orders ) ) {
             foreach ( $orders as &$o ) {
                 if ( ! empty( $o['order_date'] ) ) {
@@ -863,25 +863,45 @@ class ULS_Members_Plugin {
 
         $keys = is_array( $raw_keys ) ? $raw_keys : [];
 
+        // === EXISTING REWARDS ===
         $uls_rewards = [
             'reward_points_balance' => $member_user_id
                 ? (int) get_user_meta( $member_user_id, 'reward_points_balance', true )
                 : 0
         ];
 
-        // === CRITICAL FIX: Guarantee user_id for impersonation links ===
+        // === NEW: Generic usermeta support ===
+        $usermeta = [];
+        if ( $member_user_id ) {
+            // Fetch common/useful keys (add more as needed)
+            $meta_keys_to_fetch = [
+                'referral_count',
+                'first_name',
+                'last_name',
+                'nickname',
+                // Add any other frequently used usermeta keys here
+            ];
+            foreach ( $meta_keys_to_fetch as $mk ) {
+                $val = get_user_meta( $member_user_id, $mk, true );
+                if ( $val !== '' && $val !== false && $val !== null ) {
+                    $usermeta[ $mk ] = $val;
+                }
+            }
+            // Optional: fetch ALL usermeta (heavier but very flexible)
+            // $usermeta = array_map( function($v){ return maybe_unserialize($v[0] ?? $v); }, get_user_meta( $member_user_id ) );
+        }
+
+        // Profile fallback (unchanged)
         if ( is_array( $row_profile ) ) {
             if ( empty( $row_profile['user_id'] ) || (int) $row_profile['user_id'] === 0 ) {
                 $row_profile['user_id'] = $member_user_id;
             }
         } else {
-            // No profile row → minimal object
             $row_profile = [
                 'user_id' => $member_user_id,
                 'email'   => $email
             ];
         }
-        // ===============================================================
 
         wp_send_json_success( [
             'uls_wptm_tbl_4'            => $row_wptm ?: [],
@@ -893,9 +913,11 @@ class ULS_Members_Plugin {
             'uls_bm_bsi_results_latest' => $latest_bsi ?: [],
             'uls_bm_bsi_colors'         => $bsi_colors,
             'uls_rewards'               => $uls_rewards,
+            'usermeta'                  => $usermeta,   // ← NEW
         ] );
     }
 
+    
     /**
      * AJAX: Update WP Fusion tags for a member (add/remove)
      */
