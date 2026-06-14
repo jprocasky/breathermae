@@ -54,6 +54,7 @@ class ULS_Members_Plugin {
         [ $this, 'ajax_toggle_file_visibility_scope' ]
         );   
         add_action( 'wp_ajax_uls_update_user_tags', [ $this, 'ajax_update_user_tags' ] );
+        
         add_action( 'init', [ $this, 'handle_csv_export' ] );        
         
         add_action( 'wp_ajax_uls_get_scoped_impersonation_url', function () {
@@ -436,6 +437,7 @@ public function shortcode_members_table( $atts ) {
                             $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
                         } else {
                             $cell = $r[$key] ?? '';
+                            $td_attr = ($f === 'email') ? ' data-col="email"' : '';
                         }
 
                         $td_attr = ($f === 'email') ? ' data-col="email"' : '';
@@ -898,14 +900,11 @@ public function shortcode_members_table( $atts ) {
     /**
      * AJAX: Update WP Fusion tags for a member (add/remove)
      */
+
     public function ajax_update_user_tags() {
         check_ajax_referer( 'uls_members_nonce', 'nonce' );
 
-/*         if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {  // Restrict to admins/providers
-            wp_send_json_error( [ 'message' => 'Unauthorized' ], 403 );
-        } */
-
-        $user_id = (int) ( $_POST['user_id'] ?? 0 );
+        $user_id      = (int) ( $_POST['user_id'] ?? 0 );
         $new_tags_raw = sanitize_text_field( wp_unslash( $_POST['tags'] ?? '' ) );
 
         if ( ! $user_id || ! function_exists( 'wp_fusion' ) ) {
@@ -914,12 +913,8 @@ public function shortcode_members_table( $atts ) {
 
         $new_tags = array_filter( array_map( 'trim', explode( ',', $new_tags_raw ) ) );
 
-        // Get current tags for diffing
+        // Remove old tags + apply new ones (simple & safe for this use case)
         $current_tag_ids = wpf_get_tags( $user_id ) ?: [];
-        $current_labels  = $this->get_user_wpf_tag_labels( $user_id );
-
-        // Simple approach: remove ALL current matched tags, then apply new ones
-        // (Safe because we're only editing the "matched" subset displayed in the table)
         if ( ! empty( $current_tag_ids ) ) {
             wp_fusion()->user->remove_tags( $current_tag_ids, $user_id );
         }
@@ -931,10 +926,7 @@ public function shortcode_members_table( $atts ) {
 
         bm_log( "Tags updated for user {$user_id}: " . implode(', ', $new_tags) );
 
-        wp_send_json_success( [
-            'user_id' => $user_id,
-            'tags'    => $new_tags
-        ] );
+        wp_send_json_success( [ 'user_id' => $user_id, 'tags' => $new_tags ] );
     }
 
     /**

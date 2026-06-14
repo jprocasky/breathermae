@@ -139,50 +139,45 @@
     $box.html(html);
   }
 
-    // ---- TAG EDITOR ----
+    // ---- TAG EDITOR (double-click on Matched Tags) ----
     function initTagEditor() {
-        $(document).off('dblclick.uls', 'td[data-col="matched_tags"]').on('dblclick.uls', 'td[data-col="matched_tags"]', function(e) {
+        $(document).off('dblclick.ulsTags', 'td[data-col="matched_tags"]')
+                .on('dblclick.ulsTags', 'td[data-col="matched_tags"]', function(e) {
             e.stopImmediatePropagation();
 
-            var $td = $(this);
-            var userId = parseInt($td.data('user-id'), 10);
-            var currentTags = $td.text().trim();
+            var $td     = $(this);
+            var userId  = parseInt($td.data('user-id'), 10);
+            var current = $td.text().trim();
 
             if (!userId) {
-                alert('Cannot edit tags – missing user ID.');
+                alert('Cannot edit – missing user ID.');
                 return;
             }
 
-            var newTags = prompt(
-                'Edit tags (comma-separated):\n\nCurrent tags:\n' + currentTags,
-                currentTags
-            );
+            var input = prompt('Edit tags (comma-separated):', current);
+            if (input === null) return; // cancelled
 
-            if (newTags === null) return; // user cancelled
-
-            console.log('[uls] Updating tags for user', userId, '→', newTags);
+            console.log('[uls] Saving tags for user', userId, '→', input);
 
             jQuery.post(ULS_MEMBERS.ajaxurl, {
                 action: 'uls_update_user_tags',
                 user_id: userId,
-                tags: newTags,
-                nonce: ULS_MEMBERS.nonce
+                tags: input,
+                nonce: ULS_MEMBERS.nonce   // note: the localized object uses 'nonce'
             }, function(resp) {
                 if (resp && resp.success) {
-                    console.log('[uls] Tags updated successfully');
-                    // Refresh the whole table (simple & reliable)
-                    location.reload();
-                    // TODO: For true partial refresh, re-fetch the row and update only the td
+                    alert('Tags updated successfully!');
+                    location.reload();        // simple full refresh for now
                 } else {
-                    alert('Failed to update tags: ' + (resp?.data?.message || 'Unknown error'));
+                    alert('Update failed: ' + (resp?.data?.message || 'Unknown error'));
                 }
             }).fail(function() {
-                alert('AJAX error while updating tags.');
+                alert('AJAX error updating tags.');
             });
         });
     }
 
-// ---- RENDER: Results Link ----
+
 // ---- RENDER: Results Link (with heavy debugging) ----
 function updateScopedResultsLink(memberId) {
     console.log('[uls] updateScopedResultsLink called with memberId:', memberId);
