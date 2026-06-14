@@ -47,6 +47,9 @@ class ULS_Member_Files_Module {
             'wp_ajax_uls_toggle_file_visibility_scope',
             [ $this, 'ajax_toggle_file_visibility_scope' ]
         );
+
+        add_action( 'wp_ajax_uls_update_file_document_type', [ $this, 'ajax_update_file_document_type' ] );        
+        
     }
 
     /* ------------------------ Helpers ------------------------ */
@@ -408,6 +411,41 @@ class ULS_Member_Files_Module {
     public function ajax_list_all_member_files() {
         $_POST['all'] = 1;
         $this->ajax_list_member_files();
+    }
+
+    /**
+     * AJAX: Update document type for an existing file
+     */
+    public function ajax_update_file_document_type() {
+        check_ajax_referer( 'uls_member_files', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+
+        $id   = (int) ( $_POST['id'] ?? 0 );
+        $type = (int) ( $_POST['document_type_id'] ?? 0 );
+
+        if ( ! $id || ! $type ) {
+            wp_send_json_error( [ 'message' => 'Invalid parameters' ], 400 );
+        }
+
+        global $wpdb;
+        $table = $this->table;
+
+        $updated = $wpdb->update(
+            $table,
+            [ 'ai_document_type_id' => $type ],
+            [ 'id' => $id ],
+            [ '%d' ],
+            [ '%d' ]
+        );
+
+        if ( $updated !== false ) {
+            wp_send_json_success( [ 'id' => $id, 'document_type_id' => $type ] );
+        } else {
+            wp_send_json_error( [ 'message' => 'Update failed' ] );
+        }
     }
 
     /* ------------------------ AJAX: Upload ------------------------ */

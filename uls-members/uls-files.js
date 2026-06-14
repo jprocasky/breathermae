@@ -356,6 +356,35 @@
         return;
       }
 
+    // ===== NEW: Auto-save Document Type on change =====
+    $p.on('change.ulsf', '.uls-ai-prompt-type', function () {
+        var $sel = $(this);
+        var fileId = parseInt($sel.data('file-id'), 10) || 0;
+        var newTypeId = parseInt($sel.val(), 10) || 0;
+
+        if (!fileId || !newTypeId) return;
+
+        console.log('[uls-files] Updating document type →', fileId, newTypeId);
+
+        $.post(W.ajaxurl, {
+            action: 'uls_update_file_document_type',   // we'll add this in PHP
+            nonce: W.nonce,
+            id: fileId,
+            document_type_id: newTypeId
+        })
+        .done(function(resp) {
+            if (resp && resp.success) {
+                $sel.css('border-color', '#4caf50'); // brief visual feedback
+                setTimeout(() => $sel.css('border-color', ''), 1200);
+            } else {
+                console.warn('Failed to update document type', resp);
+            }
+        })
+        .fail(function() {
+            console.error('AJAX error updating document type');
+        });
+    });
+
       $.post(W.ajaxurl, {
         action: W.toggleVisAction, // reuse existing action
         nonce: W.nonce,
