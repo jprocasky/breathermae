@@ -13,7 +13,7 @@ if ( ! class_exists( 'ULS_Member_Files_Module' ) ) :
 
 class ULS_Member_Files_Module {
 
-    const DB_VERSION = '1.1.0';
+    const DB_VERSION = '1.1.1';
     private static $instance = null;
     private $table = 'uls_member_files';
 
@@ -49,7 +49,7 @@ class ULS_Member_Files_Module {
         );
 
         add_action( 'wp_ajax_uls_update_file_document_type', [ $this, 'ajax_update_file_document_type' ] );        
-        
+
     }
 
     /* ------------------------ Helpers ------------------------ */
@@ -214,10 +214,13 @@ class ULS_Member_Files_Module {
 
     public function maybe_upgrade_schema() {
         $opt = 'uls_member_files_db_version';
-        $installed = get_option( $opt );
-        if ( $installed === self::DB_VERSION ) return;
+        $installed = get_option( $opt, '0.0.0' );
 
-        global $wpdb; $charset = $wpdb->get_charset_collate(); $table = $this->table;
+        global $wpdb; 
+        $charset = $wpdb->get_charset_collate(); 
+        $table = $this->table;
+
+        // Always run CREATE TABLE (safe)
         $sql = "CREATE TABLE IF NOT EXISTS `{$table}` (
             `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             `member_email` VARCHAR(191) NOT NULL,
@@ -230,62 +233,61 @@ class ULS_Member_Files_Module {
             `file_size` BIGINT UNSIGNED NOT NULL DEFAULT 0,
             `attachment_id` BIGINT UNSIGNED NULL,
             `is_member_visible` TINYINT(1) NOT NULL DEFAULT 0,
-
-            -- ✅ NEW
             `visibility_scope` VARCHAR(20) NOT NULL DEFAULT 'shared',
             `author_context` VARCHAR(50) NOT NULL DEFAULT '',
-
             `uploaded_by` BIGINT UNSIGNED NOT NULL,
             `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
             `deleted_by` BIGINT UNSIGNED NULL,
             `deleted_at` DATETIME NULL,
 
+            -- Document Type Support
+            `ai_document_type_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+
             PRIMARY KEY (`id`),
             KEY `idx_member_email` (`member_email`),
             KEY `idx_member_user_id` (`member_user_id`),
             KEY `idx_note_name` (`note_name`),
             KEY `idx_member_visible` (`is_member_visible`),
-
-            -- ✅ NEW
             KEY `idx_visibility_scope` (`visibility_scope`),
             KEY `idx_author_context` (`author_context`),
-
-            KEY `idx_uploaded_at` (`uploaded_at`)
+            KEY `idx_uploaded_at` (`uploaded_at`),
+            KEY `idx_ai_document_type_id` (`ai_document_type_id`)
         ) $charset;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
 
-            $cols = $wpdb->get_col( "DESC `{$table}`", 0 );
+        // Force column check and add if missing
+        $cols = $wpdb->get_col( "DESC `{$table}`", 0 );
 
-            if ( is_array( $cols ) ) {
+        if ( is_array( $cols ) && ! in_array( 'ai_document_type_id', $cols, true ) ) {
+            error_log( '[uls-files] Adding missing column ai_document_type_id' );
+            
+            $wpdb->query(
+                "ALTER TABLE `{$table}` 
+                 ADD COLUMN `ai_document_type_id` BIGINT UNSIGNED NULL DEFAULT NULL 
+                 AFTER `author_context`"
+            );
+            
+            $wpdb->query(
+                "CREATE INDEX `idx_ai_document_type_id` 
+                 ON `{$table}` (`ai_document_type_id`)"
+            );
+        }
 
-            if ( ! in_array( 'visibility_scope', $cols, true ) ) {
-                $wpdb->query(
-                "ALTER TABLE `{$table}`
-                ADD `visibility_scope` VARCHAR(20) NOT NULL DEFAULT 'shared' AFTER `is_member_visible`"
-                );
-                $wpdb->query(
-                "CREATE INDEX `idx_visibility_scope`
-                ON `{$table}` (`visibility_scope`)"
-                );
-            }
-
-            if ( ! in_array( 'author_context', $cols, true ) ) {
-                $wpdb->query(
-                "ALTER TABLE `{$table}`
-                ADD `author_context` VARCHAR(50) NOT NULL DEFAULT '' AFTER `visibility_scope`"
-                );
-                $wpdb->query(
-                "CREATE INDEX `idx_author_context`
-                ON `{$table}` (`author_context`)"
-                );
-            }
-            }
+        // Update other missing columns too (safety)
+        if ( ! in_array( 'visibility_scope', $cols, true ) ) {
+            $wpdb->query( "ALTER TABLE `{$table}` ADD `visibility_scope` VARCHAR(20) NOT NULL DEFAULT 'shared' AFTER `is_member_visible`" );
+        }
+        if ( ! in_array( 'author_context', $cols, true ) ) {
+            $wpdb->query( "ALTER TABLE `{$table}` ADD `author_context` VARCHAR(50) NOT NULL DEFAULT '' AFTER `visibility_scope`" );
+        }
 
         update_option( $opt, self::DB_VERSION );
     }
+
+
 
     /* ------------------------ AJAX: List ------------------------ */
 
@@ -398,9 +400,7 @@ class ULS_Member_Files_Module {
                 'view_type'        => $view_type,
                 'has_ai_summary' => $has_ai_summary,
                 'ai_summary_stale' => $ai_summary_stale,
-                'ai_document_type_id' => $summary
-                    ? (int) $summary['document_type_id']
-                    : 0,
+                'ai_document_type_id' => (int) ($r['ai_document_type_id'] ?? 0),
 
             ];
         }
