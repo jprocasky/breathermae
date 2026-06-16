@@ -632,16 +632,23 @@ bm_log( print_r( [
         }
 
         $current_user_id = get_current_user_id();
+
+        // Try multiple ways to get tags
         $user_tags = $this->get_user_wpf_tag_labels( $current_user_id );
 
-        // Fallback raw tags
         if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
             $user_tags = get_user_meta( $current_user_id, 'zoho_tags', true );
-            if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
-                $user_tags = get_user_meta( $current_user_id, 'multi_tags', true );
-            }
         }
-        if ( ! is_array( $user_tags ) ) $user_tags = [];
+        if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
+            $user_tags = get_user_meta( $current_user_id, 'multi_tags', true );
+        }
+        if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
+            // Last resort - try common WP Fusion keys
+            $user_tags = get_user_meta( $current_user_id, 'wpf_tags', true );
+        }
+        if ( ! is_array( $user_tags ) ) {
+            $user_tags = [];
+        }
 
         bm_log( 'RAW USER TAGS for ' . $current_user_id . ': ' . print_r( $user_tags, true ) );
 
@@ -674,6 +681,7 @@ bm_log( print_r( [
             return [];
         }
 
+        // Build hierarchy
         $all_patterns = $matching_user_parents;
         $direct = $this->get_child_patterns_for_parents( $matching_user_parents );
         $all_patterns = array_merge( $all_patterns, $direct );
@@ -683,9 +691,14 @@ bm_log( print_r( [
             $all_patterns = array_merge( $all_patterns, $sub );
         }
 
+        bm_log( 'Final child_patterns: ' . print_r( $all_patterns, true ) );
+
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
+
+
+    
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
 
