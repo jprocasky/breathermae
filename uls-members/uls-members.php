@@ -368,6 +368,8 @@ class ULS_Members_Plugin {
         if ( empty( $child_patterns ) ) {
             return '<div style="text-align: center; color: red; font-size: 0.5em;">No matching members found for the specified parent pattern.</div>';
         }
+
+bm_log('Made it here');
 bm_log( print_r( [ 
     'user_id'       => $current_user_id, 
     'parent_input'  => $parent_pattern_input, 
@@ -620,7 +622,7 @@ bm_log( print_r( [
      * Matches against current user's tags, then follows parent/child table.
      */
     /**
-    /**
+    
      * Get hierarchy patterns based on shortcode parent_pattern (e.g. "SA###").
      */
     private function get_patterns_for_parent_input( $parent_pattern_input ) {
