@@ -626,79 +626,51 @@ bm_log( print_r( [
      */
     private function get_patterns_for_parent_input( $parent_pattern_input ) {
         if ( empty( $parent_pattern_input ) ) {
+            // Legacy
             $tags = $this->get_user_wpf_tag_labels( get_current_user_id() );
             return $this->get_child_patterns_for_parents( $tags );
         }
 
         $current_user_id = get_current_user_id();
+        bm_log( '=== START get_patterns_for_parent_input for user ' . $current_user_id . ' with parent_pattern=' . $parent_pattern_input . ' ===' );
 
-        bm_log( '=== START get_patterns_for_parent_input for user ' . $current_user_id . ' ===' );
-
-        $user_tags = $this->get_user_wpf_tag_labels( $current_user_id );
-        bm_log( 'From get_user_wpf_tag_labels: ' . print_r( $user_tags, true ) );
-
-        if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
-            $user_tags = get_user_meta( $current_user_id, 'zoho_tags', true );
-            bm_log( 'From zoho_tags: ' . print_r( $user_tags, true ) );
-        }
-        if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
-            $user_tags = get_user_meta( $current_user_id, 'multi_tags', true );
-            bm_log( 'From multi_tags: ' . print_r( $user_tags, true ) );
-        }
-        if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
-            $user_tags = get_user_meta( $current_user_id, 'wpf_tags', true );
-            bm_log( 'From wpf_tags: ' . print_r( $user_tags, true ) );
-        }
-        if ( ! is_array( $user_tags ) ) $user_tags = [];
-
-        // Relation table fallback
         global $wpdb;
         $table = $wpdb->prefix . $this->table_rel;
-        bm_log( 'Querying table: ' . $table );
 
-        $sales_parents = $wpdb->get_col( $wpdb->prepare(
-            "SELECT DISTINCT parent_tag FROM $table WHERE parent_tag LIKE %s",
-            'SA%'
-        ) );
-        bm_log( 'Parents found in relation table: ' . print_r( $sales_parents, true ) );
-
-        if ( ! empty( $sales_parents ) ) {
-            $user_tags = array_merge( $user_tags, $sales_parents );
-        }
-
-        $user_tags = array_unique( $user_tags );
-
-        bm_log( 'Final user_tags: ' . print_r( $user_tags, true ) );
-
+        // Normalize input
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
 
-        $matching_user_parents = [];
-        foreach ( $user_tags as $tag ) {
-            $tag = trim( $tag );
-            if ( empty( $tag ) ) continue;
+        // Find matching parents in the relation table (this is the key change)
+        $matching_parents = [];
+        foreach ( $input_patterns as $pattern ) {
+            $pattern = trim( $pattern );
+            if ( empty( $pattern ) ) continue;
 
-            foreach ( $input_patterns as $pattern ) {
-                $pattern = trim( $pattern );
-                if ( empty( $pattern ) ) continue;
+            // Convert SA### style to SQL LIKE
+            $like_pattern = str_replace( '#', '%', $pattern ); // SA### becomes SA%
+            $like_pattern = str_replace( '*', '%', $like_pattern );
 
-                if ( stripos( $pattern, 'SA' ) === 0 && preg_match( '/^SA[0-9]/i', $tag ) ) {
-                    $matching_user_parents[] = $tag;
-                    break;
-                } elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
-                    $matching_user_parents[] = $tag;
-                    break;
-                }
-            }
+            $found = $wpdb->get_col( $wpdb->prepare(
+                "SELECT DISTINCT parent_tag 
+                 FROM $table 
+                 WHERE parent_tag LIKE %s",
+                $like_pattern
+            ) );
+
+            $matching_parents = array_merge( $matching_parents, $found );
         }
 
-        bm_log( 'Matching parents found: ' . print_r( $matching_user_parents, true ) );
+        $matching_parents = array_unique( array_filter( $matching_parents ) );
+        bm_log( 'Matching parents from table for input ' . $parent_pattern_input . ': ' . print_r( $matching_parents, true ) );
 
-        if ( empty( $matching_user_parents ) ) {
+        if ( empty( $matching_parents ) ) {
             return [];
         }
 
-        $all_patterns = $matching_user_parents;
-        $direct = $this->get_child_patterns_for_parents( $matching_user_parents );
+        // Build hierarchy
+        $all_patterns = $matching_parents;
+
+        $direct = $this->get_child_patterns_for_parents( $matching_parents );
         $all_patterns = array_merge( $all_patterns, $direct );
 
         if ( ! empty( $direct ) ) {
@@ -711,7 +683,6 @@ bm_log( print_r( [
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
-    
     
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
