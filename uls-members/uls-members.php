@@ -632,37 +632,46 @@ bm_log( print_r( [
 
         $current_user_id = get_current_user_id();
 
-        // Try WP Fusion first
+        bm_log( '=== START get_patterns_for_parent_input for user ' . $current_user_id . ' ===' );
+
+        // Try every possible tag source
         $user_tags = $this->get_user_wpf_tag_labels( $current_user_id );
+        bm_log( 'From get_user_wpf_tag_labels: ' . print_r( $user_tags, true ) );
 
         if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
             $user_tags = get_user_meta( $current_user_id, 'zoho_tags', true );
+            bm_log( 'From zoho_tags: ' . print_r( $user_tags, true ) );
         }
         if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
             $user_tags = get_user_meta( $current_user_id, 'multi_tags', true );
+            bm_log( 'From multi_tags: ' . print_r( $user_tags, true ) );
         }
         if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
             $user_tags = get_user_meta( $current_user_id, 'wpf_tags', true );
+            bm_log( 'From wpf_tags: ' . print_r( $user_tags, true ) );
         }
-        if ( ! is_array( $user_tags ) ) $user_tags = [];
-
-        bm_log( 'RAW USER TAGS for ' . $current_user_id . ': ' . print_r( $user_tags, true ) );
-
-        // NEW: Direct lookup in parent/child table for this user as parent
-        if ( empty( $user_tags ) ) {
-            global $wpdb;
-            $table = $wpdb->prefix . $this->table_rel; // use your class property
-            $sales_parents = $wpdb->get_col( $wpdb->prepare(
-                "SELECT DISTINCT parent_tag 
-                 FROM $table 
-                 WHERE parent_tag LIKE %s",
-                'SA%'
-            ) );
-            if ( ! empty( $sales_parents ) ) {
-                $user_tags = $sales_parents;
-                bm_log( 'Fallback from relation table: ' . print_r( $user_tags, true ) );
-            }
+        if ( ! is_array( $user_tags ) ) {
+            $user_tags = [];
         }
+
+        // NEW: Direct query from parent/child table for this user (most reliable for sales)
+        global $wpdb;
+        $table = $wpdb->prefix . $this->table_rel;   // adjust if property name is different
+        $sales_parents = $wpdb->get_col( $wpdb->prepare(
+            "SELECT DISTINCT parent_tag 
+             FROM $table 
+             WHERE parent_tag LIKE %s",
+            'SA%'
+        ) );
+        bm_log( 'Parents found in relation table: ' . print_r( $sales_parents, true ) );
+
+        if ( ! empty( $sales_parents ) ) {
+            $user_tags = array_merge( $user_tags, $sales_parents );
+        }
+
+        $user_tags = array_unique( $user_tags );
+
+        bm_log( 'Final user_tags after all fallbacks: ' . print_r( $user_tags, true ) );
 
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
 
@@ -675,11 +684,9 @@ bm_log( print_r( [
                 $pattern = trim( $pattern );
                 if ( empty( $pattern ) ) continue;
 
-                if ( stripos( $pattern, 'SA' ) === 0 ) {
-                    if ( preg_match( '/^SA[0-9]/i', $tag ) ) {
-                        $matching_user_parents[] = $tag;
-                        break;
-                    }
+                if ( stripos( $pattern, 'SA' ) === 0 && preg_match( '/^SA[0-9]/i', $tag ) ) {
+                    $matching_user_parents[] = $tag;
+                    break;
                 } elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
                     $matching_user_parents[] = $tag;
                     break;
@@ -690,6 +697,7 @@ bm_log( print_r( [
         bm_log( 'Matching parents found: ' . print_r( $matching_user_parents, true ) );
 
         if ( empty( $matching_user_parents ) ) {
+            bm_log( '=== No matching parents - returning empty ===' );
             return [];
         }
 
@@ -703,6 +711,7 @@ bm_log( print_r( [
         }
 
         bm_log( 'Final child_patterns: ' . print_r( $all_patterns, true ) );
+        bm_log( '=== END get_patterns_for_parent_input ===' );
 
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
