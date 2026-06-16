@@ -634,7 +634,6 @@ bm_log( print_r( [
 
         bm_log( '=== START get_patterns_for_parent_input for user ' . $current_user_id . ' ===' );
 
-        // Try every possible tag source
         $user_tags = $this->get_user_wpf_tag_labels( $current_user_id );
         bm_log( 'From get_user_wpf_tag_labels: ' . print_r( $user_tags, true ) );
 
@@ -650,17 +649,15 @@ bm_log( print_r( [
             $user_tags = get_user_meta( $current_user_id, 'wpf_tags', true );
             bm_log( 'From wpf_tags: ' . print_r( $user_tags, true ) );
         }
-        if ( ! is_array( $user_tags ) ) {
-            $user_tags = [];
-        }
+        if ( ! is_array( $user_tags ) ) $user_tags = [];
 
-        // NEW: Direct query from parent/child table for this user (most reliable for sales)
+        // Relation table fallback
         global $wpdb;
-        $table = $wpdb->prefix . $this->table_rel;   // adjust if property name is different
+        $table = $wpdb->prefix . $this->table_rel;
+        bm_log( 'Querying table: ' . $table );
+
         $sales_parents = $wpdb->get_col( $wpdb->prepare(
-            "SELECT DISTINCT parent_tag 
-             FROM $table 
-             WHERE parent_tag LIKE %s",
+            "SELECT DISTINCT parent_tag FROM $table WHERE parent_tag LIKE %s",
             'SA%'
         ) );
         bm_log( 'Parents found in relation table: ' . print_r( $sales_parents, true ) );
@@ -671,7 +668,7 @@ bm_log( print_r( [
 
         $user_tags = array_unique( $user_tags );
 
-        bm_log( 'Final user_tags after all fallbacks: ' . print_r( $user_tags, true ) );
+        bm_log( 'Final user_tags: ' . print_r( $user_tags, true ) );
 
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
 
@@ -697,7 +694,6 @@ bm_log( print_r( [
         bm_log( 'Matching parents found: ' . print_r( $matching_user_parents, true ) );
 
         if ( empty( $matching_user_parents ) ) {
-            bm_log( '=== No matching parents - returning empty ===' );
             return [];
         }
 
@@ -711,11 +707,11 @@ bm_log( print_r( [
         }
 
         bm_log( 'Final child_patterns: ' . print_r( $all_patterns, true ) );
-        bm_log( '=== END get_patterns_for_parent_input ===' );
 
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
+    
     
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
