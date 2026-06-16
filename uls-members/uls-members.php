@@ -874,7 +874,7 @@ class ULS_Members_Plugin {
         $usermeta = [];
         if ( $member_user_id ) {
             // Fetch common/useful keys (add more as needed)
-            $meta_keys_to_fetch = [
+/*             $meta_keys_to_fetch = [
                 'referral_count',
                 'first_name',
                 'last_name',
@@ -886,9 +886,9 @@ class ULS_Members_Plugin {
                 if ( $val !== '' && $val !== false && $val !== null ) {
                     $usermeta[ $mk ] = $val;
                 }
-            }
+            } */
             // Optional: fetch ALL usermeta (heavier but very flexible)
-            // $usermeta = array_map( function($v){ return maybe_unserialize($v[0] ?? $v); }, get_user_meta( $member_user_id ) );
+            $usermeta = array_map( function($v){ return maybe_unserialize($v[0] ?? $v); }, get_user_meta( $member_user_id ) );
         }
 
         // Profile fallback (unchanged)
