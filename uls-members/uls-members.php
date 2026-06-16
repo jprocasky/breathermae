@@ -358,14 +358,17 @@ class ULS_Members_Plugin {
         if ( ! empty( $override_patterns ) ) {
             $child_patterns = $override_patterns;
         } else {
-            // ORIGINAL + hierarchy expansion
             $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
 
             if ( empty( $current_tag_labels ) ) {
                 return '<div style="text-align: center; color: red; font-size: 0.5em;">No Tags found for your account.</div>';
             }
 
-            $child_patterns = $this->get_current_parent_patterns();  // ← CHANGED: now multi-level
+            $child_patterns = $this->get_child_patterns_for_parents( $current_tag_labels );
+
+            if ( empty( $child_patterns ) ) {
+                return '<div style="text-align: center; color: red; font-size: 0.5em;">No related members found for your tags.</div>';
+            }
         }
 
         // Find users - now safe
@@ -483,19 +486,9 @@ class ULS_Members_Plugin {
         return array_unique( $labels );
     }
 
-    /** Fetch child patterns for any matched parent_tag. */
-    private function get_child_patterns_for_parents( array $parent_labels ) {
-        global $wpdb;
-        if ( empty( $parent_labels ) ) { return []; }
-        $placeholders = implode( ',', array_fill( 0, count( $parent_labels ), '%s' ) );
-        $sql = "SELECT child_pattern FROM `{$this->table_rel}` WHERE parent_tag IN ($placeholders)";
-        $results = $wpdb->get_col( $wpdb->prepare( $sql, $parent_labels ) );
-        return array_unique( array_map( 'trim', (array) $results ) );
-    }
-
     /**
-     * NEW: Get expanded parent patterns (self + direct children + sub-sales via table).
-     * Supports multi-level by including child_patterns as potential parents too.
+     * Get current user's parent patterns with multi-level support.
+     * Returns self + direct children + grandchildren (sub-sales) etc.
      */
     private function get_current_parent_patterns() {
         $current_user_id = get_current_user_id();
@@ -505,37 +498,40 @@ class ULS_Members_Plugin {
 
         $tags = $this->get_user_wpf_tag_labels( $current_user_id );
 
-        // Fallback to raw meta keys you specified
-        if ( empty( $tags ) ) {
+        // Fallback to raw meta
+        if ( empty( $tags ) || ! is_array( $tags ) ) {
             $tags = get_user_meta( $current_user_id, 'zoho_tags', true );
             if ( empty( $tags ) || ! is_array( $tags ) ) {
                 $tags = get_user_meta( $current_user_id, 'multi_tags', true );
             }
-            if ( is_array( $tags ) ) {
-                $tags = array_filter( $tags );
-            } else {
-                $tags = [];
-            }
+        }
+        if ( ! is_array( $tags ) ) {
+            $tags = [];
         }
 
         if ( empty( $tags ) ) {
             return [];
         }
 
-        global $wpdb;
-        $patterns = $tags; // include self
+        // Start with direct
+        $patterns = $this->get_child_patterns_for_parents( $tags );
+        $patterns = array_merge( $patterns, $tags ); // include self
 
-        // Get direct children
-        $childs = $this->get_child_patterns_for_parents( $tags );
-        $patterns = array_merge( $patterns, $childs );
-
-        // NEW: Treat those children as potential parents for sub-level (multi-level support)
-        if ( ! empty( $childs ) ) {
-            $sub_childs = $this->get_child_patterns_for_parents( $childs );
-            $patterns = array_merge( $patterns, $sub_childs );
-        }
+        // Add one extra level for sub-sales (Susan under John)
+        $sub_patterns = $this->get_child_patterns_for_parents( $patterns );
+        $patterns = array_merge( $patterns, $sub_patterns );
 
         return array_unique( array_filter( array_map( 'trim', $patterns ) ) );
+    }
+
+    /** Fetch child patterns for any matched parent_tag. */
+    private function get_child_patterns_for_parents( array $parent_labels ) {
+        global $wpdb;
+        if ( empty( $parent_labels ) ) { return []; }
+        $placeholders = implode( ',', array_fill( 0, count( $parent_labels ), '%s' ) );
+        $sql = "SELECT child_pattern FROM `{$this->table_rel}` WHERE parent_tag IN ($placeholders)";
+        $results = $wpdb->get_col( $wpdb->prepare( $sql, $parent_labels ) );
+        return array_unique( array_map( 'trim', (array) $results ) );
     }
 
     /** Convert wildcard (e.g., ABC*, A?C*) to regex. */
