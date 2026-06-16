@@ -684,7 +684,7 @@ bm_log( print_r( [
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
-    
+
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
 
@@ -777,6 +777,21 @@ bm_log( print_r( [
         }
         return $matched;
     }
+
+    /**
+     * Convert wildcard pattern (e.g. SA200*) to regex for matching.
+     */
+    private function wildcard_to_regex( $pattern ) {
+        if ( empty( $pattern ) ) {
+            return '/^$/';
+        }
+        // Escape and convert * to .*
+        $regex = preg_quote( $pattern, '/' );
+        $regex = str_replace( '\*', '.*', $regex );
+        return '/^' . $regex . '$/i';  // case-insensitive full match
+    }
+
+
     /** Helper: normalize any cell into a UNIX timestamp (supports "count|timestamp", single values, and CRLF/newline). */
     private function parse_visit_ts( $val ) {
         if ( $val === null ) return null;
