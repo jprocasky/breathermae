@@ -634,6 +634,7 @@ bm_log( print_r( [
         $current_user_id = get_current_user_id();
         $user_tags = $this->get_user_wpf_tag_labels( $current_user_id );
 
+        // Fallback raw tags
         if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
             $user_tags = get_user_meta( $current_user_id, 'zoho_tags', true );
             if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
@@ -641,6 +642,8 @@ bm_log( print_r( [
             }
         }
         if ( ! is_array( $user_tags ) ) $user_tags = [];
+
+        bm_log( 'RAW USER TAGS for ' . $current_user_id . ': ' . print_r( $user_tags, true ) );
 
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
 
@@ -653,9 +656,8 @@ bm_log( print_r( [
                 $pattern = trim( $pattern );
                 if ( empty( $pattern ) ) continue;
 
-                // Broad SA### / SA* handling
                 if ( stripos( $pattern, 'SA' ) === 0 ) {
-                    if ( preg_match( '/^SA[0-9]/i', $tag ) ) {   // Any SA followed by number
+                    if ( preg_match( '/^SA[0-9]/i', $tag ) ) {
                         $matching_user_parents[] = $tag;
                         break;
                     }
@@ -666,13 +668,12 @@ bm_log( print_r( [
             }
         }
 
-        bm_log( 'Matching parents found: ' . print_r( $matching_user_parents, true ) );  // extra debug
+        bm_log( 'Matching parents found: ' . print_r( $matching_user_parents, true ) );
 
         if ( empty( $matching_user_parents ) ) {
             return [];
         }
 
-        // Hierarchy build
         $all_patterns = $matching_user_parents;
         $direct = $this->get_child_patterns_for_parents( $matching_user_parents );
         $all_patterns = array_merge( $all_patterns, $direct );
