@@ -283,6 +283,7 @@ class ULS_Members_Plugin {
     /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
     /** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
     /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name,all_tags" ...] */
+    
     public function shortcode_members_table( $atts ) {
 
         $atts = shortcode_atts(
@@ -293,6 +294,7 @@ class ULS_Members_Plugin {
                 'patterns'         => '',
                 'exclude_patterns' => '',
                 'export'           => 'no',
+                'parent_pattern' => '',
             ],
             $atts,
             'uls_members_table'
@@ -345,30 +347,32 @@ class ULS_Members_Plugin {
         }
 
         // Patterns
-        $override_patterns = array_filter(
-            array_map( 'trim', explode( ',', (string) $atts['patterns'] ) )
-        );
+        $override_patterns = array_filter( array_map( 'trim', explode( ',', (string) $atts['patterns'] ) ) );
+        $exclude_patterns  = array_filter( array_map( 'trim', explode( ',', (string) $atts['exclude_patterns'] ) ) );
 
-        $exclude_patterns = array_filter(
-            array_map( 'trim', explode( ',', (string) $atts['exclude_patterns'] ) )
-        );
+        $parent_pattern_input = isset( $atts['parent_pattern'] ) ? trim( (string) $atts['parent_pattern'] ) : '';
 
         $current_user_id = get_current_user_id();
 
         if ( ! empty( $override_patterns ) ) {
             $child_patterns = $override_patterns;
+        } elseif ( ! empty( $parent_pattern_input ) ) {
+            // NEW: Flexible per-page hierarchy via parent_pattern
+            $child_patterns = $this->get_patterns_for_parent_input( $parent_pattern_input );
         } else {
+            // Legacy single-level
             $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
+            $child_patterns     = $this->get_child_patterns_for_parents( $current_tag_labels );
+        }
+bm_log( print_r( [ 
+    'user' => $current_user_id, 
+    'parent_input' => $parent_pattern_input, 
+    'matching_parents' => $matching_user_parents ?? [], 
+    'final_patterns' => $child_patterns 
+], true ) );
 
-            if ( empty( $current_tag_labels ) ) {
-                return '<div style="text-align: center; color: red; font-size: 0.5em;">No Tags found for your account.</div>';
-            }
-
-            $child_patterns = $this->get_child_patterns_for_parents( $current_tag_labels );
-
-            if ( empty( $child_patterns ) ) {
-                return '<div style="text-align: center; color: red; font-size: 0.5em;">No related members found for your tags.</div>';
-            }
+        if ( empty( $child_patterns ) ) {
+            return '<div style="text-align: center; color: red; font-size: 0.5em;">No matching members found for the specified parent pattern.</div>';
         }
 
         // Find users - now safe
@@ -534,37 +538,151 @@ class ULS_Members_Plugin {
         return array_unique( array_map( 'trim', (array) $results ) );
     }
 
-    /** Convert wildcard (e.g., ABC*, A?C*) to regex. */
-    private function wildcard_to_regex( $pattern ) {
-        $escaped = preg_quote( $pattern, '/' );
-        $escaped = str_replace( ['\*', '\?'], ['.*', '.'], $escaped );
-        return '/^' . $escaped . '$/i';
+    /**
+     * Get patterns for a specific parent_pattern input (multi-level support).
+     * If empty, falls back to single-level current user behavior.
+     */
+    private function get_patterns_for_parent( $parent_pattern_input = '' ) {
+        if ( empty( $parent_pattern_input ) ) {
+            // Legacy single-level behavior
+            $current_user_id = get_current_user_id();
+            $tags = $this->get_user_wpf_tag_labels( $current_user_id );
+            return $this->get_child_patterns_for_parents( $tags );
+        }
+
+        // Normalize input (support comma-separated or single)
+        $parent_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
+
+        global $wpdb;
+        $all_patterns = $parent_patterns; // include the parent itself
+
+        // Get direct children from relation table
+        $direct_children = $this->get_child_patterns_for_parents( $parent_patterns );
+        $all_patterns = array_merge( $all_patterns, $direct_children );
+
+        // Add one extra level for sub-sales / multi-level
+        if ( ! empty( $direct_children ) ) {
+            $sub_children = $this->get_child_patterns_for_parents( $direct_children );
+            $all_patterns = array_merge( $all_patterns, $sub_children );
+        }
+
+        return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
     /**
-     * Resolve a color from the BSI lookup table for a percent value.
-     * Uses form_id = 0 (overall).
+     * Auto-detect sales hierarchy for the current logged-in user (multi-level).
+     * Used on shared sales portal page.
      */
-    private function get_bsi_color_for_percent( float $percent ): string {
-        if ( ! is_numeric( $percent ) ) {
-            return '';
+    private function get_sales_hierarchy_patterns() {
+        $current_user_id = get_current_user_id();
+        if ( ! $current_user_id ) {
+            return [];
         }
 
-        global $wpdb;
-        $table = 'uls_bm_bsi_form_lookup';
+        // Get all tags (prefer WP Fusion helper)
+        $tags = $this->get_user_wpf_tag_labels( $current_user_id );
 
-        $sql = "
-            SELECT form_color
-            FROM {$table}
-            WHERE form_id = 0
-            AND %f >= low_value
-            AND %f < high_value
-            LIMIT 1
-        ";
+        if ( empty( $tags ) || ! is_array( $tags ) ) {
+            $tags = get_user_meta( $current_user_id, 'zoho_tags', true );
+            if ( empty( $tags ) || ! is_array( $tags ) ) {
+                $tags = get_user_meta( $current_user_id, 'multi_tags', true );
+            }
+        }
+        if ( ! is_array( $tags ) ) {
+            $tags = [];
+        }
 
-        return (string) $wpdb->get_var(
-            $wpdb->prepare( $sql, $percent, $percent )
-        );
+        // Filter to primary sales codes only (SA###)
+        $sales_codes = array_filter( $tags, function( $tag ) {
+            return preg_match( '/^SA\d+/i', trim( $tag ) );
+        });
+
+        if ( empty( $sales_codes ) ) {
+            return [];
+        }
+
+        // Build hierarchy
+        $all_patterns = $sales_codes;                    // include self
+
+        // Direct downline (SA200*)
+        $direct = $this->get_child_patterns_for_parents( $sales_codes );
+        $all_patterns = array_merge( $all_patterns, $direct );
+
+        // Sub-sales downline (Tom's SA160* when John is viewing)
+        if ( ! empty( $direct ) ) {
+            $sub = $this->get_child_patterns_for_parents( $direct );
+            $all_patterns = array_merge( $all_patterns, $sub );
+        }
+
+        return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
+    }
+
+    /**
+     * Get hierarchy patterns based on a shortcode parent_pattern (e.g. "SA###" or "SA200").
+     * Matches against current user's tags, then follows parent/child table.
+     */
+    /**
+    /**
+     * Get hierarchy patterns based on shortcode parent_pattern (e.g. "SA###").
+     */
+    private function get_patterns_for_parent_input( $parent_pattern_input ) {
+        if ( empty( $parent_pattern_input ) ) {
+            // Legacy fallback
+            $tags = $this->get_user_wpf_tag_labels( get_current_user_id() );
+            return $this->get_child_patterns_for_parents( $tags );
+        }
+
+        $current_user_id = get_current_user_id();
+        $user_tags = $this->get_user_wpf_tag_labels( $current_user_id );
+
+        if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
+            $user_tags = get_user_meta( $current_user_id, 'zoho_tags', true );
+            if ( empty( $user_tags ) || ! is_array( $user_tags ) ) {
+                $user_tags = get_user_meta( $current_user_id, 'multi_tags', true );
+            }
+        }
+        if ( ! is_array( $user_tags ) ) {
+            $user_tags = [];
+        }
+
+        $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
+
+        // Find matching user sales codes
+        $matching_user_parents = [];
+        foreach ( $user_tags as $tag ) {
+            $tag = trim( $tag );
+            foreach ( $input_patterns as $pattern ) {
+                $pattern = trim( $pattern );
+
+                // Handle "SA###", "SA*", or exact match
+                if ( stripos( $pattern, 'SA' ) === 0 ) {
+                    if ( preg_match( '/^SA\d+/i', $tag ) ) {
+                        $matching_user_parents[] = $tag;
+                        break;
+                    }
+                } elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
+                    $matching_user_parents[] = $tag;
+                    break;
+                }
+            }
+        }
+
+        if ( empty( $matching_user_parents ) ) {
+            return [];
+        }
+
+        // Build multi-level hierarchy
+        $all_patterns = $matching_user_parents;
+
+        $direct = $this->get_child_patterns_for_parents( $matching_user_parents );
+        $all_patterns = array_merge( $all_patterns, $direct );
+
+        if ( ! empty( $direct ) ) {
+            $sub = $this->get_child_patterns_for_parents( $direct );
+            $all_patterns = array_merge( $all_patterns, $sub );
+        }
+
+        return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
     private function get_bsi_colors_for_row( array $row ): array {
