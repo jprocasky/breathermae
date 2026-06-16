@@ -364,17 +364,15 @@ class ULS_Members_Plugin {
             $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
             $child_patterns     = $this->get_child_patterns_for_parents( $current_tag_labels );
         }
-bm_log( print_r( [ 
-    'user' => $current_user_id, 
-    'parent_input' => $parent_pattern_input, 
-    'matching_parents' => $matching_user_parents ?? [], 
-    'final_patterns' => $child_patterns 
-], true ) );
 
         if ( empty( $child_patterns ) ) {
             return '<div style="text-align: center; color: red; font-size: 0.5em;">No matching members found for the specified parent pattern.</div>';
         }
-
+bm_log( print_r( [ 
+    'user_id'       => $current_user_id, 
+    'parent_input'  => $parent_pattern_input, 
+    'child_patterns'=> $child_patterns 
+], true ) );
         // Find users - now safe
         $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns ?? [] );
 
@@ -647,20 +645,21 @@ bm_log( print_r( [
 
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
 
-        // Find matching user sales codes
         $matching_user_parents = [];
         foreach ( $user_tags as $tag ) {
             $tag = trim( $tag );
             foreach ( $input_patterns as $pattern ) {
                 $pattern = trim( $pattern );
 
-                // Handle "SA###", "SA*", or exact match
+                // Handle SA### or SA* 
                 if ( stripos( $pattern, 'SA' ) === 0 ) {
                     if ( preg_match( '/^SA\d+/i', $tag ) ) {
                         $matching_user_parents[] = $tag;
                         break;
                     }
-                } elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
+                } 
+                // General case
+                elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
                     $matching_user_parents[] = $tag;
                     break;
                 }
@@ -671,7 +670,7 @@ bm_log( print_r( [
             return [];
         }
 
-        // Build multi-level hierarchy
+        // Build hierarchy
         $all_patterns = $matching_user_parents;
 
         $direct = $this->get_child_patterns_for_parents( $matching_user_parents );
@@ -685,6 +684,7 @@ bm_log( print_r( [
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
 
+    
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
 
