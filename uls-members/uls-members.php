@@ -627,7 +627,6 @@ bm_log( print_r( [
      */
     private function get_patterns_for_parent_input( $parent_pattern_input ) {
         if ( empty( $parent_pattern_input ) ) {
-            // Legacy fallback
             $tags = $this->get_user_wpf_tag_labels( get_current_user_id() );
             return $this->get_child_patterns_for_parents( $tags );
         }
@@ -641,40 +640,40 @@ bm_log( print_r( [
                 $user_tags = get_user_meta( $current_user_id, 'multi_tags', true );
             }
         }
-        if ( ! is_array( $user_tags ) ) {
-            $user_tags = [];
-        }
+        if ( ! is_array( $user_tags ) ) $user_tags = [];
 
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
 
         $matching_user_parents = [];
         foreach ( $user_tags as $tag ) {
             $tag = trim( $tag );
+            if ( empty( $tag ) ) continue;
+
             foreach ( $input_patterns as $pattern ) {
                 $pattern = trim( $pattern );
+                if ( empty( $pattern ) ) continue;
 
-                // Handle SA### or SA* 
+                // Broad SA### / SA* handling
                 if ( stripos( $pattern, 'SA' ) === 0 ) {
-                    if ( preg_match( '/^SA\d+/i', $tag ) ) {
+                    if ( preg_match( '/^SA[0-9]/i', $tag ) ) {   // Any SA followed by number
                         $matching_user_parents[] = $tag;
                         break;
                     }
-                } 
-                // General case
-                elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
+                } elseif ( $tag === $pattern || fnmatch( $pattern, $tag, FNM_CASEFOLD ) ) {
                     $matching_user_parents[] = $tag;
                     break;
                 }
             }
         }
 
+        bm_log( 'Matching parents found: ' . print_r( $matching_user_parents, true ) );  // extra debug
+
         if ( empty( $matching_user_parents ) ) {
             return [];
         }
 
-        // Build hierarchy
+        // Hierarchy build
         $all_patterns = $matching_user_parents;
-
         $direct = $this->get_child_patterns_for_parents( $matching_user_parents );
         $all_patterns = array_merge( $all_patterns, $direct );
 
@@ -685,7 +684,6 @@ bm_log( print_r( [
 
         return array_unique( array_filter( array_map( 'trim', $all_patterns ) ) );
     }
-
 
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
