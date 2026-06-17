@@ -376,14 +376,37 @@ bm_log( print_r( [
     'child_patterns'=> $child_patterns 
 ], true ) );
         // Find users - now safe
+        // First level (existing logic - should already work)
         $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns ?? [] );
 
         if ( empty( $matched_users ) ) {
             return '<p>No matching members were found.</p>';
         }
 
-        // Attach visits
-        $rows = $this->attach_visits_from_view( $matched_users );
+        // NEW: Second level - sub-sales drill-down
+        $additional_users = [];
+        $seen_ids = array_column( $matched_users, 'ID' ); // avoid duplicates
+
+        foreach ( $matched_users as $first_level_user ) {
+            $sub_child_patterns = $this->get_child_patterns_for_single_user( $first_level_user['ID'], $parent_pattern_input );
+
+            if ( ! empty( $sub_child_patterns ) ) {
+                $sub_users = $this->find_users_matching_child_patterns( $sub_child_patterns, $exclude_patterns ?? [] );
+
+                foreach ( $sub_users as $sub ) {
+                    if ( ! in_array( $sub['ID'], $seen_ids ) ) {
+                        $additional_users[] = $sub;
+                        $seen_ids[] = $sub['ID'];
+                    }
+                }
+            }
+        }
+
+        // Combine first + second level
+        $all_matched = array_merge( $matched_users, $additional_users );
+
+        // Attach visits, rewards, etc. to the combined set
+        $rows = $this->attach_visits_from_view( $all_matched );
 
         // Attach rewards + names + ALL tags
         foreach ( $rows as &$r ) {
@@ -618,6 +641,37 @@ bm_log( print_r( [
     }
 
     /**
+     * Get child patterns for a specific user (for second-level drill-down).
+     */
+    private function get_child_patterns_for_single_user( $user_id, $parent_pattern_input ) {
+        $user_tags = $this->get_user_wpf_tag_labels( $user_id );
+        if ( empty( $user_tags ) ) {
+            $user_tags = get_user_meta( $user_id, 'zoho_tags', true ) ?: get_user_meta( $user_id, 'multi_tags', true ) ?: [];
+        }
+        if ( ! is_array( $user_tags ) ) $user_tags = [];
+
+        // Only consider tags that match the parent_pattern (e.g. SA###)
+        $matching = [];
+        $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
+
+        foreach ( $user_tags as $tag ) {
+            $tag = trim( $tag );
+            foreach ( $input_patterns as $p ) {
+                if ( stripos( $p, 'SA' ) === 0 && preg_match( '/^SA[0-9]/i', $tag ) ) {
+                    $matching[] = $tag;
+                    break;
+                }
+            }
+        }
+
+        if ( empty( $matching ) ) {
+            return [];
+        }
+
+        return $this->get_child_patterns_for_parents( $matching );
+    }
+
+    /**
      * Get hierarchy patterns based on a shortcode parent_pattern (e.g. "SA###" or "SA200").
      * Matches against current user's tags, then follows parent/child table.
      */
@@ -635,7 +689,7 @@ bm_log( print_r( [
         bm_log( '=== START get_patterns_for_parent_input for user ' . $current_user_id . ' with parent_pattern=' . $parent_pattern_input . ' ===' );
 
         global $wpdb;
-        $table = $wpdb->prefix . $this->table_rel;
+        $table = $this->table_rel;
 
         // Normalize input
         $input_patterns = array_filter( array_map( 'trim', explode( ',', (string) $parent_pattern_input ) ) );
