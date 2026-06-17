@@ -378,17 +378,25 @@ class ULS_Members_Plugin {
         }
 
         // SECOND LEVEL - Sub-sales drill-down
-        $additional_users = [];
-        $seen_ids = wp_list_pluck( $matched_users, 'ID' );
+        
+        $all_matched = [];
+        $seen_ids = [];
 
         foreach ( $matched_users as $first_level ) {
+            $all_matched[] = $first_level;
+            $seen_ids[] = $first_level['ID'];
+
+            // Get sub-users for this specific parent
             $sub_patterns = $this->get_child_patterns_for_single_user( $first_level['ID'], $parent_pattern_input );
 
             if ( ! empty( $sub_patterns ) ) {
                 $sub_users = $this->find_users_matching_child_patterns( $sub_patterns, $exclude_patterns ?? [] );
+
                 foreach ( $sub_users as $sub ) {
                     if ( ! in_array( $sub['ID'], $seen_ids ) ) {
-                        $additional_users[] = $sub;
+                        $sub['hierarchy_level'] = 2;
+                        $sub['parent_id'] = $first_level['ID'];
+                        $all_matched[] = $sub;
                         $seen_ids[] = $sub['ID'];
                     }
                 }
@@ -442,19 +450,23 @@ class ULS_Members_Plugin {
                 </thead>
 
                 <tbody class="uls-members__tbody">
-                    <?php foreach ( $rows as $r ): ?>
-                        <tr class="uls-members__row <?php echo $r['hierarchy_level'] == 2 ? 'uls-sub-level' : ''; ?>" 
+                    <?php foreach ( $rows as $r ): 
+                        $level = (int) ($r['hierarchy_level'] ?? 1);
+                        $is_sub = ($level === 2);
+                    ?>
+                        <tr class="uls-members__row <?php echo $is_sub ? 'uls-sub-level' : 'uls-parent-level'; ?>" 
                             data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>"
-                            data-level="<?php echo esc_attr( $r['hierarchy_level'] ); ?>">
+                            data-level="<?php echo esc_attr( $level ); ?>"
+                            data-parent-id="<?php echo esc_attr( $r['parent_id'] ?? 0 ); ?>">
                             
-                            <!-- NEW Hierarchy Indicator Column (add to $fields if you want it visible) -->
-                            <?php if ( in_array( 'hierarchy', $fields ) || true ): // always show for now ?>
-                                <td class="uls-hierarchy-col">
-                                    <?php if ( $r['hierarchy_level'] == 2 ): ?>
-                                        <span style="color:#FD5A38; margin-right:8px;">↳</span>
-                                    <?php endif; ?>
-                                </td>
-                            <?php endif; ?>
+                            <!-- Hierarchy Control Column -->
+                            <td class="uls-hierarchy-col" style="width: 40px; text-align: center;">
+                                <?php if ( ! $is_sub ): ?>
+                                    <span class="toggle-downline" style="cursor: pointer; color: #FD5A38; font-size: 1.1em; font-weight: bold;">▼</span>
+                                <?php else: ?>
+                                    <span style="color: #FD5A38; margin-left: 12px;">↳</span>
+                                <?php endif; ?>
+                            </td>
 
                             <?php foreach ( $fields as $f ): ?>
                                 <?php

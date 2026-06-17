@@ -534,30 +534,26 @@ function updateScopedResultsLink(memberId) {
 
 
     // ==================== HIERARCHY / DRILL-DOWN STYLING ====================
+    // Hierarchy / Collapsible Support
     function initHierarchy() {
-        // Style second-level rows
-        $('.uls-sub-level').each(function() {
-            $(this).css({
-                'background-color': '#f8f9fa',
-                'font-style': 'italic',
-                'padding-left': '30px'   // visual indent
-            });
-        });
-
-        // Add small indent icon in first column (optional)
-        $('.uls-sub-level').find('td:first-child').prepend('<span style="color:#FD5A38; margin-right:8px;">↳</span>');
-
-        // Click on first-level row to toggle its immediate sub-level rows
-        $('.uls-members__row[data-level="1"]').off('click.hierarchy').on('click.hierarchy', function(e) {
-            if ($(e.target).is('a, button, input')) return; // don't trigger on links etc.
+        $('.uls-parent-level').off('click.hierarchy').on('click.hierarchy', function(e) {
+            if ($(e.target).is('a, button, input, .uls-hierarchy-col *')) return;
 
             var $row = $(this);
-            // Find following rows until next level-1 row
-            $row.nextUntil('.uls-members__row[data-level="1"]').toggle();
+            var parentId = $row.data('parent-id') || $row.attr('id'); // fallback
+
+            // Toggle immediate following sub-rows
+            $row.nextUntil('.uls-parent-level').filter('.uls-sub-level').toggle();
         });
 
-        console.info('[uls-members] Hierarchy styling initialized');
+        // Initial state: hide sub-levels
+        $('.uls-sub-level').hide();
+
+        console.info('[uls-members] Hierarchy initialized - click parent rows to expand');
     }
+
+    // Inside bindAll() function, add at the end:
+    initHierarchy();
 
     // Call it after pager/search init
     function bindAll() {
