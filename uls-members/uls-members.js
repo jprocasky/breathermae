@@ -532,4 +532,48 @@ function updateScopedResultsLink(memberId) {
 
   $(bindAll);
 
+
+    // ==================== HIERARCHY / DRILL-DOWN STYLING ====================
+    function initHierarchy() {
+        // Style second-level rows
+        $('.uls-sub-level').each(function() {
+            $(this).css({
+                'background-color': '#f8f9fa',
+                'font-style': 'italic',
+                'padding-left': '30px'   // visual indent
+            });
+        });
+
+        // Add small indent icon in first column (optional)
+        $('.uls-sub-level').find('td:first-child').prepend('<span style="color:#FD5A38; margin-right:8px;">↳</span>');
+
+        // Click on first-level row to toggle its immediate sub-level rows
+        $('.uls-members__row[data-level="1"]').off('click.hierarchy').on('click.hierarchy', function(e) {
+            if ($(e.target).is('a, button, input')) return; // don't trigger on links etc.
+
+            var $row = $(this);
+            // Find following rows until next level-1 row
+            $row.nextUntil('.uls-members__row[data-level="1"]').toggle();
+        });
+
+        console.info('[uls-members] Hierarchy styling initialized');
+    }
+
+    // Call it after pager/search init
+    function bindAll() {
+        // ... your existing bindAll code ...
+
+        initEmptyMemberFields();
+        $(document).off('click.uls', SEL.rows).on('click.uls', SEL.rows, onRowClick);
+
+        $('.uls-members').each(function(){
+            initPager($(this));
+        });
+
+        initTagEditor();
+
+        // NEW: Hierarchy support
+        initHierarchy();
+    }
+
 })(jQuery, window.ULS_MEMBERS || {});

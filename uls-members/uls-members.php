@@ -405,6 +405,9 @@ class ULS_Members_Plugin {
             $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
             $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
             $r['all_tags']       = $this->get_user_wpf_tag_labels( $r['ID'] );
+
+            $r['hierarchy_level'] = in_array( $r['ID'], wp_list_pluck( $additional_users, 'ID' ) ) ? 2 : 1;
+            $r['parent_id'] = 0; // can enhance later with actual parent mapping
         }
         unset( $r );
 
@@ -440,33 +443,43 @@ class ULS_Members_Plugin {
 
                 <tbody class="uls-members__tbody">
                     <?php foreach ( $rows as $r ): ?>
-                        <tr class="uls-members__row" data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>">
-                        <?php foreach ( $fields as $f ): ?>
+                        <tr class="uls-members__row <?php echo $r['hierarchy_level'] == 2 ? 'uls-sub-level' : ''; ?>" 
+                            data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>"
+                            data-level="<?php echo esc_attr( $r['hierarchy_level'] ); ?>">
+                            
+                            <!-- NEW Hierarchy Indicator Column (add to $fields if you want it visible) -->
+                            <?php if ( in_array( 'hierarchy', $fields ) || true ): // always show for now ?>
+                                <td class="uls-hierarchy-col">
+                                    <?php if ( $r['hierarchy_level'] == 2 ): ?>
+                                        <span style="color:#FD5A38; margin-right:8px;">↳</span>
+                                    <?php endif; ?>
+                                </td>
+                            <?php endif; ?>
 
-                            <?php
-                            $key = ($f === 'email') ? 'user_email' : $f;
-                            $td_attr = '';
+                            <?php foreach ( $fields as $f ): ?>
+                                <?php
+                                $key = ($f === 'email') ? 'user_email' : $f;
+                                $td_attr = '';
 
-                            if ( $f === 'all_tags' ) {
-                                $tags = (array) ($r['all_tags'] ?? []);
-                                sort( $tags, SORT_STRING | SORT_FLAG_CASE );
-                                $cell = implode( ', ', $tags );
-                                $td_attr = ' data-col="all_tags" data-user-id="' . esc_attr( $r['ID'] ) . '"';
-                            } elseif ( $f === 'rewards_points' ) {
-                                $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
-                            } else {
-                                $cell = $r[$key] ?? '';
-                                if ( $f === 'email' ) {
-                                    $td_attr = ' data-col="email"';
+                                if ( $f === 'all_tags' ) {
+                                    $tags = (array) ($r['all_tags'] ?? []);
+                                    sort( $tags, SORT_STRING | SORT_FLAG_CASE );
+                                    $cell = implode( ', ', $tags );
+                                    $td_attr = ' data-col="all_tags" data-user-id="' . esc_attr( $r['ID'] ) . '"';
+                                } elseif ( $f === 'rewards_points' ) {
+                                    $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
+                                } else {
+                                    $cell = $r[$key] ?? '';
+                                    if ( $f === 'email' ) {
+                                        $td_attr = ' data-col="email"';
+                                    }
                                 }
-                            }
-                            ?>
+                                ?>
 
-                            <td<?php echo $td_attr; ?>>
-                                <?php echo esc_html( $cell ); ?>
-                            </td>
-
-                        <?php endforeach; ?>
+                                <td<?php echo $td_attr; ?>>
+                                    <?php echo esc_html( $cell ); ?>
+                                </td>
+                            <?php endforeach; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
