@@ -519,7 +519,7 @@ function updateScopedResultsLink(memberId) {
 }
 
   function bindAll(){
-      initEmptyMemberFields(); // ✅ NEW
+      initEmptyMemberFields();
 
       $(document).off('click.uls', SEL.rows).on('click.uls', SEL.rows, onRowClick);
 
@@ -528,20 +528,22 @@ function updateScopedResultsLink(memberId) {
       });
       
       initTagEditor();
+
+      // Hierarchy / Drill-down support
+      initHierarchy();
   }
 
   $(bindAll);
 
 
-    // ==================== HIERARCHY / DRILL-DOWN STYLING ====================
-    // Hierarchy / Collapsible Support
+    // ==================== HIERARCHY / DRILL-DOWN ====================
     function initHierarchy() {
-        // Hide all sub-level rows initially
+        // Hide all sub-level rows by default
         $('.uls-sub-level').hide();
 
-        // Only attach click to parents that have the toggle icon
-        $(document).off('click.hierarchy', '.uls-parent-level .toggle-downline')
-                   .on('click.hierarchy', '.uls-parent-level .toggle-downline', function(e) {
+        // Toggle when clicking the ▼ icon
+        $(document).off('click.hierarchy', '.toggle-downline')
+                   .on('click.hierarchy', '.toggle-downline', function(e) {
             e.stopImmediatePropagation();
             var $row = $(this).closest('tr');
             var $subs = $row.nextUntil('.uls-parent-level').filter('.uls-sub-level');
@@ -553,23 +555,6 @@ function updateScopedResultsLink(memberId) {
         });
 
         console.info('[uls-members] Hierarchy toggle initialized');
-    }
-
-    // Call it after pager/search init
-    function bindAll() {
-        // ... your existing bindAll code ...
-
-        initEmptyMemberFields();
-        $(document).off('click.uls', SEL.rows).on('click.uls', SEL.rows, onRowClick);
-
-        $('.uls-members').each(function(){
-            initPager($(this));
-        });
-
-        initTagEditor();
-
-        // NEW: Hierarchy support
-        initHierarchy();
     }
 
 })(jQuery, window.ULS_MEMBERS || {});

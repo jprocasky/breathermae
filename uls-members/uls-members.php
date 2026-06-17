@@ -332,6 +332,9 @@ class ULS_Members_Plugin {
         ];
 
         $headers = [];
+        
+        // Always add empty header for the hierarchy icon column
+        $headers[] = '';
         if ( (string) $atts['headers'] !== '' ) {
             $custom = array_map( 'trim', explode( ',', (string) $atts['headers'] ) );
             foreach ( $fields as $i => $f ) {
@@ -402,17 +405,32 @@ class ULS_Members_Plugin {
         // Attach visits + extra data
         $rows = $this->attach_visits_from_view( $all_matched );
 
-        foreach ( $rows as &$r ) {
+        // Re-apply hierarchy data (it gets lost in attach_visits_from_view)
+        $hierarchy_data = [];
+        foreach ($all_matched as $item) {
+            if (isset($item['ID'])) {
+                $hierarchy_data[$item['ID']] = [
+                    'hierarchy_level' => $item['hierarchy_level'] ?? 1,
+                    'parent_id'       => $item['parent_id']       ?? 0,
+                ];
+            }
+        }
+
+        foreach ($rows as &$r) {
             $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
             $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
             $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
             $r['all_tags']       = $this->get_user_wpf_tag_labels( $r['ID'] );
-            
-            if ( ! isset( $r['hierarchy_level'] ) ) {
+
+            // Restore hierarchy info
+            if (isset($hierarchy_data[$r['ID']])) {
+                $r['hierarchy_level'] = $hierarchy_data[$r['ID']]['hierarchy_level'];
+                $r['parent_id']       = $hierarchy_data[$r['ID']]['parent_id'];
+            } else {
                 $r['hierarchy_level'] = 1;
             }
         }
-        unset( $r );
+        unset($r);
 
         // Mark which first-level parents actually have children (for the ▼ icon)
         $has_child_map = [];
@@ -426,7 +444,11 @@ class ULS_Members_Plugin {
         foreach ($rows as &$r) {
             $r['has_children'] = isset($has_child_map[$r['ID']]);
         }
-        unset($r);        
+        unset($r);
+
+        bm_log( 'Has child map (after fix): ' . print_r( $has_child_map, true ) );
+
+        // === RENDER STARTS HERE ===
 
         // === RENDER STARTS HERE ===
         $per_page = intval( $atts['per_page'] );
@@ -474,9 +496,10 @@ class ULS_Members_Plugin {
                             <!-- Hierarchy Column -->
                             <td class="uls-hierarchy-col" style="width: 40px; text-align: center; vertical-align: middle;">
                                 <?php if ( !$is_sub && $has_children ): ?>
-                                    <span class="toggle-downline" style="cursor: pointer; color: #FD5A38; font-size: 1.3em; font-weight: bold;">▼</span>
+                                    <span class="toggle-downline" 
+                                          style="cursor: pointer; color: #FD5A38; font-size: 1.4em; font-weight: bold; display: inline-block; width: 20px;">▼</span>
                                 <?php elseif ( $is_sub ): ?>
-                                    <span style="color: #FD5A38; margin-left: 18px;">↳</span>
+                                    <span style="color: #FD5A38; margin-left: 18px; font-size: 1.2em;">↳</span>
                                 <?php endif; ?>
                             </td>
 
@@ -500,14 +523,14 @@ class ULS_Members_Plugin {
                                 }
                                 ?>
 
-                                <td<?php echo $td_attr; ?>>
+                                <td<?php echo $td_attr; ?> style="<?php echo $is_sub ? 'background-color:#f8f9fa; font-style:italic;' : ''; ?>">
                                     <?php echo esc_html( $cell ); ?>
                                 </td>
                             <?php endforeach; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-                
+
                 
             </table>
 
@@ -765,7 +788,31 @@ class ULS_Members_Plugin {
     }
 
 
+    /**
+     * Resolve a color from the BSI lookup table for a percent value.
+     * Uses form_id = 0 (overall).
+     */
+    private function get_bsi_color_for_percent( float $percent ): string {
+        if ( ! is_numeric( $percent ) ) {
+            return '';
+        }
 
+        global $wpdb;
+        $table = 'uls_bm_bsi_form_lookup';
+
+        $sql = "
+            SELECT form_color
+            FROM {$table}
+            WHERE form_id = 0
+            AND %f >= low_value
+            AND %f < high_value
+            LIMIT 1
+        ";
+
+        return (string) $wpdb->get_var(
+            $wpdb->prepare( $sql, $percent, $percent )
+        );
+    }
     
     private function get_bsi_colors_for_row( array $row ): array {
         $colors = [];
