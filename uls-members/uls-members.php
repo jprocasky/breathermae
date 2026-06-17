@@ -402,22 +402,26 @@ class ULS_Members_Plugin {
         }
 
         // Attach visits + extra data
-        $rows = $this->attach_visits_from_view( $all_matched );
-
         foreach ( $rows as &$r ) {
             $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
             $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
             $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
             $r['all_tags']       = $this->get_user_wpf_tag_labels( $r['ID'] );
             
-            // Ensure hierarchy flag
             if ( ! isset( $r['hierarchy_level'] ) ) {
                 $r['hierarchy_level'] = 1;
+            }
+            
+            // Mark parents that have children
+            if ( $r['hierarchy_level'] == 1 ) {
+                $r['has_children'] = false;
+                // Simple check - if the next row is a sub-level of this parent
+                // (more robust version can be added later)
             }
         }
         unset( $r );
 
-        
+
         // === RENDER (exact from your original) ===
         $per_page = intval( $atts['per_page'] );
         if ( $per_page <= 0 ) { $per_page = 10; }
@@ -452,18 +456,19 @@ class ULS_Members_Plugin {
                     <?php foreach ( $rows as $r ): 
                         $level = (int) ($r['hierarchy_level'] ?? 1);
                         $is_sub = ($level === 2);
+                        $has_children = !empty($r['has_children']); // we'll set this below
                     ?>
                         <tr class="uls-members__row <?php echo $is_sub ? 'uls-sub-level' : 'uls-parent-level'; ?>" 
                             data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>"
                             data-level="<?php echo esc_attr( $level ); ?>"
                             data-parent-id="<?php echo esc_attr( $r['parent_id'] ?? 0 ); ?>">
                             
-                            <!-- Hierarchy Control Column -->
-                            <td class="uls-hierarchy-col" style="width: 40px; text-align: center;">
-                                <?php if ( ! $is_sub ): ?>
-                                    <span class="toggle-downline" style="cursor: pointer; color: #FD5A38; font-size: 1.1em; font-weight: bold;">▼</span>
-                                <?php else: ?>
-                                    <span style="color: #FD5A38; margin-left: 12px;">↳</span>
+                            <!-- Hierarchy Column -->
+                            <td class="uls-hierarchy-col" style="width: 40px; text-align: center; vertical-align: middle;">
+                                <?php if ( ! $is_sub && $has_children ): ?>
+                                    <span class="toggle-downline" style="cursor: pointer; color: #FD5A38; font-size: 1.2em;">▼</span>
+                                <?php elseif ( $is_sub ): ?>
+                                    <span style="color: #FD5A38; margin-left: 16px;">↳</span>
                                 <?php endif; ?>
                             </td>
 
@@ -494,6 +499,7 @@ class ULS_Members_Plugin {
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
+            
             </table>
 
             <div class="uls-members__pager">

@@ -536,24 +536,26 @@ function updateScopedResultsLink(memberId) {
     // ==================== HIERARCHY / DRILL-DOWN STYLING ====================
     // Hierarchy / Collapsible Support
     function initHierarchy() {
-        $('.uls-parent-level').off('click.hierarchy').on('click.hierarchy', function(e) {
-            if ($(e.target).is('a, button, input, .uls-hierarchy-col *')) return;
-
-            var $row = $(this);
-            var parentId = $row.data('parent-id') || $row.attr('id'); // fallback
-
-            // Toggle immediate following sub-rows
-            $row.nextUntil('.uls-parent-level').filter('.uls-sub-level').toggle();
-        });
-
-        // Initial state: hide sub-levels
+        // Hide all sub-levels initially
         $('.uls-sub-level').hide();
 
-        console.info('[uls-members] Hierarchy initialized - click parent rows to expand');
-    }
+        // Click handler only on parents that have children
+        $('.uls-parent-level .toggle-downline').off('click.hierarchy').on('click.hierarchy', function(e) {
+            e.stopImmediatePropagation();
+            var $row = $(this).closest('tr');
+            $row.nextUntil('.uls-parent-level').filter('.uls-sub-level').toggle();
+            
+            // Optional: rotate icon
+            var $icon = $(this);
+            if ($icon.text() === '▼') {
+                $icon.text('▲');
+            } else {
+                $icon.text('▼');
+            }
+        });
 
-    // Inside bindAll() function, add at the end:
-    initHierarchy();
+        console.info('[uls-members] Hierarchy initialized');
+    }
 
     // Call it after pager/search init
     function bindAll() {
