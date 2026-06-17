@@ -377,16 +377,14 @@ class ULS_Members_Plugin {
             return '<p>No matching members were found.</p>';
         }
 
-        // SECOND LEVEL - Sub-sales drill-down
-        
+        // SECOND LEVEL - Insert sub-users immediately after their parent
         $all_matched = [];
-        $seen_ids = [];
+        $seen_ids = wp_list_pluck( $matched_users, 'ID' );
 
         foreach ( $matched_users as $first_level ) {
             $all_matched[] = $first_level;
-            $seen_ids[] = $first_level['ID'];
 
-            // Get sub-users for this specific parent
+            // Get sub-users for this parent
             $sub_patterns = $this->get_child_patterns_for_single_user( $first_level['ID'], $parent_pattern_input );
 
             if ( ! empty( $sub_patterns ) ) {
@@ -395,15 +393,13 @@ class ULS_Members_Plugin {
                 foreach ( $sub_users as $sub ) {
                     if ( ! in_array( $sub['ID'], $seen_ids ) ) {
                         $sub['hierarchy_level'] = 2;
-                        $sub['parent_id'] = $first_level['ID'];
+                        $sub['parent_id']       = $first_level['ID'];
                         $all_matched[] = $sub;
                         $seen_ids[] = $sub['ID'];
                     }
                 }
             }
         }
-
-        $all_matched = array_merge( $matched_users, $additional_users );
 
         // Attach visits + extra data
         $rows = $this->attach_visits_from_view( $all_matched );
@@ -413,12 +409,15 @@ class ULS_Members_Plugin {
             $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
             $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
             $r['all_tags']       = $this->get_user_wpf_tag_labels( $r['ID'] );
-
-            $r['hierarchy_level'] = in_array( $r['ID'], wp_list_pluck( $additional_users, 'ID' ) ) ? 2 : 1;
-            $r['parent_id'] = 0; // can enhance later with actual parent mapping
+            
+            // Ensure hierarchy flag
+            if ( ! isset( $r['hierarchy_level'] ) ) {
+                $r['hierarchy_level'] = 1;
+            }
         }
         unset( $r );
 
+        
         // === RENDER (exact from your original) ===
         $per_page = intval( $atts['per_page'] );
         if ( $per_page <= 0 ) { $per_page = 10; }
