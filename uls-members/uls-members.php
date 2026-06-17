@@ -377,23 +377,21 @@ class ULS_Members_Plugin {
             return '<p>No matching members were found.</p>';
         }
 
-        // SECOND LEVEL - Insert sub-users immediately after their parent
+        // SECOND LEVEL - Insert directly after parent
         $all_matched = [];
         $seen_ids = wp_list_pluck( $matched_users, 'ID' );
 
         foreach ( $matched_users as $first_level ) {
             $all_matched[] = $first_level;
 
-            // Get sub-users for this parent
             $sub_patterns = $this->get_child_patterns_for_single_user( $first_level['ID'], $parent_pattern_input );
 
             if ( ! empty( $sub_patterns ) ) {
                 $sub_users = $this->find_users_matching_child_patterns( $sub_patterns, $exclude_patterns ?? [] );
-
                 foreach ( $sub_users as $sub ) {
                     if ( ! in_array( $sub['ID'], $seen_ids ) ) {
                         $sub['hierarchy_level'] = 2;
-                        $sub['parent_id']       = $first_level['ID'];
+                        $sub['parent_id'] = $first_level['ID'];
                         $all_matched[] = $sub;
                         $seen_ids[] = $sub['ID'];
                     }
@@ -402,6 +400,8 @@ class ULS_Members_Plugin {
         }
 
         // Attach visits + extra data
+        $rows = $this->attach_visits_from_view( $all_matched );
+
         foreach ( $rows as &$r ) {
             $r['rewards_points'] = (int) get_user_meta( $r['ID'], 'reward_points_balance', true );
             $r['first_name']     = (string) get_user_meta( $r['ID'], 'first_name', true );
@@ -411,22 +411,16 @@ class ULS_Members_Plugin {
             if ( ! isset( $r['hierarchy_level'] ) ) {
                 $r['hierarchy_level'] = 1;
             }
-            
-            // Mark parents that have children
-            if ( $r['hierarchy_level'] == 1 ) {
-                $r['has_children'] = false;
-                // Simple check - if the next row is a sub-level of this parent
-                // (more robust version can be added later)
-            }
         }
         unset( $r );
 
-
-        // === RENDER (exact from your original) ===
+        // === RENDER STARTS HERE ===
         $per_page = intval( $atts['per_page'] );
         if ( $per_page <= 0 ) { $per_page = 10; }
 
         ob_start(); ?>
+        
+        
         <div class="uls-members" data-per-page="<?php echo esc_attr( $per_page ); ?>">
 
             <?php if ( $allow_export ): ?>
