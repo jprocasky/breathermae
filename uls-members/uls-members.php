@@ -294,7 +294,7 @@ class ULS_Members_Plugin {
                 'patterns'         => '',
                 'exclude_patterns' => '',
                 'export'           => 'no',
-                'parent_pattern'   => '',   // NEW
+                'parent_pattern'   => '',
             ],
             $atts,
             'uls_members_table'
@@ -306,7 +306,7 @@ class ULS_Members_Plugin {
             return '<p>Please log in to view related members.</p>';
         }
 
-        // Allowed + default fields (unchanged)
+        // Allowed + default fields
         $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'all_tags', 'rewards_points' ];
         $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
@@ -319,7 +319,7 @@ class ULS_Members_Plugin {
             $fields = $default_fields;
         }
 
-        // Labels (unchanged)
+        // Labels
         $labels_map = [
             'email'        => 'Email',
             'display_name' => 'Name',
@@ -356,7 +356,6 @@ class ULS_Members_Plugin {
         } elseif ( ! empty( $parent_pattern_input ) ) {
             $child_patterns = $this->get_patterns_for_parent_input( $parent_pattern_input );
         } else {
-            // Legacy
             $current_tag_labels = $this->get_user_wpf_tag_labels( $current_user_id );
             $child_patterns     = $this->get_child_patterns_for_parents( $current_tag_labels );
         }
@@ -371,14 +370,14 @@ class ULS_Members_Plugin {
             return '<div style="text-align: center; color: red; font-size: 0.5em;">No matching members found for the specified parent pattern.</div>';
         }
 
-        // === FIRST LEVEL ===
+        // FIRST LEVEL
         $matched_users = $this->find_users_matching_child_patterns( $child_patterns, $exclude_patterns ?? [] );
 
         if ( empty( $matched_users ) ) {
             return '<p>No matching members were found.</p>';
         }
 
-        // === SECOND LEVEL: Sub-sales (your requirement) ===
+        // SECOND LEVEL - Sub-sales drill-down
         $additional_users = [];
         $seen_ids = wp_list_pluck( $matched_users, 'ID' );
 
@@ -398,7 +397,7 @@ class ULS_Members_Plugin {
 
         $all_matched = array_merge( $matched_users, $additional_users );
 
-        // Attach visits, rewards, etc.
+        // Attach visits + extra data
         $rows = $this->attach_visits_from_view( $all_matched );
 
         foreach ( $rows as &$r ) {
@@ -409,20 +408,83 @@ class ULS_Members_Plugin {
         }
         unset( $r );
 
-        // Render (unchanged from here down)
+        // === RENDER (exact from your original) ===
         $per_page = intval( $atts['per_page'] );
         if ( $per_page <= 0 ) { $per_page = 10; }
 
         ob_start(); ?>
-        <div class="uls-members" data-per_page="<?php echo esc_attr( $per_page ); ?>">
-            <!-- ... your existing render code (export, search, table, pager) ... -->
-            <?php /* keep everything from your current render block */ ?>
+        <div class="uls-members" data-per-page="<?php echo esc_attr( $per_page ); ?>">
+
+            <?php if ( $allow_export ): ?>
+                <?php $export_url = add_query_arg( 'uls_export', '1' ); ?>
+                <div style="margin-bottom:10px;">
+                    <a href="<?php echo esc_url( $export_url ); ?>" class="button button-primary">
+                        Export CSV
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <div class="uls-members__search">
+                <input type="text" class="uls-members__search-input" placeholder="Search members…" autocomplete="off" />
+                <button type="button" class="uls-members__search-clear">&times;</button>
+            </div>
+
+            <table class="uls-members__table">
+                <thead>
+                    <tr>
+                        <?php foreach ( $headers as $h ): ?>
+                            <th><?php echo esc_html( $h ); ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+
+                <tbody class="uls-members__tbody">
+                    <?php foreach ( $rows as $r ): ?>
+                        <tr class="uls-members__row" data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>">
+                        <?php foreach ( $fields as $f ): ?>
+
+                            <?php
+                            $key = ($f === 'email') ? 'user_email' : $f;
+                            $td_attr = '';
+
+                            if ( $f === 'all_tags' ) {
+                                $tags = (array) ($r['all_tags'] ?? []);
+                                sort( $tags, SORT_STRING | SORT_FLAG_CASE );
+                                $cell = implode( ', ', $tags );
+                                $td_attr = ' data-col="all_tags" data-user-id="' . esc_attr( $r['ID'] ) . '"';
+                            } elseif ( $f === 'rewards_points' ) {
+                                $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
+                            } else {
+                                $cell = $r[$key] ?? '';
+                                if ( $f === 'email' ) {
+                                    $td_attr = ' data-col="email"';
+                                }
+                            }
+                            ?>
+
+                            <td<?php echo $td_attr; ?>>
+                                <?php echo esc_html( $cell ); ?>
+                            </td>
+
+                        <?php endforeach; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <div class="uls-members__pager">
+                <button type="button" class="uls-pager__prev">Prev</button>
+                <span class="page-info">
+                    <span class="uls-pager__current">1</span> of <span class="uls-pager__total">1</span>
+                </span>
+                <button type="button" class="uls-pager__next">Next</button>
+            </div>
+
         </div>
         <?php
 
         return ob_get_clean();
     }
-
 
 
     /** Get a user's WP Fusion tag labels (translate IDs → labels). */
@@ -598,7 +660,7 @@ class ULS_Members_Plugin {
         return $this->get_child_patterns_for_parents( $matching );
     }
 
-    
+
 
     /**
      * Get hierarchy patterns based on a shortcode parent_pattern (e.g. "SA###" or "SA200").
