@@ -414,6 +414,20 @@ class ULS_Members_Plugin {
         }
         unset( $r );
 
+        // Mark which first-level parents actually have children (for the ▼ icon)
+        $has_child_map = [];
+        $row_count = count($rows);
+        for ($i = 0; $i < $row_count - 1; $i++) {
+            if (isset($rows[$i+1]['hierarchy_level']) && $rows[$i+1]['hierarchy_level'] == 2) {
+                $has_child_map[ $rows[$i]['ID'] ] = true;
+            }
+        }
+
+        foreach ($rows as &$r) {
+            $r['has_children'] = isset($has_child_map[$r['ID']]);
+        }
+        unset($r);        
+
         // === RENDER STARTS HERE ===
         $per_page = intval( $atts['per_page'] );
         if ( $per_page <= 0 ) { $per_page = 10; }
@@ -450,7 +464,7 @@ class ULS_Members_Plugin {
                     <?php foreach ( $rows as $r ): 
                         $level = (int) ($r['hierarchy_level'] ?? 1);
                         $is_sub = ($level === 2);
-                        $has_children = !empty($r['has_children']); // we'll set this below
+                        $has_children = !empty($r['has_children']);
                     ?>
                         <tr class="uls-members__row <?php echo $is_sub ? 'uls-sub-level' : 'uls-parent-level'; ?>" 
                             data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>"
@@ -459,10 +473,10 @@ class ULS_Members_Plugin {
                             
                             <!-- Hierarchy Column -->
                             <td class="uls-hierarchy-col" style="width: 40px; text-align: center; vertical-align: middle;">
-                                <?php if ( ! $is_sub && $has_children ): ?>
-                                    <span class="toggle-downline" style="cursor: pointer; color: #FD5A38; font-size: 1.2em;">▼</span>
+                                <?php if ( !$is_sub && $has_children ): ?>
+                                    <span class="toggle-downline" style="cursor: pointer; color: #FD5A38; font-size: 1.3em; font-weight: bold;">▼</span>
                                 <?php elseif ( $is_sub ): ?>
-                                    <span style="color: #FD5A38; margin-left: 16px;">↳</span>
+                                    <span style="color: #FD5A38; margin-left: 18px;">↳</span>
                                 <?php endif; ?>
                             </td>
 
@@ -493,7 +507,8 @@ class ULS_Members_Plugin {
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-            
+                
+                
             </table>
 
             <div class="uls-members__pager">

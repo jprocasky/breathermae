@@ -536,25 +536,23 @@ function updateScopedResultsLink(memberId) {
     // ==================== HIERARCHY / DRILL-DOWN STYLING ====================
     // Hierarchy / Collapsible Support
     function initHierarchy() {
-        // Hide all sub-levels initially
+        // Hide all sub-level rows initially
         $('.uls-sub-level').hide();
 
-        // Click handler only on parents that have children
-        $('.uls-parent-level .toggle-downline').off('click.hierarchy').on('click.hierarchy', function(e) {
+        // Only attach click to parents that have the toggle icon
+        $(document).off('click.hierarchy', '.uls-parent-level .toggle-downline')
+                   .on('click.hierarchy', '.uls-parent-level .toggle-downline', function(e) {
             e.stopImmediatePropagation();
             var $row = $(this).closest('tr');
-            $row.nextUntil('.uls-parent-level').filter('.uls-sub-level').toggle();
-            
-            // Optional: rotate icon
+            var $subs = $row.nextUntil('.uls-parent-level').filter('.uls-sub-level');
+            $subs.toggle();
+
+            // Toggle icon
             var $icon = $(this);
-            if ($icon.text() === '▼') {
-                $icon.text('▲');
-            } else {
-                $icon.text('▼');
-            }
+            $icon.text( $icon.text() === '▼' ? '▲' : '▼' );
         });
 
-        console.info('[uls-members] Hierarchy initialized');
+        console.info('[uls-members] Hierarchy toggle initialized');
     }
 
     // Call it after pager/search init
