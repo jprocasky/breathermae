@@ -334,16 +334,17 @@ class BMF_Repository {
         $table = $wpdb->prefix . 'bm_questions';
 
         $payload = [
-            'section_id'    => $data['section_id'],
-            'code'          => $data['question_code'],
-            'prompt'        => $data['prompt'],
-            'type'          => $data['question_type'],
-            'required'      => $data['required'] ?? 0,
-            'order_index'   => $data['order_index'] ?? 0,
-            'options_string'=> $data['options_string'] ?? null,
-            'choices_json'  => $data['choices_json'] ?? null,
-            'meta_json'     => $data['formula_meta'] ?? null,
-        ];
+                'form_id'       => $data['form_id'] ?? 0,                    // ← ADD THIS
+                'section_id'    => $data['section_id'],
+                'code'          => $data['question_code'],
+                'prompt'        => $data['prompt'],
+                'type'          => $data['question_type'],
+                'required'      => $data['required'] ?? 0,
+                'order_index'   => $data['order_index'] ?? 0,
+                'options_string'=> $data['options_string'] ?? null,
+                'choices_json'  => $data['choices_json'] ?? null,
+                'meta_json'     => $data['meta_json'] ?? null,               // fixed from formula_meta
+            ];
 
         if ( ! empty( $data['id'] ) ) {
             // UPDATE

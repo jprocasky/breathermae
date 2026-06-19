@@ -125,11 +125,6 @@ function bmf_split_options($string) {
 
     <div style="display:flex; gap:30px; margin-top:20px;">
 
-        <p>
-            <a href="<?php echo esc_url( remove_query_arg('edit') ); ?>" class="button button-primary">
-                + Add New Question
-            </a>
-        </p>    
         
         <!-- LEFT: question list -->
         <div style="flex:2;">
@@ -181,6 +176,11 @@ function bmf_split_options($string) {
 
         <!-- RIGHT: editor -->
         <div style="flex:1; background:#fff; padding:20px; border:1px solid #ccd0d4;">
+            <p>
+                <a href="<?php echo esc_url( remove_query_arg('edit') ); ?>" class="button button-primary">
+                    + Add New Question
+                </a>
+            </p>               
             <h2><?php echo $editing ? 'Edit Question' : 'Add Question'; ?></h2>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">

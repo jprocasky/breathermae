@@ -23,13 +23,14 @@ class BMF_Question_Controller extends BMF_Admin_Controller {
 
     protected function save(): void {
         $data = [
-            'id'           => isset($_POST['id']) ? absint($_POST['id']) : null,
-            'section_id'   => absint($_POST['section_id']),
-            'question_code'=> sanitize_text_field($_POST['question_code']),
-            'prompt'       => sanitize_textarea_field($_POST['prompt']),
-            'question_type'=> sanitize_key($_POST['question_type']),
-            'required'     => ! empty($_POST['required']) ? 1 : 0,
-            'order_index'  => absint($_POST['order_index']),
+            'id'            => isset($_POST['id']) ? absint($_POST['id']) : null,
+            'form_id'       => absint($_POST['form_id'] ?? 0),           // ← ADD THIS
+            'section_id'    => absint($_POST['section_id']),
+            'question_code' => sanitize_text_field($_POST['question_code'] ?? ''),
+            'prompt'        => sanitize_textarea_field($_POST['prompt'] ?? ''),
+            'question_type' => sanitize_text_field($_POST['question_type'] ?? 'radio'),
+            'required'      => !empty($_POST['required']) ? 1 : 0,
+            'order_index'   => absint($_POST['order_index'] ?? 0),
         ];
 
         if ( empty($data['question_code']) ) {
