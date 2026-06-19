@@ -99,6 +99,12 @@ function bmf_split_options($string) {
     <strong><?php echo esc_html($section->title); ?></strong>
 </div>
 
+<?php if (isset($_GET['deleted'])) : ?>
+    <div class="notice notice-success is-dismissible">
+        <p>Question deleted successfully.</p>
+    </div>
+<?php endif; ?>
+
 <div class="wrap">
     
     <h1>Questions</h1>
@@ -118,6 +124,12 @@ function bmf_split_options($string) {
     </div>
 
     <div style="display:flex; gap:30px; margin-top:20px;">
+
+        <p>
+            <a href="<?php echo esc_url( remove_query_arg('edit') ); ?>" class="button button-primary">
+                + Add New Question
+            </a>
+        </p>    
         
         <!-- LEFT: question list -->
         <div style="flex:2;">
@@ -137,14 +149,29 @@ function bmf_split_options($string) {
                         <td><?php echo esc_html($q->code); ?></td>
                         <td><?php echo esc_html($q->prompt); ?></td>
                         <td>
-                            <a href="<?php echo esc_url(
-                                add_query_arg([
-                                    'page' => 'bmf-questions',
-                                    'form_id' => $form_id,
+                            <a href="<?php 
+                                echo esc_url( add_query_arg([
+                                    'page'       => 'bmf-questions',
+                                    'form_id'    => $form_id,
                                     'section_id' => $section_id,
-                                    'edit' => $q->id
-                                ], admin_url('admin.php'))
-                            ); ?>">Edit</a>
+                                    'edit'       => $q->id,
+                                ], admin_url('admin.php')) ); 
+                            ?>">Edit</a>
+
+                            &nbsp;|&nbsp;
+
+                            <a href="<?php 
+                                echo esc_url( wp_nonce_url( add_query_arg([
+                                    'page'       => 'bmf-questions',
+                                    'form_id'    => $form_id,
+                                    'section_id' => $section_id,
+                                    'delete'     => $q->id,
+                                ], admin_url('admin.php')), 'bmf_delete_question_' . $q->id ) ); 
+                            ?>" 
+                            onclick="return confirm('Are you sure you want to delete this question?');"
+                            style="color:#b32d2e;">
+                                Delete
+                            </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

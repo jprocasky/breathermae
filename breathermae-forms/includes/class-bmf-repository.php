@@ -314,6 +314,19 @@ class BMF_Repository {
         return (int) $wpdb->insert_id;
     }
 
+    public function delete_question(int $question_id): bool
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'bm_questions';
+
+        $deleted = $wpdb->delete(
+            $table,
+            ['id' => absint($question_id)],
+            ['%d']
+        );
+
+        return $deleted !== false;
+    }
 
     public static function upsert_question( array $data ): int {
         global $wpdb;

@@ -107,4 +107,36 @@ class BMF_Question_Controller extends BMF_Admin_Controller {
 
         $this->repo->upsert_question( $data );
     }
+
+    protected function delete(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to delete questions.');
+        }
+
+        $question_id = isset($_GET['delete']) ? absint($_GET['delete']) : 0;
+        $form_id     = isset($_GET['form_id']) ? absint($_GET['form_id']) : 0;
+        $section_id  = isset($_GET['section_id']) ? absint($_GET['section_id']) : 0;
+
+        if (!$question_id || !$form_id || !$section_id) {
+            wp_die('Invalid request.');
+        }
+
+        // Verify nonce
+        check_admin_referer('bmf_delete_question_' . $question_id);
+
+        $this->repo->delete_question($question_id);
+
+        // Redirect back to the questions list
+        wp_safe_redirect(add_query_arg([
+            'page'       => 'bmf-questions',
+            'form_id'    => $form_id,
+            'section_id' => $section_id,
+            'deleted'    => 1,
+        ], admin_url('admin.php')));
+
+        exit;
+    }
+
+
 }

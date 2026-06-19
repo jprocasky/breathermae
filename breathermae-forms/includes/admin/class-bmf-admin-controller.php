@@ -31,6 +31,9 @@ abstract class BMF_Admin_Controller {
      */
     abstract protected function save(): void;
 
+    //Delete question action
+    add_action('admin_post_bmf-question_delete', [$this, 'delete']);    
+
     /**
      * POST handler wrapper
      */
