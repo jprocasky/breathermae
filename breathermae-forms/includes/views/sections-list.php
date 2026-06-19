@@ -74,23 +74,46 @@ $redirects = $meta['path_redirects'] ?? [];
             <table class="widefat striped">
                 <thead>
                     <tr>
-                        <th>Section</th>
+                        <th style="width: 60px;">Section</th>
                         <th>Title</th>
-                        <th>Actions</th>
+                        <th>Formula</th>
+                        <th style="width: 80px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $sections as $s ) : ?>
+                    <?php
+                        $formula = trim( (string) ( $s->formula ?? '' ) );
+                        if ( $formula ) {
+                            $formula_display = strlen( $formula ) > 65 
+                                ? substr( $formula, 0, 62 ) . '…' 
+                                : $formula;
+                        } else {
+                            $formula_display = '—';
+                        }
+                    ?>
                     <tr>
-                        <td><?php echo esc_html($s->order_index); ?></td>
-                        <td><?php echo esc_html($s->title); ?></td>
+                        <td><?php echo esc_html( $s->order_index ); ?></td>
+                        <td><?php echo esc_html( $s->title ); ?></td>
+                        <td>
+                            <?php if ( $formula ) : ?>
+                                <code 
+                                    style="font-size: 12px; background: #f6f7f7; padding: 2px 6px; border-radius: 3px; display: inline-block; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;"
+                                    title="<?php echo esc_attr( $formula ); ?>"
+                                >
+                                    <?php echo esc_html( $formula_display ); ?>
+                                </code>
+                            <?php else : ?>
+                                <span style="color: #8c8f94;">—</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <a href="<?php echo esc_url(
                                 add_query_arg(
                                     [
-                                        'page'   => 'bmf-sections',
-                                        'form_id'=> $form_id,
-                                        'edit'   => $s->id,
+                                        'page'    => 'bmf-sections',
+                                        'form_id' => $form_id,
+                                        'edit'    => $s->id,
                                     ],
                                     admin_url( 'admin.php' )
                                 )
@@ -100,6 +123,7 @@ $redirects = $meta['path_redirects'] ?? [];
                 <?php endforeach; ?>
                 </tbody>
             </table>
+
         </div>
 
         <!-- ================= RIGHT ================= -->
@@ -237,6 +261,25 @@ $redirects = $meta['path_redirects'] ?? [];
                         </button>
                     </p>
                 </div>
+
+                <!-- Scoring Formula -->
+                <h3>Scoring Formula</h3>
+                <p>
+                    <label><strong>Formula</strong> <small>(used by section scorer)</small></label><br>
+                    <textarea 
+                        name="formula" 
+                        rows="4" 
+                        class="large-text code" 
+                        placeholder="avg(Q1:Q5) or (Q1 + Q2 * 0.5) / 2"
+                    ><?php echo esc_textarea( $section->formula ?? '' ); ?></textarea>
+                    <br>
+                    <small>
+                        Examples: <code>avg(Q1:Q3)</code>, <code>avg(Q1:Q10)</code>, 
+                        <code>sum(Q1,Q2,Q3)/3</code>, <code>(Q1*0.4 + Q2*0.6)</code>, 
+                        <code>Total / 20</code><br>
+                        Variables: Q1, Q2, ... (per section). Supports <code>avg()</code>, <code>sum()</code>, <code>Total</code>, and basic arithmetic.
+                    </small>
+                </p>
 
                 <h3>Advanced JSON (Formula Meta)</h3>
                 <textarea name="formula_meta_raw" rows="10" style="width:100%; font-family: monospace;">

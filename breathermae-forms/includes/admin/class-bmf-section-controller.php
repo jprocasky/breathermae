@@ -37,6 +37,11 @@ class BMF_Section_Controller extends BMF_Admin_Controller {
             'order_index' => absint($_POST['order_index']),
         ];
 
+        // Formula for section scoring (used by BMF_Section_Scorer)
+            $data['formula'] = isset($_POST['formula']) 
+                ? sanitize_textarea_field( wp_unslash( $_POST['formula'] ) ) 
+                : null;
+
         if ( empty( $data['title'] ) ) {
             throw new Exception( 'Section title is required' );
         }
