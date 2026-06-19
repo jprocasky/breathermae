@@ -83,6 +83,21 @@ function bmf_split_options($string) {
 }
 
 ?>
+<!-- Breadcrumb -->
+<div class="bmf-breadcrumb" style="margin: 10px 0 20px;">
+    <a href="<?php echo esc_url( admin_url('admin.php?page=bmf-forms') ); ?>">
+        ← All Forms
+    </a>
+    &nbsp;›&nbsp;
+    <a href="<?php echo esc_url( add_query_arg([
+        'page'    => 'bmf-sections',
+        'form_id' => $form_id,
+    ], admin_url('admin.php')) ); ?>">
+        <?php echo esc_html($form->title); ?>
+    </a>
+    &nbsp;›&nbsp;
+    <strong><?php echo esc_html($section->title); ?></strong>
+</div>
 
 <div class="wrap">
     

@@ -47,6 +47,12 @@ class BMF_Forms_Table extends WP_List_Table {
 
     protected function column_title( $item ): string {
 
+        // Link the form title directly to the Sections editor
+        $sections_url = add_query_arg([
+            'page'    => 'bmf-sections',
+            'form_id' => $item->id,
+        ], admin_url('admin.php'));
+
         $edit_url = add_query_arg([
             'page' => 'bmf-forms',
             'edit' => $item->id,
@@ -59,12 +65,13 @@ class BMF_Forms_Table extends WP_List_Table {
         ], admin_url('admin.php'));
 
         $actions = [
-            'edit' => sprintf('<a href="%s">Edit</a>', esc_url($edit_url)),
+            'edit'   => sprintf('<a href="%s">Edit</a>', esc_url($edit_url)),
             'export' => sprintf('<a href="%s">Export</a>', esc_url($export_url)),
         ];
 
         return sprintf(
-            '<strong>%s</strong> %s',
+            '<strong><a href="%s">%s</a></strong> %s',
+            esc_url($sections_url),
             esc_html($item->title),
             $this->row_actions($actions)
         );

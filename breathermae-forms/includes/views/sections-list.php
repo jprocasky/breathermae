@@ -21,6 +21,29 @@ if ( ! $form ) {
 // ✅ use repo for sections
 $sections = $repo->get_sections_by_form( $form_id );
 
+// Preload question counts for better performance
+$question_counts = [];
+if (!empty($sections)) {
+    global $wpdb;
+    $section_ids = wp_list_pluck($sections, 'id');
+    $placeholders = implode(',', array_fill(0, count($section_ids), '%d'));
+
+    $counts = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT section_id, COUNT(*) as cnt 
+             FROM {$wpdb->prefix}bm_questions 
+             WHERE section_id IN ($placeholders) 
+             GROUP BY section_id",
+            $section_ids
+        ),
+        OBJECT_K
+    );
+
+    foreach ($counts as $row) {
+        $question_counts[$row->section_id] = (int) $row->cnt;
+    }
+}
+
 $editing = false;
 $section = null;
 
@@ -61,6 +84,16 @@ if ( ! empty( $section->meta_json ) ) {
 $redirects = $meta['path_redirects'] ?? [];
 
 ?>
+<!-- Breadcrumb -->
+<div class="bmf-breadcrumb" style="margin: 10px 0 20px;">
+    <a href="<?php echo esc_url( admin_url('admin.php?page=bmf-forms') ); ?>">
+        ← All Forms
+    </a>
+    <?php if (!empty($form)) : ?>
+        &nbsp;›&nbsp;
+        <strong><?php echo esc_html($form->title); ?></strong>
+    <?php endif; ?>
+</div>
 
 <div class="wrap">
     <h1>Sections for "<?php echo esc_html($form->title); ?>"</h1>
@@ -76,6 +109,7 @@ $redirects = $meta['path_redirects'] ?? [];
                     <tr>
                         <th style="width: 60px;">Section</th>
                         <th>Title</th>
+                        <th style="width: 90px; text-align: center;">Questions</th>
                         <th>Formula</th>
                         <th style="width: 80px;">Actions</th>
                     </tr>
@@ -94,7 +128,28 @@ $redirects = $meta['path_redirects'] ?? [];
                     ?>
                     <tr>
                         <td><?php echo esc_html( $s->order_index ); ?></td>
-                        <td><?php echo esc_html( $s->title ); ?></td>
+
+                        <td>
+                            <?php
+                            $questions_url = add_query_arg([
+                                'page'       => 'bmf-questions',
+                                'form_id'    => $form_id,
+                                'section_id' => $s->id,
+                            ], admin_url('admin.php'));
+                            ?>
+                            <a href="<?php echo esc_url($questions_url); ?>">
+                                <strong><?php echo esc_html($s->title); ?></strong>
+                            </a>
+                        </td>
+
+                        <!-- Question Count -->
+                        <td style="text-align: center;">
+                            <?php 
+                                $count = $question_counts[$s->id] ?? 0;
+                                echo '<span style="background:#f0f0f1; padding:2px 8px; border-radius:10px; font-size:12px;">' . intval($count) . '</span>';
+                            ?>
+                        </td>
+
                         <td>
                             <?php if ( $formula ) : ?>
                                 <code 
