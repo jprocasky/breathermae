@@ -14,6 +14,8 @@ abstract class BMF_Admin_Controller {
     public function register(): void {
         add_action( 'admin_menu', [ $this, 'register_page' ] );
         add_action( 'admin_post_' . $this->page_slug . '_save', [ $this, 'handle_save' ] );
+            //Delete question action
+        add_action('admin_post_bmf-question_delete', [$this, 'delete']);    
     }
 
     /**
@@ -31,8 +33,7 @@ abstract class BMF_Admin_Controller {
      */
     abstract protected function save(): void;
 
-    //Delete question action
-    add_action('admin_post_bmf-question_delete', [$this, 'delete']);    
+
 
     /**
      * POST handler wrapper
