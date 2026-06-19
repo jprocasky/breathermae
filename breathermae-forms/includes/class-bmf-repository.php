@@ -265,15 +265,17 @@ class BMF_Repository {
         $table = $wpdb->prefix . 'bm_form_sections';
 
         $payload = [
-            'form_id'        => $data['form_id'],
-            'title'          => $data['title'],
-            'prompt'         => $data['prompt'] ?? null,
-            'explanation'    => $data['explanation'] ?? null,
-            'order_index'    => $data['order_index'] ?? 0,
-            'options_string' => $data['options_string'] ?? null,
-            'choices_json'   => $data['choices_json'] ?? null,
-            'formula_meta'   => $data['formula_meta'] ?? null,
-        ];
+                'form_id'        => $data['form_id'],
+                'title'          => $data['title'],
+                'prompt'         => $data['prompt'] ?? null,
+                'explanation'    => $data['explanation'] ?? null,
+                'order_index'    => $data['order_index'] ?? 0,
+                'options_string' => $data['options_string'] ?? null,
+                'choices_json'   => $data['choices_json'] ?? null,
+                'formula'        => $data['formula'] ?? null,           
+                'formula_meta'   => $data['formula_meta'] ?? null,
+                'meta_json'      => $data['meta_json'] ?? null,         
+            ];
 
         if ( ! empty( $data['id'] ) ) {
             // ✅ UPDATE existing section
