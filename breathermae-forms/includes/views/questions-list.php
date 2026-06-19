@@ -238,10 +238,15 @@ function bmf_split_options($string) {
                 <?php endforeach; ?>
                 </div>
 
-                <p>
+                <p style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <button type="button" class="button" id="bmf-add-question-choice">
                         + Add choice
                     </button>
+
+                    <button type="button" class="button button-secondary" id="bmf-reverse-values">
+                        Reverse Values
+                    </button>
+                    <span id="bmf-reverse-notice" style="font-size: 12px; color: #2271b1; display: none;"></span>
                 </p>
 
                 <p>
@@ -268,5 +273,47 @@ document.getElementById('bmf-add-question-choice')?.addEventListener('click', fu
     });
 
     container.appendChild(clone);
+});
+</script>
+
+<script>
+document.getElementById('bmf-reverse-values')?.addEventListener('click', function () {
+    const container = document.getElementById('bmf-question-choices');
+    if (!container) return;
+
+    const valueInputs = container.querySelectorAll('input[name="choice_value[]"]');
+    if (!valueInputs.length) return;
+
+    // Collect numeric values
+    const values = Array.from(valueInputs).map(input => {
+        const num = parseFloat(input.value);
+        return isNaN(num) ? null : num;
+    }).filter(v => v !== null);
+
+    if (values.length === 0) {
+        alert('No numeric values found to reverse.');
+        return;
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    // Reverse each value
+    valueInputs.forEach(input => {
+        const num = parseFloat(input.value);
+        if (!isNaN(num)) {
+            input.value = (min + max - num);
+        }
+    });
+
+    // Show temporary notice
+    const notice = document.getElementById('bmf-reverse-notice');
+    if (notice) {
+        notice.textContent = 'Values reversed. Review and Save.';
+        notice.style.display = 'inline';
+        setTimeout(() => {
+            notice.style.display = 'none';
+        }, 2500);
+    }
 });
 </script>
