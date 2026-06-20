@@ -276,6 +276,12 @@ function bmf_split_options($string) {
                             value="<?php echo esc_attr( $row['meta'] ); ?>"
                             placeholder='{"weights":{"rsi":2}}'
                             style="flex:3; font-family:monospace;">
+                        <button type="button"
+                                class="bmf-delete-choice button-link"
+                                style="color:#b32d2e; font-size:18px; line-height:1; padding:0 4px; cursor:pointer; border:none; background:none;"
+                                title="Delete this choice">
+                            ×
+                        </button>
                     </div>
                 <?php endforeach; ?>
                 </div>
@@ -301,20 +307,48 @@ function bmf_split_options($string) {
 </div>
 
 <script>
-document.getElementById('bmf-add-question-choice')?.addEventListener('click', function () {
+document.addEventListener('DOMContentLoaded', function () {
+
     const container = document.getElementById('bmf-question-choices');
     if (!container) return;
 
-    const rows = container.querySelectorAll('.bmf-question-choice-row');
-    if (!rows.length) return;
+    // === Add new choice row ===
+    const addBtn = document.getElementById('bmf-add-question-choice');
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            const rows = container.querySelectorAll('.bmf-question-choice-row');
+            if (!rows.length) return;
 
-    const clone = rows[rows.length - 1].cloneNode(true);
+            const clone = rows[rows.length - 1].cloneNode(true);
 
-    clone.querySelectorAll('input').forEach(input => {
-        input.value = '';
+            // Clear all input values in the new row
+            clone.querySelectorAll('input').forEach(input => {
+                input.value = '';
+            });
+
+            container.appendChild(clone);
+        });
+    }
+
+    // === Delete choice row (using event delegation) ===
+    container.addEventListener('click', function (e) {
+        if (e.target.classList.contains('bmf-delete-choice')) {
+            const rows = container.querySelectorAll('.bmf-question-choice-row');
+
+            // Prevent deleting the last remaining choice
+            if (rows.length <= 1) {
+                alert('At least one choice is required.');
+                return;
+            }
+
+            // Remove the row
+            const row = e.target.closest('.bmf-question-choice-row');
+            if (row) {
+                row.remove();
+            }
+        }
     });
 
-    container.appendChild(clone);
 });
 </script>
 
