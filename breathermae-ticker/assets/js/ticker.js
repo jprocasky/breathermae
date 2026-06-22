@@ -15,7 +15,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Read settings from data attributes set by the widget
         // scrollSpeed = pixels per second (higher = faster)
-        const pixelsPerSecond = parseInt(ticker.dataset.speed) || 70;
+        let pixelsPerSecond = parseFloat(ticker.dataset.speed) || 45;
+
+        // Safety net: if the value is very small (< 10), it's likely from an old widget
+        // saved with the previous "seconds" control. Use a sensible default instead.
+        if (pixelsPerSecond < 10) {
+            pixelsPerSecond = 45;
+        }
+
         const pauseOnHover = ticker.dataset.pauseOnHover === 'true';
 
         // Store reference to the original first item for cloning

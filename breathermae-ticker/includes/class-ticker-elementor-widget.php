@@ -150,17 +150,17 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
             [
                 'label'       => __('Scroll Speed', 'breathermae-ticker'),
                 'type'        => Controls_Manager::SLIDER,
-                'description' => __('Higher value = faster scrolling. This keeps consistent speed across screen sizes.', 'breathermae-ticker'),
+                'description' => __('Higher = faster. Recommended range: 35–70 for most tickers. This keeps speed consistent across phones and desktop.', 'breathermae-ticker'),
                 'range'       => [
                     'px' => [
-                        'min'  => 30,
-                        'max'  => 180,
+                        'min'  => 20,
+                        'max'  => 120,
                         'step' => 5,
                     ],
                 ],
                 'default' => [
                     'unit' => 'px',
-                    'size' => 70,
+                    'size' => 45,
                 ],
             ]
         );
@@ -218,7 +218,7 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         $full_text = wp_strip_all_tags($full_text); // safety
 
         // Data attributes for JS
-        $speed = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 25;
+        $speed = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 45;
         $pause = ($settings['pause_on_hover'] ?? 'yes') === 'yes' ? 'true' : 'false';
 
         ?>
