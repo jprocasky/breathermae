@@ -1008,22 +1008,92 @@ add_action('wp_enqueue_scripts', function () {
 /*   • Tools → Elementor Templates                                             */
 /* - Provides sortable, searchable lists with direct Elementor edit links.    */
 /* - Supports reusable named editor window targeting.                          */
-/* ========================================================================== */
-
-/* ========================================================================== */
-/* ADMIN TOOLS: Elementor Pages & Templates Index (ADMIN SAFE)                 */
+/* - NEW: Duplicate column + one-click duplicate (preserves all Elementor data)*/
 /* ========================================================================== */
 
 if ( is_admin() ) {
 
+    /* ---------------------------------------------------------------------- */
+    /* DUPLICATE FUNCTION (Elementor-safe)                                    */
+    /* ---------------------------------------------------------------------- */
+    function uls_duplicate_elementor_page( $post_id ) {
+        $post = get_post( $post_id );
+        if ( ! $post ) {
+            return new WP_Error( 'invalid_post', 'Original page not found.' );
+        }
+
+        $new_post_args = [
+            'post_title'     => $post->post_title . ' (Copy)',
+            'post_content'   => $post->post_content,
+            'post_excerpt'   => $post->post_excerpt,
+            'post_status'    => 'draft',                    // Start as draft
+            'post_type'      => $post->post_type,
+            'post_author'    => get_current_user_id(),
+            'post_parent'    => $post->post_parent,
+            'menu_order'     => $post->menu_order,
+            'comment_status' => $post->comment_status,
+            'ping_status'    => $post->ping_status,
+        ];
+
+        $new_post_id = wp_insert_post( $new_post_args, true );
+
+        if ( is_wp_error( $new_post_id ) ) {
+            return $new_post_id;
+        }
+
+        // Copy ALL meta including _elementor_data (using direct query for reliability)
+        global $wpdb;
+        $meta_rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id = %d",
+            $post_id
+        ) );
+
+        foreach ( $meta_rows as $meta ) {
+            $meta_key   = $meta->meta_key;
+            $meta_value = maybe_unserialize( $meta->meta_value );
+
+            if ( in_array( $meta_key, [ '_edit_lock', '_edit_last' ], true ) ) {
+                continue;
+            }
+
+            // Critical for Elementor JSON
+            if ( $meta_key === '_elementor_data' && is_string( $meta_value ) ) {
+                $meta_value = wp_slash( $meta_value );
+            }
+
+            add_post_meta( $new_post_id, $meta_key, $meta_value );
+        }
+
+        // Copy taxonomies (if any)
+        $taxonomies = get_object_taxonomies( $post->post_type );
+        foreach ( $taxonomies as $taxonomy ) {
+            $terms = wp_get_object_terms( $post_id, $taxonomy, [ 'fields' => 'ids' ] );
+            if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+                wp_set_object_terms( $new_post_id, $terms, $taxonomy );
+            }
+        }
+
+        // Clear Elementor cache
+        if ( class_exists( '\Elementor\Plugin' ) ) {
+            \Elementor\Plugin::$instance->files_manager->clear_cache();
+        }
+
+        return $new_post_id;
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* Window target filter (existing)                                        */
+    /* ---------------------------------------------------------------------- */
     add_filter('wp_targeted_link_rel', function ($rel, $link, $target) {
-        // Allow named window reuse for Elementor editor links
         if ($target === 'elementor_editor') {
             return 'opener';
         }
         return $rel;
     }, 10, 3);
 
+    /* ---------------------------------------------------------------------- */
+    /* Admin menus (existing)                                                 */
+    /* ---------------------------------------------------------------------- */
     add_action('admin_menu', function () {
         add_management_page(
             'Elementor Pages',
@@ -1042,32 +1112,60 @@ if ( is_admin() ) {
         );
     });
 
-add_action('admin_init', function () {
+    /* ---------------------------------------------------------------------- */
+    /* Preference handler (existing)                                          */
+    /* ---------------------------------------------------------------------- */
+    add_action('admin_init', function () {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
 
-    if (!current_user_can('manage_options')) {
-        return;
-    }
+        if (isset($_GET['uls_window_pref'])) {
+            $reuse = isset($_GET['reuse_window']) ? 1 : 0;
+            update_user_meta(
+                get_current_user_id(),
+                'uls_reuse_elementor_window',
+                $reuse
+            );
+        }
+    });
 
-    // Only update preference when the checkbox form submits
-    if (isset($_GET['uls_window_pref'])) {
-
-        $reuse = isset($_GET['reuse_window']) ? 1 : 0;
-
-        update_user_meta(
-            get_current_user_id(),
-            'uls_reuse_elementor_window',
-            $reuse
-        );
-    }
-});
-
+    /* ---------------------------------------------------------------------- */
+    /* DUPLICATE HANDLER + List Table class (modified)                        */
+    /* ---------------------------------------------------------------------- */
     add_action('admin_init', function () {
 
-        if ( ! class_exists('WP_List_Table') ) {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        /* ===== DUPLICATE ACTION HANDLER ===== */
+        if (isset($_GET['uls_duplicate'])) {
+            $original_id = intval($_GET['uls_duplicate']);
+            $nonce       = $_GET['_wpnonce'] ?? '';
+
+            if (wp_verify_nonce($nonce, 'uls_duplicate_page_' . $original_id)) {
+                $new_id = uls_duplicate_elementor_page($original_id);
+
+                if (!is_wp_error($new_id) && $new_id > 0) {
+                    // Best UX: open the new copy directly in Elementor
+                    wp_redirect(admin_url('post.php?post=' . $new_id . '&action=elementor'));
+                    exit;
+                } else {
+                    // On failure, bounce back to the list
+                    $page_slug = sanitize_key($_GET['page'] ?? 'uls-elementor-pages');
+                    wp_redirect(add_query_arg('duplicate_failed', '1', admin_url('tools.php?page=' . $page_slug)));
+                    exit;
+                }
+            }
+        }
+
+        /* ===== EXISTING LIST TABLE CLASS (with Duplicate column added) ===== */
+        if (!class_exists('WP_List_Table')) {
             require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
         }
 
-        if ( class_exists('WP_List_Table') && ! class_exists('ULS_Elementor_List_Table') ) {
+        if (class_exists('WP_List_Table') && !class_exists('ULS_Elementor_List_Table')) {
 
             class ULS_Elementor_List_Table extends WP_List_Table {
 
@@ -1098,7 +1196,8 @@ add_action('admin_init', function () {
                         $cols['view'] = 'View';
                     }
 
-                    $cols['edit'] = 'Edit in Elementor';
+                    $cols['edit']      = 'Edit in Elementor';
+                    $cols['duplicate'] = 'Duplicate';          // NEW
                     return $cols;
                 }
 
@@ -1111,7 +1210,6 @@ add_action('admin_init', function () {
                 }
 
                 public function prepare_items() {
-
                     $columns  = $this->get_columns();
                     $hidden   = [];
                     $sortable = $this->get_sortable_columns();
@@ -1142,7 +1240,6 @@ add_action('admin_init', function () {
                     ]);
                 }
 
-
                 protected function column_default($item, $column_name) {
 
                     $target = isset($_GET['reuse_window']) ? 'elementor_editor' : '_blank';
@@ -1169,31 +1266,34 @@ add_action('admin_init', function () {
 
                         case 'view':
                             $url = esc_url(get_permalink($item->ID));
-                            $reuse = get_user_meta(
-                                get_current_user_id(),
-                                'uls_reuse_elementor_window',
-                                true
-                            );
-
+                            $reuse = get_user_meta(get_current_user_id(), 'uls_reuse_elementor_window', true);
                             if ($reuse) {
-
                                 return '<a href="' . $url . '" onclick="window.open(this.href, \'elementor_editor\'); return false;">View</a>';
                             }
                             return '<a href="' . $url . '" target="_blank">View</a>';
 
                         case 'edit':
                             $url = esc_url(admin_url('post.php?post=' . $item->ID . '&action=elementor'));
-                            $reuse = get_user_meta(
-                                get_current_user_id(),
-                                'uls_reuse_elementor_window',
-                                true
-                            );
-
+                            $reuse = get_user_meta(get_current_user_id(), 'uls_reuse_elementor_window', true);
                             if ($reuse) {
-
                                 return '<a href="' . $url . '" onclick="window.open(this.href, \'elementor_editor\'); return false;">Edit</a>';
                             }
                             return '<a href="' . $url . '" target="_blank">Edit</a>';
+
+                        /* ===== NEW DUPLICATE COLUMN ===== */
+                        case 'duplicate':
+                            $duplicate_url = wp_nonce_url(
+                                admin_url('tools.php?page=' . esc_attr($_GET['page']) . '&uls_duplicate=' . $item->ID),
+                                'uls_duplicate_page_' . $item->ID
+                            );
+
+                            $reuse = get_user_meta(get_current_user_id(), 'uls_reuse_elementor_window', true);
+
+                            if ($reuse) {
+                                return '<a href="' . esc_url($duplicate_url) . '" onclick="window.open(this.href, \'elementor_editor\'); return false;" class="button button-secondary button-small">Duplicate</a>';
+                            } else {
+                                return '<a href="' . esc_url($duplicate_url) . '" target="_blank" class="button button-secondary button-small">Duplicate</a>';
+                            }
                     }
 
                     return '';
@@ -1202,6 +1302,9 @@ add_action('admin_init', function () {
         }
     });
 
+    /* ---------------------------------------------------------------------- */
+    /* Render functions (existing - unchanged)                                */
+    /* ---------------------------------------------------------------------- */
     function uls_render_elementor_pages() {
         uls_render_elementor_list('page', false, 'Elementor Pages');
     }
@@ -1234,17 +1337,14 @@ add_action('admin_init', function () {
                     value="1"
                     onchange="this.form.submit();" ' .
                 checked(
-                    get_user_meta(
-                        get_current_user_id(),
-                        'uls_reuse_elementor_window',
-                        true
-                    ),
+                    get_user_meta(get_current_user_id(), 'uls_reuse_elementor_window', true),
                     1,
                     false
                 ) . '>
                 Reuse same Editor-View window
             </label>
         </p>';
+
         $table->search_box('Search', 'uls-elementor-search');
         $table->display();
 
