@@ -80,6 +80,7 @@ function bm_ticker_admin_menu() {
 }
 
 function bm_ticker_admin_page() {
+    require_once BM_TICKER_PATH . 'includes/class-ticker-db.php';
     require_once BM_TICKER_PATH . 'includes/class-ticker-admin.php';
     BM_Ticker_Admin::render_page();
 }

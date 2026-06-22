@@ -148,19 +148,19 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         $this->add_control(
             'scroll_speed',
             [
-                'label'      => __('Scroll Speed (seconds)', 'breathermae-ticker'),
-                'type'       => Controls_Manager::SLIDER,
-                'size_units' => ['s'],
-                'range'      => [
-                    's' => [
-                        'min'  => 8,
-                        'max'  => 120,
-                        'step' => 1,
+                'label'       => __('Scroll Speed', 'breathermae-ticker'),
+                'type'        => Controls_Manager::SLIDER,
+                'description' => __('Higher value = faster scrolling. This keeps consistent speed across screen sizes.', 'breathermae-ticker'),
+                'range'       => [
+                    'px' => [
+                        'min'  => 30,
+                        'max'  => 180,
+                        'step' => 5,
                     ],
                 ],
                 'default' => [
-                    'unit' => 's',
-                    'size' => 25,
+                    'unit' => 'px',
+                    'size' => 70,
                 ],
             ]
         );
@@ -228,8 +228,8 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
 
             <div class="bm-ticker__track">
                 <?php
-                // Repeat the item several times for seamless infinite scroll
-                for ($i = 0; $i < 4; $i++) :
+                // Start with 2 copies — JS will duplicate more if needed for narrow screens
+                for ($i = 0; $i < 2; $i++) :
                 ?>
                     <span class="bm-ticker__item"><?php echo esc_html($full_text); ?></span>
                 <?php endfor; ?>

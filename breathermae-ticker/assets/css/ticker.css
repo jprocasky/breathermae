@@ -67,4 +67,8 @@
     .bm-ticker__item {
         font-size: 0.95em;
     }
+
+    .bm-ticker__track {
+        gap: 1.75rem; /* slightly tighter on mobile */
+    }
 }
