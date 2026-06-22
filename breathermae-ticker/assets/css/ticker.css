@@ -1,0 +1,70 @@
+/**
+ * BreatherMae Ticker Styles
+ */
+
+.bm-ticker {
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 12px 0;
+    position: relative;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    user-select: none;
+}
+
+.bm-ticker__track {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    animation: bm-ticker-scroll linear infinite;
+    will-change: transform;
+}
+
+.bm-ticker__item {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* Seamless loop - the animation moves the track */
+@keyframes bm-ticker-scroll {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+/* Pause on hover (controlled via data attribute + JS) */
+.bm-ticker--paused .bm-ticker__track,
+.bm-ticker:hover .bm-ticker__track[data-pause-on-hover="true"] {
+    animation-play-state: paused;
+}
+
+/* Empty state */
+.bm-ticker--empty {
+    background-color: #334155;
+    color: #94a3b8;
+    text-align: center;
+    padding: 14px 20px;
+}
+
+.bm-ticker--empty .bm-ticker__track {
+    animation: none;
+    justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .bm-ticker {
+        padding: 10px 0;
+    }
+    
+    .bm-ticker__item {
+        font-size: 0.95em;
+    }
+}
