@@ -13,31 +13,25 @@ document.addEventListener('DOMContentLoaded', function () {
         const originalItems = track.querySelectorAll('.bm-ticker__item');
         if (originalItems.length === 0) return;
 
-        // Read settings from data attributes set by the widget
-        // Support both new (data-duration) and legacy (data-speed)
-        let durationSeconds = parseFloat(ticker.dataset.duration || ticker.dataset.speed) || 10;
+        // Read duration (lower number = faster scrolling)
+        let durationSeconds = parseFloat(ticker.dataset.duration) || 6;
 
-        // Safety net - allow fast scrolling
-        if (durationSeconds < 2 || durationSeconds > 120) {
-            durationSeconds = 10;
-        }
+        if (durationSeconds < 2) durationSeconds = 6;
 
         const pauseOnHover = ticker.dataset.pauseOnHover === 'true';
 
-        // Apply duration directly (simple and reliable)
+        // Set duration
         track.style.animationDuration = durationSeconds + 's';
 
-        // Re-apply duration on resize (debounced)
-        let resizeTimer;
-        window.addEventListener('resize', function () {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(function () {
-                track.style.animationDuration = durationSeconds + 's';
-            }, 150);
-        });
-
-        // Pause on hover
+        // Pause on hover (simple)
         if (pauseOnHover) {
+            ticker.addEventListener('mouseenter', function() {
+                track.style.animationPlayState = 'paused';
+            });
+            ticker.addEventListener('mouseleave', function() {
+                track.style.animationPlayState = 'running';
+            });
+        }
             ticker.addEventListener('mouseenter', function () {
                 track.style.animationPlayState = 'paused';
             });
