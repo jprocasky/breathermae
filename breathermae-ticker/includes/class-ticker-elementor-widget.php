@@ -148,19 +148,19 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         $this->add_control(
             'scroll_speed',
             [
-                'label'       => __('Scroll Speed', 'breathermae-ticker'),
+                'label'       => __('Scroll Duration (seconds)', 'breathermae-ticker'),
                 'type'        => Controls_Manager::SLIDER,
-                'description' => __('Higher = faster. Recommended range: 35–70 for most tickers. This keeps speed consistent across phones and desktop.', 'breathermae-ticker'),
+                'description' => __('Lower number = faster scrolling. 8–15s is usually good for a fast ticker. 25–40s feels slower and more relaxed.', 'breathermae-ticker'),
                 'range'       => [
-                    'px' => [
-                        'min'  => 20,
-                        'max'  => 120,
-                        'step' => 5,
+                    's' => [
+                        'min'  => 5,
+                        'max'  => 60,
+                        'step' => 1,
                     ],
                 ],
                 'default' => [
-                    'unit' => 'px',
-                    'size' => 45,
+                    'unit' => 's',
+                    'size' => 12,
                 ],
             ]
         );
@@ -218,12 +218,12 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         $full_text = wp_strip_all_tags($full_text); // safety
 
         // Data attributes for JS
-        $speed = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 45;
+        $duration = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 12;
         $pause = ($settings['pause_on_hover'] ?? 'yes') === 'yes' ? 'true' : 'false';
 
         ?>
         <div class="bm-ticker"
-             data-speed="<?php echo esc_attr($speed); ?>"
+             data-duration="<?php echo esc_attr($duration); ?>"
              data-pause-on-hover="<?php echo esc_attr($pause); ?>">
 
             <div class="bm-ticker__track">
@@ -239,15 +239,17 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
     }
 
     protected function content_template() {
-        // Live preview in Elementor editor (basic)
+        // Live preview in Elementor editor
         ?>
         <#
         var prefix = settings.prefix || 'Health Tip: ';
         var postfix = settings.postfix || ' • BreatherMae';
         var fullText = prefix + ' ' + 'This is a sample health tip that will scroll continuously.' + ' ' + postfix;
+        var durationValue = (settings.scroll_speed && settings.scroll_speed.size) ? settings.scroll_speed.size : 12;
         #>
-        <div class="bm-ticker" style="background-color: {{ settings.background_color }}; color: {{ settings.text_color }};">
-            <div class="bm-ticker__track" style="animation-duration: {{ settings.scroll_speed.size }}s;">
+        <div class="bm-ticker" data-duration="{{ durationValue }}" data-pause-on-hover="true"
+             style="background-color: {{ settings.background_color }}; color: {{ settings.text_color }};">
+            <div class="bm-ticker__track">
                 <span class="bm-ticker__item">{{{ fullText }}}</span>
                 <span class="bm-ticker__item">{{{ fullText }}}</span>
                 <span class="bm-ticker__item">{{{ fullText }}}</span>

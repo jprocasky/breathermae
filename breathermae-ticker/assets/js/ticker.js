@@ -14,13 +14,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (originalItems.length === 0) return;
 
         // Read settings from data attributes set by the widget
-        // scrollSpeed = pixels per second (higher = faster)
-        let pixelsPerSecond = parseFloat(ticker.dataset.speed) || 45;
+        // data-duration = seconds for one full scroll loop (lower = faster)
+        let durationSeconds = parseFloat(ticker.dataset.duration) || 12;
 
-        // Safety net: if the value is very small (< 10), it's likely from an old widget
-        // saved with the previous "seconds" control. Use a sensible default instead.
-        if (pixelsPerSecond < 10) {
-            pixelsPerSecond = 45;
+        // Safety net
+        if (durationSeconds < 3 || durationSeconds > 120) {
+            durationSeconds = 12;
         }
 
         const pauseOnHover = ticker.dataset.pauseOnHover === 'true';
@@ -35,8 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const containerWidth = ticker.offsetWidth || 300;
             let currentWidth = track.scrollWidth;
 
-            // We want the track to be at least ~2.5x container width for smooth looping
-            const targetWidth = containerWidth * 2.5;
+            const targetWidth = Math.max(containerWidth * 2.2, currentWidth * 2.2);
 
             while (currentWidth < targetWidth) {
                 const clone = firstItem.cloneNode(true);
@@ -48,38 +46,22 @@ document.addEventListener('DOMContentLoaded', function () {
         // Initial duplication
         ensureEnoughWidth();
 
-        /**
-         * Calculate and apply animation duration based on actual width
-         * This keeps visual speed consistent across screen sizes
-         */
-        function setAnimationDuration() {
-            // Measure the width of one full "set" (half the track after duplication)
-            const totalWidth = track.scrollWidth;
-            const oneSetWidth = totalWidth / 2; // because we duplicate enough to make two sets
-
-            if (oneSetWidth <= 0) return;
-
-            // duration (seconds) = distance / speed
-            const durationSeconds = oneSetWidth / pixelsPerSecond;
-
-            track.style.animationDuration = durationSeconds + 's';
-        }
-
-        // Set initial duration after duplication
-        setAnimationDuration();
+        // Apply duration directly (simple and reliable)
+        track.style.animationDuration = durationSeconds + 's';
 
         // Re-calculate on resize (debounced)
         let resizeTimer;
         window.addEventListener('resize', function () {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
-                // Clean up extra clones, keep originals + re-duplicate
+                // Clean up extra clones
                 const allCurrentItems = track.querySelectorAll('.bm-ticker__item');
                 while (allCurrentItems.length > originalItems.length) {
                     allCurrentItems[allCurrentItems.length - 1].remove();
                 }
                 ensureEnoughWidth();
-                setAnimationDuration();
+                // Re-apply duration after resize
+                track.style.animationDuration = durationSeconds + 's';
             }, 180);
         });
 
