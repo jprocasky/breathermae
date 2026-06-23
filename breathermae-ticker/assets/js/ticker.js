@@ -1,24 +1,73 @@
 /**
- * BreatherMae Ticker - Minimal reliable JS
+ * BreatherMae Ticker - Character-based smooth streaming (2-copy seamless jump)
  */
 (function() {
-    function init() {
-        const tickers = document.querySelectorAll('.bm-ticker');
-        tickers.forEach(function(ticker) {
-            const track = ticker.querySelector('.bm-ticker__track');
-            if (!track) return;
+    'use strict';
 
-            const raw = ticker.dataset.duration || ticker.dataset.speed || '5';
-            let secs = parseFloat(raw) || 5;
-            if (secs < 2) secs = 2;
+    function initTicker(ticker) {
+        const track = ticker.querySelector('.bm-ticker__track');
+        if (!track) return;
 
-            track.style.setProperty('animation-duration', secs + 's', 'important');
-        });
+        const items = track.querySelectorAll('.bm-ticker__item');
+        if (items.length < 2) return;
+
+        const lettersPerSecond = parseFloat(ticker.dataset.lettersPerSecond) || 12;
+
+        const firstItem = items[0];
+        const oneCopyWidth = firstItem.offsetWidth;
+
+        if (oneCopyWidth <= 0) return;
+
+        // Estimate pixels per second from characters
+        const totalChars = firstItem.textContent.length || 50;
+        const avgCharWidth = oneCopyWidth / totalChars;
+        const pixelsPerSecond = avgCharWidth * lettersPerSecond;
+
+        let position = 0;
+        let lastTime = performance.now();
+        let isPaused = false;
+
+        function animate(currentTime) {
+            if (isPaused) {
+                lastTime = currentTime;
+                requestAnimationFrame(animate);
+                return;
+            }
+
+            const delta = currentTime - lastTime;
+            lastTime = currentTime;
+
+            position -= (pixelsPerSecond * delta) / 1000;
+
+            // Seamless jump
+            if (position <= -oneCopyWidth) {
+                position += oneCopyWidth;
+            }
+
+            track.style.transform = `translateX(${position}px)`;
+
+            requestAnimationFrame(animate);
+        }
+
+        // Pause on hover
+        if (ticker.dataset.pauseOnHover === 'true') {
+            ticker.addEventListener('mouseenter', () => { isPaused = true; });
+            ticker.addEventListener('mouseleave', () => {
+                isPaused = false;
+                lastTime = performance.now();
+            });
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    function initAll() {
+        document.querySelectorAll('.bm-ticker').forEach(initTicker);
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', initAll);
     } else {
-        init();
+        initAll();
     }
 })();

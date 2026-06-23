@@ -146,21 +146,21 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         );
 
         $this->add_control(
-            'scroll_speed',
+            'letters_per_second',
             [
-                'label'       => __('Scroll Duration (seconds)', 'breathermae-ticker'),
+                'label'       => __('Letters per Second', 'breathermae-ticker'),
                 'type'        => Controls_Manager::SLIDER,
-                'description' => __('Lower number = faster scrolling. 8–15s is usually good for a fast ticker. 25–40s feels slower and more relaxed.', 'breathermae-ticker'),
+                'description' => __('Speed is based on characters flowing onto the display (1–100). 8–25 is usually comfortable.', 'breathermae-ticker'),
                 'range'       => [
-                    's' => [
-                        'min'  => 2,
-                        'max'  => 60,
+                    'px' => [
+                        'min'  => 1,
+                        'max'  => 100,
                         'step' => 1,
                     ],
                 ],
                 'default' => [
-                    'unit' => 's',
-                    'size' => 6,
+                    'unit' => 'px',
+                    'size' => 12,
                 ],
             ]
         );
@@ -217,13 +217,13 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         $full_text = trim($prefix . ' ' . $tip['message'] . ' ' . $postfix);
         $full_text = wp_strip_all_tags($full_text); // safety
 
-        // Data attributes for JS
-        $duration = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 6;
+        // Data attributes for JS (letters per second)
+        $lettersPerSec = isset($settings['letters_per_second']['size']) ? intval($settings['letters_per_second']['size']) : 12;
         $pause = ($settings['pause_on_hover'] ?? 'yes') === 'yes' ? 'true' : 'false';
 
         ?>
         <div class="bm-ticker"
-             data-duration="<?php echo esc_attr($duration); ?>"
+             data-letters-per-second="<?php echo esc_attr($lettersPerSec); ?>"
              data-pause-on-hover="<?php echo esc_attr($pause); ?>">
 
             <div class="bm-ticker__track">

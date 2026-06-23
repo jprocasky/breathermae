@@ -55,11 +55,12 @@ function bm_ticker_enqueue_assets() {
         BM_TICKER_VERSION
     );
 
+    // No version parameter to reduce aggressive caching issues
     wp_enqueue_script(
         'bm-ticker-script',
         BM_TICKER_URL . 'assets/js/ticker.js',
         [],
-        BM_TICKER_VERSION,
+        null,
         true
     );
 }
