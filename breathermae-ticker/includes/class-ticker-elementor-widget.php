@@ -160,7 +160,7 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
                 ],
                 'default' => [
                     'unit' => 's',
-                    'size' => 12,
+                    'size' => 8,
                 ],
             ]
         );
@@ -218,7 +218,7 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         $full_text = wp_strip_all_tags($full_text); // safety
 
         // Data attributes for JS
-        $duration = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 12;
+        $duration = isset($settings['scroll_speed']['size']) ? intval($settings['scroll_speed']['size']) : 8;
         $pause = ($settings['pause_on_hover'] ?? 'yes') === 'yes' ? 'true' : 'false';
 
         ?>

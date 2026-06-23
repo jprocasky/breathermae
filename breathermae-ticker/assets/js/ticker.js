@@ -14,12 +14,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (originalItems.length === 0) return;
 
         // Read settings from data attributes set by the widget
-        // data-duration = seconds for one full scroll loop (lower = faster)
-        let durationSeconds = parseFloat(ticker.dataset.duration) || 12;
+        // Support both new (data-duration) and legacy (data-speed)
+        let durationSeconds = parseFloat(ticker.dataset.duration || ticker.dataset.speed) || 10;
 
-        // Safety net
-        if (durationSeconds < 3 || durationSeconds > 120) {
-            durationSeconds = 12;
+        // Safety net - allow fast scrolling
+        if (durationSeconds < 2 || durationSeconds > 120) {
+            durationSeconds = 10;
         }
 
         const pauseOnHover = ticker.dataset.pauseOnHover === 'true';
