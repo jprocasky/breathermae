@@ -9,7 +9,7 @@
         if (!track) return;
 
         const items = track.querySelectorAll('.bm-ticker__item');
-        if (items.length < 2) return;
+        if (items.length < 3) return; // Need 3 copies for smooth seamless looping
 
         const lettersPerSecond = parseFloat(ticker.dataset.lettersPerSecond) || 12;
 

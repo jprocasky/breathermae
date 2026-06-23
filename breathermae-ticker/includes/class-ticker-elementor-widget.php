@@ -228,8 +228,8 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
 
             <div class="bm-ticker__track">
                 <?php
-                // 2 copies for tighter, faster-feeling loop
-                for ($i = 0; $i < 2; $i++) :
+                // 3 copies for smoother seamless looping (less noticeable jump)
+                for ($i = 0; $i < 3; $i++) :
                 ?>
                     <span class="bm-ticker__item"><?php echo esc_html($full_text); ?></span>
                 <?php endfor; ?>
