@@ -24,45 +24,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const pauseOnHover = ticker.dataset.pauseOnHover === 'true';
 
-        // Store reference to the original first item for cloning
-        const firstItem = originalItems[0];
-
-        /**
-         * Duplicate items until the track is wide enough for seamless looping
-         */
-        function ensureEnoughWidth() {
-            const containerWidth = ticker.offsetWidth || 300;
-            let currentWidth = track.scrollWidth;
-
-            const targetWidth = Math.max(containerWidth * 2.2, currentWidth * 2.2);
-
-            while (currentWidth < targetWidth) {
-                const clone = firstItem.cloneNode(true);
-                track.appendChild(clone);
-                currentWidth = track.scrollWidth;
-            }
-        }
-
-        // Initial duplication
-        ensureEnoughWidth();
-
         // Apply duration directly (simple and reliable)
         track.style.animationDuration = durationSeconds + 's';
 
-        // Re-calculate on resize (debounced)
+        // Re-apply duration on resize (debounced)
         let resizeTimer;
         window.addEventListener('resize', function () {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
-                // Clean up extra clones
-                const allCurrentItems = track.querySelectorAll('.bm-ticker__item');
-                while (allCurrentItems.length > originalItems.length) {
-                    allCurrentItems[allCurrentItems.length - 1].remove();
-                }
-                ensureEnoughWidth();
-                // Re-apply duration after resize
                 track.style.animationDuration = durationSeconds + 's';
-            }, 180);
+            }, 150);
         });
 
         // Pause on hover
