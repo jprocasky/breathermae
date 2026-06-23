@@ -153,7 +153,7 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
                 'description' => __('Lower number = faster scrolling. 8–15s is usually good for a fast ticker. 25–40s feels slower and more relaxed.', 'breathermae-ticker'),
                 'range'       => [
                     's' => [
-                        'min'  => 5,
+                        'min'  => 2,
                         'max'  => 60,
                         'step' => 1,
                     ],
@@ -228,8 +228,8 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
 
             <div class="bm-ticker__track">
                 <?php
-                // 4 copies for reliable seamless scrolling
-                for ($i = 0; $i < 4; $i++) :
+                // 2 copies for tighter, faster-feeling loop
+                for ($i = 0; $i < 2; $i++) :
                 ?>
                     <span class="bm-ticker__item"><?php echo esc_html($full_text); ?></span>
                 <?php endfor; ?>
@@ -250,7 +250,6 @@ class BM_Ticker_Elementor_Widget extends Widget_Base {
         <div class="bm-ticker" data-duration="{{ durationValue }}" data-pause-on-hover="true"
              style="background-color: {{ settings.background_color }}; color: {{ settings.text_color }};">
             <div class="bm-ticker__track">
-                <span class="bm-ticker__item">{{{ fullText }}}</span>
                 <span class="bm-ticker__item">{{{ fullText }}}</span>
                 <span class="bm-ticker__item">{{{ fullText }}}</span>
             </div>
