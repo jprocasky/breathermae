@@ -59,6 +59,11 @@ class BMF_Views {
      * View name: {$prefix}vw_bm_{slug}_pivot
      * Columns: form_slug, user_email, response_id, submitted_date, s{section_id}...
      */
+    /**
+     * Create/replace a pivot view for one form (one row per user/submission).
+     * View name: {$prefix}vw_bm_{slug}_pivot
+     * Columns: form_slug, user_email, response_id, submitted_date, s{section_id}..., total, average
+     */
     public static function create_pivot_view_for_form($form_slug) {
         global $wpdb;
         $p   = $wpdb->prefix;
@@ -89,8 +94,23 @@ class BMF_Views {
             $cols[] = "MAX(CASE WHEN s.id = {$sid} THEN ss.score END) AS `s{$sid}`";
         }
 
-        // ✅ Add TOTAL column (numeric-only sum from choice_value)
+        // Add TOTAL column (numeric-only sum from choice_value)
         $cols[] = "MAX(rt.total_score) AS total";
+
+        // Add AVERAGE column: arithmetic mean of all section scores (s{ID} columns)
+        // Uses fixed denominator = number of sections in the form for consistency.
+        // Missing section scores are treated as 0.
+        if (!empty($sections)) {
+            $section_sum_parts = [];
+            foreach ($sections as $sid) {
+                $sid = intval($sid);
+                $section_sum_parts[] = "COALESCE(MAX(CASE WHEN s.id = {$sid} THEN ss.score END), 0)";
+            }
+            $section_count = count($sections);
+            $cols[] = "ROUND( (" . implode(' + ', $section_sum_parts) . ") / {$section_count} , 2) AS average";
+        } else {
+            $cols[] = "NULL AS average";
+        }
 
         $col_sql = implode(",\n              ", $cols);
 
@@ -99,7 +119,7 @@ class BMF_Views {
         $view_name = "{$p}vw_bm_{$safe_slug_for_name}_pivot";
         $slug_sql  = esc_sql($form_slug);
 
-        // ✅ Full SQL with pre-aggregated totals
+        // Full SQL with pre-aggregated totals
         $sql = "
             CREATE OR REPLACE VIEW `{$view_name}` AS
             SELECT
@@ -114,13 +134,13 @@ class BMF_Views {
             JOIN `{$p}bm_forms`          f  ON f.id = r.form_id
             LEFT JOIN `{$usr}`           u  ON u.ID = r.user_id
 
-            -- ✅ Pre-aggregated numeric total from choice_value
+            -- Pre-aggregated numeric total from choice_value
             LEFT JOIN (
                 SELECT 
                     response_id,
                     SUM(
                         CASE 
-                            WHEN choice_value REGEXP '^-?[0-9]+(\\\\.[0-9]+)?$' 
+                            WHEN choice_value REGEXP '^-?[0-9]+(\\\.[0-9]+)?$' 
                             THEN CAST(choice_value AS DECIMAL(10,4))
                             ELSE 0
                         END
@@ -143,6 +163,7 @@ class BMF_Views {
             'error' => $ok === false ? $wpdb->last_error : null,
         ];
     }
+    
     /**
      * Create all pivot views for published forms.
      */
