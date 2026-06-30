@@ -143,6 +143,7 @@ class BMF_Repository {
         $pillars_res  = $wpdb->prefix . 'bm_pillars_results';
         $pillars_open = $wpdb->prefix . 'bm_pillars_open';
 
+        // Parent table first (important for FK)
         dbDelta("CREATE TABLE $pillars_res (
             id BIGINT NOT NULL AUTO_INCREMENT,
             user_email VARCHAR(191) COLLATE utf8mb4_unicode_520_ci NOT NULL,
@@ -160,7 +161,7 @@ class BMF_Repository {
             physical DECIMAL(10,4) DEFAULT NULL,
             emotional DECIMAL(10,4) DEFAULT NULL,
 
-            rank VARCHAR(255) COLLATE utf8mb4_unicode_520_ci DEFAULT NULL,
+            `rank` VARCHAR(255) COLLATE utf8mb4_unicode_520_ci DEFAULT NULL,
             master_score DECIMAL(10,4) DEFAULT NULL,
             notes TEXT COLLATE utf8mb4_unicode_520_ci,
 
@@ -168,12 +169,13 @@ class BMF_Repository {
             UNIQUE KEY uniq_user_date (user_email, results_date)
         ) $charset;");
 
+        // Child table second
         dbDelta("CREATE TABLE $pillars_open (
             user_email VARCHAR(191) PRIMARY KEY,
             row_id BIGINT NOT NULL,
             UNIQUE KEY uniq_row (row_id),
             FOREIGN KEY (row_id) REFERENCES $pillars_res(id) ON DELETE CASCADE
-        ) $charset;");        
+        ) $charset;");      
         
 
     }
