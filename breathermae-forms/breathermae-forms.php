@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Breathermae Forms
  * Description: Dynamic multi-step forms with section-level choices, CSV importer, autosave, and scoring.
- * Version: 0.1.0
- * Author: Breathermae
+ * Version: 1.1.0
+ * Author: Jeff Procasky - Breathermae
  */
 if (!defined('ABSPATH')) exit;
 
