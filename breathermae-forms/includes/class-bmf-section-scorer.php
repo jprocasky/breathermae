@@ -295,24 +295,25 @@ class BMF_Section_Scorer {
 
         // === 8 Pillars handling (forms 18-25) ===
         if (class_exists('BMF_Pillars_Saver') && isset(BMF_Pillars_Saver::$form_to_pillar[$form_id])) {
-            // Get the pillar average from the existing pivot view (recommended)
-            $pillar_slug = BMF_Pillars_Saver::$form_to_pillar[$form_id];
-            $view_table  = $wpdb->prefix . 'vw_bm_' . $pillar_slug . '_pivot';
+            $user = get_userdata($user_id);
+            if ($user && !empty($user->user_email)) {
+                $pillar_slug = BMF_Pillars_Saver::$form_to_pillar[$form_id];
+                $view_table  = $wpdb->prefix . 'vw_bm_' . $pillar_slug . '_pivot';
 
-            // Adjust the query below to match how your pivot views expose the latest average for a user
-            $average = (float) $wpdb->get_var($wpdb->prepare(
-                "SELECT average 
-                 FROM {$view_table} 
-                 WHERE user_id = %d 
-                 ORDER BY submitted_at DESC 
-                 LIMIT 1",
-                $user_id
-            ));
+                $average = (float) $wpdb->get_var($wpdb->prepare(
+                    "SELECT average 
+                     FROM {$view_table} 
+                     WHERE user_email = %s 
+                     ORDER BY submitted_date DESC 
+                     LIMIT 1",
+                    $user->user_email
+                ));
 
-            if ($average > 0) {
-                BMF_Pillars_Saver::save_pillar($user_id, $form_id, $average);
+                if (is_numeric($average)) {
+                    BMF_Pillars_Saver::save_pillar($user_id, $form_id, $average);
+                }
             }
-        }    
+        } 
 
         // === 8 Pillars Rank form (form_id 26) ===
         if ($form_id === 26 && class_exists('BMF_Pillars_Saver')) {
