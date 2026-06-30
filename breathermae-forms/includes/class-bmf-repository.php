@@ -139,12 +139,14 @@ class BMF_Repository {
         ) $charset;");   
         
         
-        // --- Pillars results (forms 18-25 + form_id 26 "8_pillars_rank") ---
+        // ============================================================
+        // PILLARS RESULTS TABLES (added 2026-06-30)
+        // Separate dbDelta calls to avoid parser pollution on existing tables
+        // ============================================================
         $pillars_res  = $wpdb->prefix . 'bm_pillars_results';
         $pillars_open = $wpdb->prefix . 'bm_pillars_open';
 
-        // Parent table first (important for FK)
-        dbDelta("CREATE TABLE $pillars_res (
+        dbDelta("CREATE TABLE {$pillars_res} (
             id BIGINT NOT NULL AUTO_INCREMENT,
             user_email VARCHAR(191) COLLATE utf8mb4_unicode_520_ci NOT NULL,
             current_flag TINYINT(1) DEFAULT '0',
@@ -169,14 +171,12 @@ class BMF_Repository {
             UNIQUE KEY uniq_user_date (user_email, results_date)
         ) $charset;");
 
-        // Child table second
-        dbDelta("CREATE TABLE $pillars_open (
+        dbDelta("CREATE TABLE {$pillars_open} (
             user_email VARCHAR(191) PRIMARY KEY,
             row_id BIGINT NOT NULL,
             UNIQUE KEY uniq_row (row_id),
-            FOREIGN KEY (row_id) REFERENCES $pillars_res(id) ON DELETE CASCADE
-        ) $charset;");      
-        
+            FOREIGN KEY (row_id) REFERENCES {$pillars_res}(id) ON DELETE CASCADE
+        ) $charset;");        
 
     }
 
