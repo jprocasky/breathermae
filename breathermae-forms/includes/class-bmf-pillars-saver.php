@@ -6,7 +6,7 @@ if (!class_exists('BMF_Pillars_Saver')) {
     class BMF_Pillars_Saver {
 
         /** Map form_id (18-25) → pillar column slug */
-        protected static $form_to_pillar = [
+        public static $form_to_pillar = [
             18 => 'physical',
             19 => 'mental',
             20 => 'spiritual',
