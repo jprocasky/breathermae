@@ -156,7 +156,7 @@ if (!class_exists('BMF_Pillars_Saver')) {
             $t_open = $wpdb->prefix . 'bm_pillars_open';
 
             $row = $wpdb->get_row($wpdb->prepare(
-                "SELECT occupational,social,spiritual,mental,financial,environmental,physical,emotional,rank FROM {$t_res} WHERE id=%d LIMIT 1",
+                "SELECT occupational,social,spiritual,mental,financial,environmental,physical,emotional,'rank' FROM {$t_res} WHERE id=%d LIMIT 1",
                 $row_id
             ), ARRAY_A);
 
