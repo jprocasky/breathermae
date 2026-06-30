@@ -156,9 +156,7 @@ if (!class_exists('BMF_Pillars_Saver')) {
             $t_open = $wpdb->prefix . 'bm_pillars_open';
 
             $row = $wpdb->get_row($wpdb->prepare(
-                "SELECT occupational, social, spiritual, mental, financial,
-                        environmental, physical, emotional, rank
-                 FROM {$t_res} WHERE id = %d LIMIT 1",
+                "SELECT occupational,social,spiritual,mental,financial,environmental,physical,emotional,rank FROM {$t_res} WHERE id=%d LIMIT 1",
                 $row_id
             ), ARRAY_A);
 
@@ -168,7 +166,7 @@ if (!class_exists('BMF_Pillars_Saver')) {
             $all_present = true;
 
             foreach (['occupational','social','spiritual','mental','financial','environmental','physical','emotional'] as $col) {
-                $val = $row[$col];
+                $val = $row[$col] ?? null;
                 if ($val === null || $val === '') {
                     $all_present = false;
                 } else {
@@ -180,20 +178,13 @@ if (!class_exists('BMF_Pillars_Saver')) {
 
             if ($all_present && $has_rank && count($pillars) === 8) {
                 $master = round(array_sum($pillars) / 8, 2);
-
                 $now = current_time('mysql', 1);
+
                 $wpdb->query($wpdb->prepare(
-                    "UPDATE {$t_res}
-                        SET is_final     = 1,
-                            current_flag = 0,
-                            master_score = %f,
-                            results_date = %s,
-                            updated_at   = %s
-                      WHERE id = %d",
+                    "UPDATE {$t_res} SET is_final=1, current_flag=0, master_score=%f, results_date=%s, updated_at=%s WHERE id=%d",
                     $master, substr($now, 0, 10), $now, $row_id
                 ));
 
-                // Remove open mapping
                 $user = get_userdata($user_id);
                 if ($user && !empty($user->user_email)) {
                     $wpdb->delete($t_open, ['user_email' => $user->user_email], ['%s']);
@@ -202,6 +193,7 @@ if (!class_exists('BMF_Pillars_Saver')) {
                 do_action('bmf_pillars_results_finalized', $user_id);
             }
         }
+
 
         /** Force finalization check (useful after batch imports or manual triggers) */
         public static function finalize_if_complete($user_id) {
