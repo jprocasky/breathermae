@@ -136,7 +136,46 @@ class BMF_Repository {
             row_id BIGINT NOT NULL,
             UNIQUE KEY uniq_row (row_id),
             FOREIGN KEY (row_id) REFERENCES $rsi_res(id) ON DELETE CASCADE
+        ) $charset;");   
+        
+        
+        // --- Pillars results (forms 18-25 + form_id 26 "8_pillars_rank") ---
+        $pillars_res  = $wpdb->prefix . 'bm_pillars_results';
+        $pillars_open = $wpdb->prefix . 'bm_pillars_open';
+
+        dbDelta("CREATE TABLE $pillars_res (
+            id BIGINT NOT NULL AUTO_INCREMENT,
+            user_email VARCHAR(191) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+            current_flag TINYINT(1) DEFAULT '0',
+            is_final TINYINT(1) DEFAULT '0',
+            results_date DATE NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+            occupational DECIMAL(10,4) DEFAULT NULL,
+            social DECIMAL(10,4) DEFAULT NULL,
+            spiritual DECIMAL(10,4) DEFAULT NULL,
+            mental DECIMAL(10,4) DEFAULT NULL,
+            financial DECIMAL(10,4) DEFAULT NULL,
+            environmental DECIMAL(10,4) DEFAULT NULL,
+            physical DECIMAL(10,4) DEFAULT NULL,
+            emotional DECIMAL(10,4) DEFAULT NULL,
+
+            rank VARCHAR(255) COLLATE utf8mb4_unicode_520_ci DEFAULT NULL,
+            master_score DECIMAL(10,4) DEFAULT NULL,
+            notes TEXT COLLATE utf8mb4_unicode_520_ci,
+
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_user_date (user_email, results_date)
+        ) $charset;");
+
+        dbDelta("CREATE TABLE $pillars_open (
+            user_email VARCHAR(191) PRIMARY KEY,
+            row_id BIGINT NOT NULL,
+            UNIQUE KEY uniq_row (row_id),
+            FOREIGN KEY (row_id) REFERENCES $pillars_res(id) ON DELETE CASCADE
         ) $charset;");        
+        
+
     }
 
     public static function get_rsi_result_dates($user_email) {

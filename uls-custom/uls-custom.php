@@ -38,6 +38,13 @@ function bm_product_image_link_shortcode($atts) {
 }
 add_shortcode('bm_product_image', 'bm_product_image_link_shortcode');
 
+function custom_product_reviews() {
+    ob_start();
+    comments_template();
+    return ob_get_clean();
+}
+add_shortcode('product_reviews', 'custom_product_reviews');
+
 
 /* --------------------------------------------------------------------------
  * SHORTCODE: [dynamic_wpf_tag]
