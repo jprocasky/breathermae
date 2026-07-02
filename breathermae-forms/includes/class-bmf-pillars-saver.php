@@ -138,12 +138,7 @@ if (!class_exists('BMF_Pillars_Saver')) {
             if (!$row_id) return false;
 
             $wpdb->query($wpdb->prepare(
-                "UPDATE {$t_res}
-                    SET 'rank' = %s,
-                        updated_at = NOW()
-                  WHERE id = %d AND user_email = %s AND current_flag = 1",
-                $rank_string, $row_id, $email
-            ));
+                "UPDATE {$t_res} SET `rank` = %s,  updated_at = NOW() WHERE id = %d AND user_email = %s AND current_flag = 1", $rank_string, $row_id, $email ));
 
             self::maybe_finalize($user_id, $row_id);
             return true;
