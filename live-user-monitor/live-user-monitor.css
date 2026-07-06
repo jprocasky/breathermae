@@ -1,0 +1,34 @@
+/* Live User Monitor table improvements */
+#live-user-table { 
+    overflow-x: auto; /* allow horizontal scroll on small screens */
+}
+
+#live-user-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: auto; /* allows natural column sizing */
+    border-radius: 4px;           /* optional rounding */
+    box-shadow: 0 0 4px rgba(0,0,0,0.08); /* subtle shadow */
+}
+
+#live-user-table th,
+#live-user-table td {
+    padding: 8px 12px;     /* adds breathing room */
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    font-size: 10px;
+}
+
+#live-user-table th {
+    background: #f4f4f4;
+    font-weight: 600;
+}
+
+#live-user-table tr:nth-child(even) {
+    background: #fafafa;
+}
+
+#live-user-table tr:hover {
+    background: #f0f8ff;   /* light blue hover */
+}
