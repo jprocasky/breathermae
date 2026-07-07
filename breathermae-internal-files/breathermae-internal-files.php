@@ -424,6 +424,9 @@ class BreatherMae_Internal_Files {
         $internal_video = esc_url_raw( wp_unslash( $_POST['internal_video'] ?? $existing['internal_video_url'] ) );
         $sharable_video = esc_url_raw( wp_unslash( $_POST['sharable_video'] ?? $existing['sharable_video_url'] ) );
 
+        $internal_file_url = esc_url_raw( wp_unslash( $_POST['internal_file_url'] ?? $existing['internal_file_url'] ) );
+        $sharable_file_url = esc_url_raw( wp_unslash( $_POST['sharable_file_url'] ?? $existing['sharable_file_url'] ) );
+
         // Handle replacements only if new file uploaded
         $graphic_id = (int) $existing['graphic_attachment_id'];
         if ( ! empty( $_FILES['graphic'] ) && $_FILES['graphic']['error'] === UPLOAD_ERR_OK ) {

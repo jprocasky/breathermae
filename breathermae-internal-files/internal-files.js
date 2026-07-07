@@ -326,20 +326,37 @@
             $form.find('#bmif-internal-video').val(data.internal_video_url || '');
             $form.find('#bmif-sharable-video').val(data.sharable_video_url || '');
 
+            // Populate the new manual URL fields
+            $form.find('input[name="internal_file_url"]').val(data.internal_file_url || '');
+            $form.find('input[name="sharable_file_url"]').val(data.sharable_file_url || '');
+
             // Previews / notes for existing files
             const $graphicPrev = $formContainer.find('#bmif-graphic-preview');
             if (data.graphic_attachment_id) {
-                $graphicPrev.html(`<small>Current graphic: <a href="${data.graphic_attachment_id ? wp_get_attachment_url_fallback(data.graphic_attachment_id) : '#'}" target="_blank">View</a> (upload new to replace)</small>`);
+                // Use a simple note instead of broken link for now
+                $graphicPrev.html(`<small>Current graphic present (ID: ${data.graphic_attachment_id}) — upload new file to replace</small>`);
             } else {
                 $graphicPrev.empty();
             }
 
             // Similar notes for other files (simplified)
             const $intPrev = $formContainer.find('#bmif-internal-file-preview');
-            $intPrev.html(data.internal_file_attachment_id ? '<small>Current internal file present — upload new to replace</small>' : '');
+            if (data.internal_file_url) {
+                $intPrev.html(`<small>Using manual URL — <a href="${data.internal_file_url}" target="_blank">View current</a></small>`);
+            } else if (data.internal_file_attachment_id) {
+                $intPrev.html('<small>Current internal file present — upload new to replace</small>');
+            } else {
+                $intPrev.empty();
+            }
 
             const $shaPrev = $formContainer.find('#bmif-sharable-file-preview');
-            $shaPrev.html(data.sharable_file_attachment_id ? '<small>Current sharable file present — upload new to replace</small>' : '');
+            if (data.sharable_file_url) {
+                $shaPrev.html(`<small>Using manual URL — <a href="${data.sharable_file_url}" target="_blank">View current</a></small>`);
+            } else if (data.sharable_file_attachment_id) {
+                $shaPrev.html('<small>Current sharable file present — upload new to replace</small>');
+            } else {
+                $shaPrev.empty();
+            }
 
             // Switch to edit mode UI
             $formContainer.addClass('editing');
