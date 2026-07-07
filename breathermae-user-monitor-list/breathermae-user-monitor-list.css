@@ -83,7 +83,8 @@
 }
 
 .breathermae-user-monitor-table td {
-  padding: 12px;
+  padding: 11px;
+  font-size: 11px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
   color: #374151;

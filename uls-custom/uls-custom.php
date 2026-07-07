@@ -983,7 +983,7 @@ add_action('wp_enqueue_scripts', function () {
     $redirect_strategy  = 'fixed_url'; // 'site_home' | 'previous_or_home' | 'fixed_url'
     $fixed_redirect_url = home_url('/session-expired');
     $inactivity_seconds = 1800; // 30 minutes
-    $exclude_paths      = [ '/user-monitor', '/session-expired' ];
+    $exclude_paths      = [ '/user-monitor', '/session-expired', '/user-monitor-list' ];
     $exclude_admins     = true;
     // ---------------
     if ($exclude_admins && is_user_logged_in() && current_user_can('manage_options')) { return; }

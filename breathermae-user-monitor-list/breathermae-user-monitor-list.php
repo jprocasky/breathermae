@@ -2,9 +2,9 @@
 /**
  * Plugin Name: Breathermae User Monitor List
  * Plugin URI: https://github.com/jprocasky/breathermae
- * Description: Internal dashboard shortcode [user_monitor_list] for registered users. Shows Username, First/Last Name, Last Visit Date, Last Page Visited (excluding session-expired), switchable IP/Geo, and dynamic WP Fusion status tag columns (green check for completed assessments like RSI_COMPLETE). Supports Zoho tags (zoho_tags + multi-tags usermeta). Prefers persistent usermeta written by live-user-monitor. Works on WP Fusion-protected pages + Elementor Pro.
- * Version: 1.1.2
- * Author: Jeff Procasky / Breathermae
+ * Description: Internal dashboard shortcode [user_monitor_list] for registered users. Shows Username, First/Last Name, Last Visit Date, Last Page Visited (excluding session-expired), switchable IP/Geo, and dynamic WP Fusion status tag columns. Supports Zoho tags (zoho_tags + multi-tags) and exclude tags via shortcode. Prefers persistent usermeta. Works on WP Fusion-protected pages + Elementor Pro.
+ * Version: 1.2.0
+ * Author: Jeff Procasky / BreathemMae
  * Author URI: https://www.breathermae.com
  * License: GPL v2 or later
  * Text Domain: breathermae-user-monitor-list
@@ -12,9 +12,10 @@
  * Requires PHP: 7.4
  *
  * Usage:
- * [user_monitor_list status_tags="RSI|RSI_COMPLETE, BSI|BSI_COMPLETE" show_ip="1" show_geo="1" per_page="50"]
+ * [user_monitor_list status_tags="RSI|RSI_COMPLETE, BSI|BSI_COMPLETE" exclude="TEST,DEMO" show_ip="1" show_geo="1" per_page="50"]
  *
- * The status_tags format is "Display Label|WP_Fusion_Tag_Slug"
+ * - status_tags: "Display Label|WP_Fusion_Tag_Slug" (comma separated)
+ * - exclude: Comma-separated list of WP Fusion tag slugs to exclude (e.g. test users)
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -34,13 +35,14 @@ class BreatherMae_User_Monitor_List {
             'breathermae-user-monitor-list',
             plugin_dir_url( __FILE__ ) . 'breathermae-user-monitor-list.css',
             array(),
-            '1.1.0'
+            '1.2.0'
         );
     }
 
     public function render_shortcode( $atts ) {
         $atts = shortcode_atts( array(
             'status_tags' => '',
+            'exclude'     => '',
             'show_ip'     => '0',
             'show_geo'    => '0',
             'per_page'    => '50',
@@ -48,9 +50,17 @@ class BreatherMae_User_Monitor_List {
         ), $atts, 'user_monitor_list' );
 
         $status_tags_str = sanitize_text_field( $atts['status_tags'] );
+        $exclude_str     = sanitize_text_field( $atts['exclude'] );
         $show_ip         = (bool) intval( $atts['show_ip'] );
         $show_geo        = (bool) intval( $atts['show_geo'] );
         $per_page        = max( 5, min( 200, intval( $atts['per_page'] ) ) );
+
+        // Parse exclude tags (comma separated)
+        $exclude_tags = array();
+        if ( ! empty( $exclude_str ) ) {
+            $exclude_tags = array_map( 'trim', explode( ',', $exclude_str ) );
+            $exclude_tags = array_filter( $exclude_tags );
+        }
 
         // Parse status tag columns
         $status_columns = array();
@@ -87,10 +97,6 @@ class BreatherMae_User_Monitor_List {
             $where_args = array( $like, $like, $like, $like );
         }
 
-        // ============================================================
-        // QUERY USERS + PREFER PERSISTENT USERMETA (written by live-user-monitor)
-        // Falls back to live_sessions only if usermeta is empty.
-        // ============================================================
         $live_table = $wpdb->prefix . 'live_sessions';
 
         $sql = "
@@ -101,34 +107,19 @@ class BreatherMae_User_Monitor_List {
                 u.display_name,
                 fn.meta_value AS first_name,
                 ln.meta_value AS last_name,
-
                 COALESCE( um_last.meta_value, l.last_active ) AS last_active,
                 COALESCE( um_page.meta_value, l.page_url )     AS page_url,
                 COALESCE( um_ip.meta_value,   l.ip_address )   AS ip_address,
                 COALESCE( um_geo.meta_value,  l.geo_location ) AS geo_location
-
             FROM {$wpdb->users} u
-            LEFT JOIN {$wpdb->usermeta} fn 
-                ON fn.user_id = u.ID AND fn.meta_key = 'first_name'
-            LEFT JOIN {$wpdb->usermeta} ln 
-                ON ln.user_id = u.ID AND ln.meta_key = 'last_name'
-
-            LEFT JOIN {$wpdb->usermeta} um_last 
-                ON um_last.user_id = u.ID AND um_last.meta_key = '_breathermae_last_active'
-            LEFT JOIN {$wpdb->usermeta} um_page 
-                ON um_page.user_id = u.ID AND um_page.meta_key = '_breathermae_last_page_url'
-            LEFT JOIN {$wpdb->usermeta} um_ip 
-                ON um_ip.user_id = u.ID AND um_ip.meta_key = '_breathermae_last_ip'
-            LEFT JOIN {$wpdb->usermeta} um_geo 
-                ON um_geo.user_id = u.ID AND um_geo.meta_key = '_breathermae_last_geo'
-
+            LEFT JOIN {$wpdb->usermeta} fn  ON fn.user_id = u.ID AND fn.meta_key = 'first_name'
+            LEFT JOIN {$wpdb->usermeta} ln  ON ln.user_id = u.ID AND ln.meta_key = 'last_name'
+            LEFT JOIN {$wpdb->usermeta} um_last ON um_last.user_id = u.ID AND um_last.meta_key = '_breathermae_last_active'
+            LEFT JOIN {$wpdb->usermeta} um_page ON um_page.user_id = u.ID AND um_page.meta_key = '_breathermae_last_page_url'
+            LEFT JOIN {$wpdb->usermeta} um_ip   ON um_ip.user_id = u.ID AND um_ip.meta_key = '_breathermae_last_ip'
+            LEFT JOIN {$wpdb->usermeta} um_geo  ON um_geo.user_id = u.ID AND um_geo.meta_key = '_breathermae_last_geo'
             LEFT JOIN (
-                SELECT 
-                    l1.user_id,
-                    l1.page_url,
-                    l1.last_active,
-                    l1.ip_address,
-                    l1.geo_location
+                SELECT l1.user_id, l1.page_url, l1.last_active, l1.ip_address, l1.geo_location
                 FROM {$live_table} l1
                 INNER JOIN (
                     SELECT user_id, MAX(last_active) AS max_ts
@@ -137,7 +128,6 @@ class BreatherMae_User_Monitor_List {
                     GROUP BY user_id
                 ) lmax ON l1.user_id = lmax.user_id AND l1.last_active = lmax.max_ts
             ) l ON l.user_id = u.ID
-
             WHERE {$where}
             ORDER BY 
                 CASE WHEN COALESCE( um_last.meta_value, l.last_active ) IS NULL THEN 1 ELSE 0 END,
@@ -153,25 +143,23 @@ class BreatherMae_User_Monitor_List {
             return '<p style="color:#dc2626;">Database error: ' . esc_html( $wpdb->last_error ) . '</p>';
         }
 
-        // Total count
-        $count_sql = "
-            SELECT COUNT(DISTINCT u.ID)
-            FROM {$wpdb->users} u
-            LEFT JOIN {$wpdb->usermeta} fn  ON fn.user_id = u.ID AND fn.meta_key = 'first_name'
-            LEFT JOIN {$wpdb->usermeta} ln  ON ln.user_id = u.ID AND ln.meta_key = 'last_name'
-            LEFT JOIN {$wpdb->usermeta} um_last ON um_last.user_id = u.ID AND um_last.meta_key = '_breathermae_last_active'
-            LEFT JOIN (
-                SELECT user_id, MAX(last_active) AS max_ts
-                FROM {$live_table}
-                WHERE page_url NOT LIKE '%%session-expired%%'
-                GROUP BY user_id
-            ) lmax ON u.ID = lmax.user_id
-            WHERE {$where}
-        ";
-        $total_users = (int) $wpdb->get_var( $wpdb->prepare( $count_sql, $where_args ) );
-        $total_pages = max( 1, ceil( $total_users / $per_page ) );
-
+        // Apply exclude tags filter
         $has_wpf = function_exists( 'wp_fusion' );
+
+        if ( ! empty( $exclude_tags ) ) {
+            $users = array_values( array_filter( $users, function( $user ) use ( $exclude_tags, $has_wpf ) {
+                foreach ( $exclude_tags as $ex_tag ) {
+                    if ( $this->user_has_fusion_tag( $user->ID, $ex_tag, $has_wpf ) ) {
+                        return false;
+                    }
+                }
+                return true;
+            }));
+        }
+
+        // Total count (recalculate after exclusion for accurate pagination display)
+        $total_users = count( $users );
+        $total_pages = max( 1, ceil( $total_users / $per_page ) );
 
         ob_start();
         ?>
@@ -249,54 +237,7 @@ class BreatherMae_User_Monitor_List {
                                     <?php if ( $show_geo ) : ?><td><?php echo $geo_display; ?></td><?php endif; ?>
 
                                     <?php foreach ( $status_columns as $col ) :
-                                        $has_tag = false;
-                                        $tag_to_check = $col['tag'];
-
-                                        // 1. Official WP Fusion methods
-                                        if ( $has_wpf && method_exists( wp_fusion()->user, 'has_tag' ) ) {
-                                            $has_tag = wp_fusion()->user->has_tag( $user->ID, $tag_to_check );
-                                        }
-                                        if ( ! $has_tag && $has_wpf && method_exists( wp_fusion()->user, 'get_tags' ) ) {
-                                            $user_tags = wp_fusion()->user->get_tags( $user->ID );
-                                            if ( is_array( $user_tags ) ) {
-                                                $has_tag = in_array( $tag_to_check, $user_tags, true ) ||
-                                                           in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $user_tags ), true );
-                                            }
-                                        }
-
-                                        // 2. Your Zoho keys
-                                        if ( ! $has_tag ) {
-                                            $zoho_tags = get_user_meta( $user->ID, 'zoho_tags', true );
-                                            if ( is_array( $zoho_tags ) ) {
-                                                $has_tag = in_array( $tag_to_check, $zoho_tags, true ) ||
-                                                           in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $zoho_tags ), true );
-                                            } elseif ( is_string( $zoho_tags ) ) {
-                                                $has_tag = stripos( $zoho_tags, $tag_to_check ) !== false;
-                                            }
-
-                                            if ( ! $has_tag ) {
-                                                $multi_tags = get_user_meta( $user->ID, 'multi-tags', true );
-                                                if ( ! $multi_tags ) {
-                                                    $multi_tags = get_user_meta( $user->ID, 'mulit-tags', true );
-                                                }
-                                                if ( is_array( $multi_tags ) ) {
-                                                    $has_tag = in_array( $tag_to_check, $multi_tags, true ) ||
-                                                               in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $multi_tags ), true );
-                                                } elseif ( is_string( $multi_tags ) ) {
-                                                    $has_tag = stripos( $multi_tags, $tag_to_check ) !== false;
-                                                }
-                                            }
-                                        }
-
-                                        // 3. Final fallback
-                                        if ( ! $has_tag ) {
-                                            $raw_tags = get_user_meta( $user->ID, 'wpf_tags', true );
-                                            if ( is_array( $raw_tags ) ) {
-                                                $has_tag = in_array( $tag_to_check, $raw_tags, true ) ||
-                                                           in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $raw_tags ), true );
-                                            }
-                                        }
-
+                                        $has_tag = $this->user_has_fusion_tag( $user->ID, $col['tag'], $has_wpf );
                                         $icon = $has_tag
                                             ? '<span class="dashicons dashicons-yes" style="color:#16a34a; font-size:24px; line-height:1;"></span>'
                                             : '<span class="dashicons dashicons-minus" style="color:#9ca3af; font-size:24px; line-height:1;"></span>';
@@ -368,6 +309,51 @@ class BreatherMae_User_Monitor_List {
         </script>
         <?php
         return ob_get_clean();
+    }
+
+    /**
+     * Robust check if a user has a specific WP Fusion tag.
+     */
+    private function user_has_fusion_tag( $user_id, $tag_to_check, $has_wpf ) {
+        if ( $has_wpf && method_exists( wp_fusion()->user, 'has_tag' ) ) {
+            if ( wp_fusion()->user->has_tag( $user_id, $tag_to_check ) ) return true;
+        }
+
+        if ( $has_wpf && method_exists( wp_fusion()->user, 'get_tags' ) ) {
+            $user_tags = wp_fusion()->user->get_tags( $user_id );
+            if ( is_array( $user_tags ) ) {
+                if ( in_array( $tag_to_check, $user_tags, true ) ||
+                     in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $user_tags ), true ) ) {
+                    return true;
+                }
+            }
+        }
+
+        // Zoho keys
+        $zoho_tags = get_user_meta( $user_id, 'zoho_tags', true );
+        if ( is_array( $zoho_tags ) ) {
+            if ( in_array( $tag_to_check, $zoho_tags, true ) ||
+                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $zoho_tags ), true ) ) return true;
+        } elseif ( is_string( $zoho_tags ) && stripos( $zoho_tags, $tag_to_check ) !== false ) {
+            return true;
+        }
+
+        $multi_tags = get_user_meta( $user_id, 'multi-tags', true ) ?: get_user_meta( $user_id, 'mulit-tags', true );
+        if ( is_array( $multi_tags ) ) {
+            if ( in_array( $tag_to_check, $multi_tags, true ) ||
+                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $multi_tags ), true ) ) return true;
+        } elseif ( is_string( $multi_tags ) && stripos( $multi_tags, $tag_to_check ) !== false ) {
+            return true;
+        }
+
+        // Final fallback
+        $raw_tags = get_user_meta( $user_id, 'wpf_tags', true );
+        if ( is_array( $raw_tags ) ) {
+            if ( in_array( $tag_to_check, $raw_tags, true ) ||
+                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $raw_tags ), true ) ) return true;
+        }
+
+        return false;
     }
 }
 
