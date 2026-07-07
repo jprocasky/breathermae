@@ -1,21 +1,18 @@
 <?php
 /**
- * Plugin Name: Breathermae User Monitor List
+ * Plugin Name: BreatherMae User Monitor List
  * Plugin URI: https://github.com/jprocasky/breathermae
- * Description: Internal dashboard shortcode [user_monitor_list] for registered users. Shows Username, First/Last Name, Last Visit Date, Last Page Visited (excluding session-expired), switchable IP/Geo, and dynamic WP Fusion status tag columns. Supports Zoho tags (zoho_tags + multi-tags) and exclude tags via shortcode. Prefers persistent usermeta. Works on WP Fusion-protected pages + Elementor Pro.
- * Version: 1.2.0
- * Author: Jeff Procasky / BreathemMae
+ * Description: Internal dashboard shortcode [user_monitor_list]. Shows registered users with last activity from persistent usermeta (no longer depends on wp_live_sessions). Supports dynamic WP Fusion status columns, exclude tags, IP/Geo, and CSV export. Works great with Elementor Pro and WP Fusion protected pages.
+ * Version: 1.3.0
+ * Author: Jeff Procasky / BreatherMae
  * Author URI: https://www.breathermae.com
  * License: GPL v2 or later
  * Text Domain: breathermae-user-monitor-list
  * Requires at least: 6.0
  * Requires PHP: 7.4
  *
- * Usage:
- * [user_monitor_list status_tags="RSI|RSI_COMPLETE, BSI|BSI_COMPLETE" exclude="TEST,DEMO" show_ip="1" show_geo="1" per_page="50"]
- *
- * - status_tags: "Display Label|WP_Fusion_Tag_Slug" (comma separated)
- * - exclude: Comma-separated list of WP Fusion tag slugs to exclude (e.g. test users)
+ * Usage example:
+ * [user_monitor_list status_tags="RSI|RSI_COMPLETE, BSI|BSI_COMPLETE" exclude="TEST" show_ip="1" show_geo="1" per_page="50"]
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -35,7 +32,7 @@ class BreatherMae_User_Monitor_List {
             'breathermae-user-monitor-list',
             plugin_dir_url( __FILE__ ) . 'breathermae-user-monitor-list.css',
             array(),
-            '1.2.0'
+            '1.3.0'
         );
     }
 
@@ -55,18 +52,16 @@ class BreatherMae_User_Monitor_List {
         $show_geo        = (bool) intval( $atts['show_geo'] );
         $per_page        = max( 5, min( 200, intval( $atts['per_page'] ) ) );
 
-        // Parse exclude tags (comma separated)
+        // Parse exclude tags
         $exclude_tags = array();
         if ( ! empty( $exclude_str ) ) {
-            $exclude_tags = array_map( 'trim', explode( ',', $exclude_str ) );
-            $exclude_tags = array_filter( $exclude_tags );
+            $exclude_tags = array_filter( array_map( 'trim', explode( ',', $exclude_str ) ) );
         }
 
-        // Parse status tag columns
+        // Parse dynamic status columns
         $status_columns = array();
         if ( ! empty( $status_tags_str ) ) {
-            $pairs = explode( ',', $status_tags_str );
-            foreach ( $pairs as $pair ) {
+            foreach ( explode( ',', $status_tags_str ) as $pair ) {
                 $parts = array_map( 'trim', explode( '|', $pair ) );
                 if ( count( $parts ) === 2 && ! empty( $parts[0] ) && ! empty( $parts[1] ) ) {
                     $status_columns[] = array(
@@ -77,7 +72,7 @@ class BreatherMae_User_Monitor_List {
             }
         }
 
-        // URL-driven interactivity
+        // Handle search + pagination from URL
         $paged  = isset( $_GET['um_paged'] ) ? max( 1, intval( $_GET['um_paged'] ) ) : 1;
         $search = isset( $_GET['um_search'] )
             ? sanitize_text_field( wp_unslash( $_GET['um_search'] ) )
@@ -87,18 +82,19 @@ class BreatherMae_User_Monitor_List {
 
         global $wpdb;
 
-        // Build search
-        $where      = '1=1';
-        $where_args = array();
+        // Build WHERE for search
+        $where = '1=1';
+        $args  = array();
 
         if ( ! empty( $search ) ) {
             $like = '%' . $wpdb->esc_like( $search ) . '%';
             $where .= " AND ( u.user_login LIKE %s OR u.display_name LIKE %s OR fn.meta_value LIKE %s OR ln.meta_value LIKE %s )";
-            $where_args = array( $like, $like, $like, $like );
+            $args = array( $like, $like, $like, $like );
         }
 
-        $live_table = $wpdb->prefix . 'live_sessions';
-
+        // ============================================================
+        // MAIN QUERY - Purely usermeta based (no live_sessions dependency)
+        // ============================================================
         $sql = "
             SELECT 
                 u.ID,
@@ -107,36 +103,26 @@ class BreatherMae_User_Monitor_List {
                 u.display_name,
                 fn.meta_value AS first_name,
                 ln.meta_value AS last_name,
-                COALESCE( um_last.meta_value, l.last_active ) AS last_active,
-                COALESCE( um_page.meta_value, l.page_url )     AS page_url,
-                COALESCE( um_ip.meta_value,   l.ip_address )   AS ip_address,
-                COALESCE( um_geo.meta_value,  l.geo_location ) AS geo_location
+                last_active.meta_value   AS last_active,
+                last_page.meta_value     AS last_page_url,
+                last_ip.meta_value       AS last_ip,
+                last_geo.meta_value      AS last_geo
             FROM {$wpdb->users} u
-            LEFT JOIN {$wpdb->usermeta} fn  ON fn.user_id = u.ID AND fn.meta_key = 'first_name'
-            LEFT JOIN {$wpdb->usermeta} ln  ON ln.user_id = u.ID AND ln.meta_key = 'last_name'
-            LEFT JOIN {$wpdb->usermeta} um_last ON um_last.user_id = u.ID AND um_last.meta_key = '_breathermae_last_active'
-            LEFT JOIN {$wpdb->usermeta} um_page ON um_page.user_id = u.ID AND um_page.meta_key = '_breathermae_last_page_url'
-            LEFT JOIN {$wpdb->usermeta} um_ip   ON um_ip.user_id = u.ID AND um_ip.meta_key = '_breathermae_last_ip'
-            LEFT JOIN {$wpdb->usermeta} um_geo  ON um_geo.user_id = u.ID AND um_geo.meta_key = '_breathermae_last_geo'
-            LEFT JOIN (
-                SELECT l1.user_id, l1.page_url, l1.last_active, l1.ip_address, l1.geo_location
-                FROM {$live_table} l1
-                INNER JOIN (
-                    SELECT user_id, MAX(last_active) AS max_ts
-                    FROM {$live_table}
-                    WHERE page_url NOT LIKE '%%session-expired%%'
-                    GROUP BY user_id
-                ) lmax ON l1.user_id = lmax.user_id AND l1.last_active = lmax.max_ts
-            ) l ON l.user_id = u.ID
+            LEFT JOIN {$wpdb->usermeta} fn          ON fn.user_id = u.ID AND fn.meta_key = 'first_name'
+            LEFT JOIN {$wpdb->usermeta} ln          ON ln.user_id = u.ID AND ln.meta_key = 'last_name'
+            LEFT JOIN {$wpdb->usermeta} last_active ON last_active.user_id = u.ID AND last_active.meta_key = '_breathermae_last_active'
+            LEFT JOIN {$wpdb->usermeta} last_page   ON last_page.user_id   = u.ID AND last_page.meta_key   = '_breathermae_last_page_url'
+            LEFT JOIN {$wpdb->usermeta} last_ip     ON last_ip.user_id     = u.ID AND last_ip.meta_key     = '_breathermae_last_ip'
+            LEFT JOIN {$wpdb->usermeta} last_geo    ON last_geo.user_id    = u.ID AND last_geo.meta_key    = '_breathermae_last_geo'
             WHERE {$where}
             ORDER BY 
-                CASE WHEN COALESCE( um_last.meta_value, l.last_active ) IS NULL THEN 1 ELSE 0 END,
-                COALESCE( um_last.meta_value, l.last_active ) DESC,
+                CASE WHEN last_active.meta_value IS NULL THEN 1 ELSE 0 END,
+                last_active.meta_value DESC,
                 u.user_registered DESC
             LIMIT %d, %d
         ";
 
-        $query_args = array_merge( $where_args, array( $offset, $per_page ) );
+        $query_args = array_merge( $args, array( $offset, $per_page ) );
         $users = $wpdb->get_results( $wpdb->prepare( $sql, $query_args ) );
 
         if ( $wpdb->last_error ) {
@@ -145,7 +131,6 @@ class BreatherMae_User_Monitor_List {
 
         // Apply exclude tags filter
         $has_wpf = function_exists( 'wp_fusion' );
-
         if ( ! empty( $exclude_tags ) ) {
             $users = array_values( array_filter( $users, function( $user ) use ( $exclude_tags, $has_wpf ) {
                 foreach ( $exclude_tags as $ex_tag ) {
@@ -154,10 +139,9 @@ class BreatherMae_User_Monitor_List {
                     }
                 }
                 return true;
-            }));
+            } ) );
         }
 
-        // Total count (recalculate after exclusion for accurate pagination display)
         $total_users = count( $users );
         $total_pages = max( 1, ceil( $total_users / $per_page ) );
 
@@ -186,7 +170,7 @@ class BreatherMae_User_Monitor_List {
 
             <?php if ( empty( $users ) ) : ?>
                 <div class="notice notice-warning" style="padding:12px;">
-                    <p>No users found<?php echo !empty($search) ? ' matching your search.' : '.'; ?></p>
+                    <p>No users found<?php echo ! empty( $search ) ? ' matching your search.' : '.'; ?></p>
                 </div>
             <?php else : ?>
 
@@ -215,7 +199,7 @@ class BreatherMae_User_Monitor_List {
                                     ? esc_html( date_i18n( 'Y-m-d H:i', strtotime( $user->last_active ) ) )
                                     : '—';
 
-                                $last_page_raw = $user->page_url ?: '';
+                                $last_page_raw = $user->last_page_url ?: '';
                                 if ( $last_page_raw ) {
                                     $path = parse_url( $last_page_raw, PHP_URL_PATH );
                                     $last_page = $path ? trim( basename( $path ), '/' ) : esc_html( $last_page_raw );
@@ -223,8 +207,8 @@ class BreatherMae_User_Monitor_List {
                                     $last_page = '—';
                                 }
 
-                                $ip_display  = ( $show_ip && ! empty( $user->ip_address ) ) ? esc_html( $user->ip_address ) : '—';
-                                $geo_display = ( $show_geo && ! empty( $user->geo_location ) ) ? esc_html( $user->geo_location ) : '—';
+                                $ip_display  = ( $show_ip && ! empty( $user->last_ip ) ) ? esc_html( $user->last_ip ) : '—';
+                                $geo_display = ( $show_geo && ! empty( $user->last_geo ) ) ? esc_html( $user->last_geo ) : '—';
                             ?>
                                 <tr>
                                     <td><strong><?php echo esc_html( $user->user_login ); ?></strong></td>
@@ -273,7 +257,7 @@ class BreatherMae_User_Monitor_List {
             <p class="monitor-footer">
                 <small>
                     Internal use only • Protected by WP Fusion • 
-                    Data source: Persistent usermeta (incl. Zoho tags) + live-user-monitor • 
+                    Data source: Persistent usermeta (written by live-user-monitor) • 
                     Default sort: Last Visit (newest first)
                 </small>
             </p>
@@ -312,11 +296,14 @@ class BreatherMae_User_Monitor_List {
     }
 
     /**
-     * Robust check if a user has a specific WP Fusion tag.
+     * Robust WP Fusion tag check (supports zoho_tags + multi-tags)
      */
     private function user_has_fusion_tag( $user_id, $tag_to_check, $has_wpf ) {
+        // 1. Official methods
         if ( $has_wpf && method_exists( wp_fusion()->user, 'has_tag' ) ) {
-            if ( wp_fusion()->user->has_tag( $user_id, $tag_to_check ) ) return true;
+            if ( wp_fusion()->user->has_tag( $user_id, $tag_to_check ) ) {
+                return true;
+            }
         }
 
         if ( $has_wpf && method_exists( wp_fusion()->user, 'get_tags' ) ) {
@@ -329,28 +316,37 @@ class BreatherMae_User_Monitor_List {
             }
         }
 
-        // Zoho keys
+        // 2. Zoho keys
         $zoho_tags = get_user_meta( $user_id, 'zoho_tags', true );
         if ( is_array( $zoho_tags ) ) {
             if ( in_array( $tag_to_check, $zoho_tags, true ) ||
-                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $zoho_tags ), true ) ) return true;
+                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $zoho_tags ), true ) ) {
+                return true;
+            }
         } elseif ( is_string( $zoho_tags ) && stripos( $zoho_tags, $tag_to_check ) !== false ) {
             return true;
         }
 
-        $multi_tags = get_user_meta( $user_id, 'multi-tags', true ) ?: get_user_meta( $user_id, 'mulit-tags', true );
+        $multi_tags = get_user_meta( $user_id, 'multi-tags', true );
+        if ( ! $multi_tags ) {
+            $multi_tags = get_user_meta( $user_id, 'mulit-tags', true );
+        }
         if ( is_array( $multi_tags ) ) {
             if ( in_array( $tag_to_check, $multi_tags, true ) ||
-                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $multi_tags ), true ) ) return true;
+                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $multi_tags ), true ) ) {
+                return true;
+            }
         } elseif ( is_string( $multi_tags ) && stripos( $multi_tags, $tag_to_check ) !== false ) {
             return true;
         }
 
-        // Final fallback
+        // 3. Default fallback
         $raw_tags = get_user_meta( $user_id, 'wpf_tags', true );
         if ( is_array( $raw_tags ) ) {
             if ( in_array( $tag_to_check, $raw_tags, true ) ||
-                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $raw_tags ), true ) ) return true;
+                 in_array( strtolower( $tag_to_check ), array_map( 'strtolower', $raw_tags ), true ) ) {
+                return true;
+            }
         }
 
         return false;
