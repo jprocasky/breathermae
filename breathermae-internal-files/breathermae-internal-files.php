@@ -16,7 +16,7 @@ if ( ! class_exists( 'BreatherMae_Internal_Files' ) ) :
 
 class BreatherMae_Internal_Files {
 
-    const DB_VERSION = '1.0.0';
+    const DB_VERSION = '1.0.1';
     private static $instance = null;
     private $table = 'breathermae_internal_files';
     private $nonce_action = 'breathermae_internal_files';
