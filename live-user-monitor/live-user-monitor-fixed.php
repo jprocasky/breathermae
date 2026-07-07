@@ -232,6 +232,16 @@ if (strpos($user_agent, 'iPad') !== false) {
         ));
 
         $last_seen = current_time('mysql', true);
+
+
+        // Persist last activity in usermeta so it survives the aggressive truncation in live_sessions
+        if ( ! empty( $user_id ) ) {
+            update_user_meta( $user_id, '_breathermae_last_active',    current_time( 'mysql' ) );
+            update_user_meta( $user_id, '_breathermae_last_page_url',  $page_url );
+            update_user_meta( $user_id, '_breathermae_last_ip',        $ip_address );
+            update_user_meta( $user_id, '_breathermae_last_geo',       $geo_location );
+        }
+
         if ($existing) {
             $wpdb->update($table_name, [
                 'last_active' => $last_seen,
