@@ -611,33 +611,37 @@ class BreatherMae_Internal_Files {
                     <textarea id="bmif-long-desc" name="long_desc" rows="4" placeholder="Detailed explanation, instructions, or notes..."></textarea>
                 </div>
 
-                <div class="bmif-grid">
-                    <div class="bmif-field">
-                        <label for="bmif-graphic">Graphic (jpg, png, webp) <small>Max ~2MB</small></label>
-                        <input type="file" id="bmif-graphic" name="graphic" accept=".jpg,.jpeg,.png,.webp">
-                        <div id="bmif-graphic-preview" class="bmif-preview"></div>
+                <!-- Graphic on its own full-width row -->
+                <div class="bmif-field bmif-graphic-row">
+                    <label for="bmif-graphic">Graphic (jpg, png, webp) <small>Max ~2MB</small></label>
+                    <input type="file" id="bmif-graphic" name="graphic" accept=".jpg,.jpeg,.png,.webp">
+                    <div id="bmif-graphic-preview" class="bmif-preview"></div>
+                </div>
+
+                <!-- Two-column layout: Internal | Sharable -->
+                <div class="bmif-two-col-grid">
+                    <div class="bmif-col">
+                        <div class="bmif-field">
+                            <label for="bmif-internal-file">Internal File (Office, PDF) <small>Max ~25MB</small></label>
+                            <input type="file" id="bmif-internal-file" name="internal_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
+                            <div id="bmif-internal-file-preview" class="bmif-preview"></div>
+                        </div>
+                        <div class="bmif-field">
+                            <label for="bmif-internal-video">Internal Video URL (YouTube unlisted)</label>
+                            <input type="url" id="bmif-internal-video" name="internal_video" placeholder="https://youtu.be/xxxx or https://youtube.com/watch?v=xxxx">
+                        </div>
                     </div>
 
-                    <div class="bmif-field">
-                        <label for="bmif-internal-file">Internal File (Office, PDF) <small>Max ~25MB</small></label>
-                        <input type="file" id="bmif-internal-file" name="internal_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
-                        <div id="bmif-internal-file-preview" class="bmif-preview"></div>
-                    </div>
-
-                    <div class="bmif-field">
-                        <label for="bmif-internal-video">Internal Video URL (YouTube unlisted)</label>
-                        <input type="url" id="bmif-internal-video" name="internal_video" placeholder="https://youtu.be/xxxx or https://youtube.com/watch?v=xxxx">
-                    </div>
-
-                    <div class="bmif-field">
-                        <label for="bmif-sharable-file">Sharable File (Office, PDF) <small>Max ~25MB</small></label>
-                        <input type="file" id="bmif-sharable-file" name="sharable_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
-                        <div id="bmif-sharable-file-preview" class="bmif-preview"></div>
-                    </div>
-
-                    <div class="bmif-field">
-                        <label for="bmif-sharable-video">Sharable Video URL (YouTube unlisted)</label>
-                        <input type="url" id="bmif-sharable-video" name="sharable_video" placeholder="https://youtu.be/xxxx">
+                    <div class="bmif-col">
+                        <div class="bmif-field">
+                            <label for="bmif-sharable-file">Sharable File (Office, PDF) <small>Max ~25MB</small></label>
+                            <input type="file" id="bmif-sharable-file" name="sharable_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
+                            <div id="bmif-sharable-file-preview" class="bmif-preview"></div>
+                        </div>
+                        <div class="bmif-field">
+                            <label for="bmif-sharable-video">Sharable Video URL (YouTube unlisted)</label>
+                            <input type="url" id="bmif-sharable-video" name="sharable_video" placeholder="https://youtu.be/xxxx">
+                        </div>
                     </div>
                 </div>
 
