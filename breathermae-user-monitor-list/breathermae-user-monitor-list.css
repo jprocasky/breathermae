@@ -124,7 +124,7 @@
 }
 
 .tablenav-pages .button {
-  font-size: 13px;
+  font-size: 11px;
   padding: 4px 10px;
   min-width: 34px;
   text-align: center;
@@ -170,4 +170,15 @@
     padding: 10px 8px;
     font-size: 13px;
   }
+}
+/* Reduce size of Search and Export CSV buttons */
+.breathermae-user-monitor .monitor-controls .button {
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    line-height: 1.4 !important;
+}
+
+/* Optional: Make the Export button a bit more compact */
+.breathermae-user-monitor .monitor-controls .button-primary {
+    padding: 6px 12px !important;
 }
