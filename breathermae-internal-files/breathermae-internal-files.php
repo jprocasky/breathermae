@@ -221,9 +221,10 @@ class BreatherMae_Internal_Files {
             `long_desc` LONGTEXT NULL,
             `graphic_attachment_id` BIGINT UNSIGNED NULL,
             `internal_file_attachment_id` BIGINT UNSIGNED NULL,
+            `internal_file_url` TEXT NULL,
             `internal_video_url` TEXT NULL,
             `sharable_file_attachment_id` BIGINT UNSIGNED NULL,
-            `sharable_video_url` TEXT NULL,
+            `sharable_file_url` TEXT NULL,
             `uploaded_by` BIGINT UNSIGNED NOT NULL,
             `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `updated_at` DATETIME NULL,
@@ -236,6 +237,18 @@ class BreatherMae_Internal_Files {
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
+
+        // Robust column upgrade for existing installations
+        $cols = $wpdb->get_col( "DESC `{$table}`", 0 );
+
+        if ( is_array( $cols ) ) {
+            if ( ! in_array( 'internal_file_url', $cols, true ) ) {
+                $wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `internal_file_url` TEXT NULL AFTER `internal_file_attachment_id`" );
+            }
+            if ( ! in_array( 'sharable_file_url', $cols, true ) ) {
+                $wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `sharable_file_url` TEXT NULL AFTER `sharable_file_attachment_id`" );
+            }
+        }
 
         update_option( $opt, self::DB_VERSION );
     }
@@ -274,14 +287,16 @@ class BreatherMae_Internal_Files {
                 'long_desc' => $r['long_desc'],
                 'graphic_url' => $this->get_attachment_url( $r['graphic_attachment_id'] ),
                 'graphic_id' => (int) $r['graphic_attachment_id'],
-                'internal_file_url' => $this->get_attachment_url( $r['internal_file_attachment_id'] ),
-                'internal_file_id' => (int) $r['internal_file_attachment_id'],
-                'internal_file_ext' => $this->get_file_ext( $r['internal_file_attachment_id'] ),
-                'internal_video_url' => $r['internal_video_url'],
-                'sharable_file_url' => $this->get_attachment_url( $r['sharable_file_attachment_id'] ),
-                'sharable_file_id' => (int) $r['sharable_file_attachment_id'],
-                'sharable_file_ext' => $this->get_file_ext( $r['sharable_file_attachment_id'] ),
-                'sharable_video_url' => $r['sharable_video_url'],
+                'internal_file_attachment_url' => $this->get_attachment_url( $r['internal_file_attachment_id'] ),
+                'internal_file_url'        => $r['internal_file_url'] ?? '',
+                'internal_file_id'         => (int) $r['internal_file_attachment_id'],
+                'internal_file_ext'        => $this->get_file_ext( $r['internal_file_attachment_id'] ),
+                'internal_video_url'       => $r['internal_video_url'] ?? '',
+                'sharable_file_attachment_url' => $this->get_attachment_url( $r['sharable_file_attachment_id'] ),
+                'sharable_file_url'        => $r['sharable_file_url'] ?? '',
+                'sharable_file_id'         => (int) $r['sharable_file_attachment_id'],
+                'sharable_file_ext'        => $this->get_file_ext( $r['sharable_file_attachment_id'] ),
+                'sharable_video_url'       => $r['sharable_video_url'] ?? '',
                 'uploaded_by' => (int) $r['uploaded_by'],
                 'uploaded_at' => date_i18n( $fmt, strtotime( $r['uploaded_at'] ) ),
                 'updated_at' => $r['updated_at'] ? date_i18n( $fmt, strtotime( $r['updated_at'] ) ) : '',
@@ -333,6 +348,9 @@ class BreatherMae_Internal_Files {
         $internal_video = esc_url_raw( wp_unslash( $_POST['internal_video'] ?? '' ) );
         $sharable_video = esc_url_raw( wp_unslash( $_POST['sharable_video'] ?? '' ) );
 
+        $internal_file_url = esc_url_raw( wp_unslash( $_POST['internal_file_url'] ?? '' ) );
+        $sharable_file_url = esc_url_raw( wp_unslash( $_POST['sharable_file_url'] ?? '' ) );
+
         if ( empty( $short_desc ) ) wp_send_json_error( [ 'message' => 'Short description is required' ], 400 );
 
         global $wpdb;
@@ -366,9 +384,10 @@ class BreatherMae_Internal_Files {
             'long_desc' => $long_desc,
             'graphic_attachment_id' => $graphic_id ?: null,
             'internal_file_attachment_id' => $internal_file_id ?: null,
+            'internal_file_url' => $internal_file_url,
             'internal_video_url' => $internal_video,
             'sharable_file_attachment_id' => $sharable_file_id ?: null,
-            'sharable_video_url' => $sharable_video,
+            'sharable_file_url' => $sharable_file_url,
             'uploaded_by' => $current_user_id,
             'uploaded_at' => current_time( 'mysql' ),
             'updated_at' => current_time( 'mysql' ),
@@ -435,9 +454,10 @@ class BreatherMae_Internal_Files {
             'long_desc' => $long_desc,
             'graphic_attachment_id' => $graphic_id ?: null,
             'internal_file_attachment_id' => $internal_file_id ?: null,
+            'internal_file_url' => $internal_file_url,
             'internal_video_url' => $internal_video,
             'sharable_file_attachment_id' => $sharable_file_id ?: null,
-            'sharable_video_url' => $sharable_video,
+            'sharable_file_url' => $sharable_file_url,
             'updated_at' => current_time( 'mysql' ),
         ], [ 'id' => $id ], [ '%s','%s','%d','%d','%s','%d','%s','%s' ], [ '%d' ] );
 
@@ -625,6 +645,10 @@ class BreatherMae_Internal_Files {
                             <label for="bmif-internal-file">Internal File (Office, PDF) <small>Max ~25MB</small></label>
                             <input type="file" id="bmif-internal-file" name="internal_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
                             <div id="bmif-internal-file-preview" class="bmif-preview"></div>
+                            <div class="bmif-url-alt">
+                                <label style="font-size:0.65em; margin-top:4px;">or paste existing file URL</label>
+                                <input type="url" name="internal_file_url" placeholder="https://yoursite.com/wp-content/uploads/...">
+                            </div>
                         </div>
                         <div class="bmif-field">
                             <label for="bmif-internal-video">Internal Video URL (YouTube unlisted)</label>
@@ -637,6 +661,10 @@ class BreatherMae_Internal_Files {
                             <label for="bmif-sharable-file">Sharable File (Office, PDF) <small>Max ~25MB</small></label>
                             <input type="file" id="bmif-sharable-file" name="sharable_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
                             <div id="bmif-sharable-file-preview" class="bmif-preview"></div>
+                            <div class="bmif-url-alt">
+                                <label style="font-size:0.65em; margin-top:4px;">or paste existing file URL</label>
+                                <input type="url" name="sharable_file_url" placeholder="https://yoursite.com/wp-content/uploads/...">
+                            </div>
                         </div>
                         <div class="bmif-field">
                             <label for="bmif-sharable-video">Sharable Video URL (YouTube unlisted)</label>
