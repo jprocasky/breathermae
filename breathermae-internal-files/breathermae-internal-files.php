@@ -392,7 +392,9 @@ class BreatherMae_Internal_Files {
             'uploaded_at' => current_time( 'mysql' ),
             'updated_at' => current_time( 'mysql' ),
             'is_deleted' => 0,
-        ], [ '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%s', '%d', '%s', '%s', '%d' ] );
+        ], [ 
+            '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%d' 
+        ] );
 
         $new_id = (int) $wpdb->insert_id;
 
@@ -462,7 +464,9 @@ class BreatherMae_Internal_Files {
             'sharable_file_attachment_id' => $sharable_file_id ?: null,
             'sharable_file_url' => $sharable_file_url,
             'updated_at' => current_time( 'mysql' ),
-        ], [ 'id' => $id ], [ '%s','%s','%d','%d','%s','%d','%s','%s' ], [ '%d' ] );
+        ], [ 'id' => $id ], [ 
+            '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s' 
+        ], [ '%d' ] );
 
         wp_send_json_success( [ 'id' => $id, 'message' => 'Entry updated successfully' ] );
     }
@@ -565,7 +569,7 @@ class BreatherMae_Internal_Files {
                 <thead>
                     <tr class="bmif-major-header">
                         <th colspan="2">General</th>
-                        <th colspan="2">Internal</th>
+                        <th colspan="2" style="color:red;">Internal</th>
                         <th colspan="2">Sharable</th>
                         <?php if ( $is_admin ) : ?><th>Actions</th><?php endif; ?>
                     </tr>

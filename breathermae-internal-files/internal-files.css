@@ -30,7 +30,7 @@
 .bmif-table th,
 .bmif-table td {
     padding: 0.45em 0.55em;
-    text-align: left;
+    text-align: center;
     border-bottom: 1px solid #f3f4f6;
     vertical-align: middle;
 }
@@ -109,11 +109,13 @@
 
 /* Graphic thumbnail */
 .bmif-graphic {
-    max-width: 60px;
-    max-height: 45px;
+    max-width: 120px;
+    max-height: 120px;
     border-radius: 4px;
-    border: 1px solid #e5e7eb;
+    border: 2px solid #00143b;
     object-fit: cover;
+    display: block;           
+    margin: 0 auto;
 }
 
 /* Form styles */
