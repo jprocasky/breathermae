@@ -2,14 +2,14 @@
 /*
 Plugin Name: Live User Monitor
 Description: Tracks anonymous and logged-in users in real time and displays them via shortcode. Includes cleanup, user details, page name formatting, duplicate prevention, IP display, Last Seen timestamp in local timezone, simplified device info with device type, geolocation, and auto-refresh gauge chart.
-Version: 3.0
+Version: 3.1
 Author: Jeff Procasky
 */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class LiveUserMonitorFixed {
-    private $db_version = '3.0';
+    private $db_version = '3.1';
 
     public function __construct() {
         register_activation_hook(__FILE__, [$this, 'install']);
@@ -27,6 +27,7 @@ class LiveUserMonitorFixed {
 
     public function install() {
         $this->create_table();
+        $this->create_history_table();
         add_option('lum_db_version', $this->db_version);
     }
 
@@ -34,6 +35,7 @@ class LiveUserMonitorFixed {
         $installed_version = get_option('lum_db_version');
         if ($installed_version !== $this->db_version) {
             $this->create_table();
+            $this->create_history_table();
             update_option('lum_db_version', $this->db_version);
         }
     }
@@ -55,6 +57,31 @@ class LiveUserMonitorFixed {
             PRIMARY KEY (session_id),
             UNIQUE KEY user_session (user_id, session_id)
         ) $charset_collate;";
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+
+    public function create_history_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'lum_page_history';
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            session_id VARCHAR(64) NOT NULL,
+            user_id BIGINT(20) NOT NULL DEFAULT 0,
+            page_url VARCHAR(512) NOT NULL,
+            referrer VARCHAR(512) DEFAULT '',
+            ip_address VARCHAR(45) NOT NULL,
+            device_info VARCHAR(255) NOT NULL,
+            geo_location VARCHAR(255) NOT NULL,
+            viewed_at DATETIME NOT NULL,
+            PRIMARY KEY (id),
+            KEY session_time (session_id, viewed_at),
+            KEY user_time (user_id, viewed_at),
+            KEY page (page_url(191))
+        ) $charset_collate;";
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
     }
@@ -209,7 +236,8 @@ if (strpos($user_agent, 'iPad') !== false) {
 
     public function update_session() {
         global $wpdb;
-        $table_name = $wpdb->prefix . 'live_sessions';
+        $live_table    = $wpdb->prefix . 'live_sessions';
+        $history_table = $wpdb->prefix . 'lum_page_history';
 
         $session_id = isset($_COOKIE['lum_session']) ? sanitize_text_field($_COOKIE['lum_session']) : wp_generate_uuid4();
         setcookie('lum_session', $session_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
@@ -226,37 +254,44 @@ if (strpos($user_agent, 'iPad') !== false) {
         $device_info = $this->parse_device_info($raw_agent);
         $geo_location = $this->get_geo_location($ip_address);
 
-        $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT page_url FROM $table_name WHERE " . ($is_logged_in ? "user_id = %d" : "session_id = %s"),
-            $is_logged_in ? $user_id : $session_id
-        ));
+        // NEW in 3.1: Capture referrer (server-side)
+        $referrer = isset($_SERVER['HTTP_REFERER']) ? sanitize_text_field($_SERVER['HTTP_REFERER']) : '';
 
         $last_seen = current_time('mysql', true);
 
-
-
+        // Existing user meta updates for logged-in users (unchanged)
         if ( ! empty( $user_id ) ) {
-
-            // Only record meaningful activity — skip session-expired pages
             if ( strpos( $page_url, 'session-expired' ) === false ) {
-                
                 update_user_meta( $user_id, '_breathermae_last_active',    current_time( 'mysql' ) );
                 update_user_meta( $user_id, '_breathermae_last_page_url',  $page_url );
                 update_user_meta( $user_id, '_breathermae_last_ip',        $ip_address );
                 update_user_meta( $user_id, '_breathermae_last_geo',       $geo_location );
-                
             }
         }
 
+        // === Check what page is CURRENTLY in live_sessions (BEFORE we update it) ===
+        $current_live_page = $wpdb->get_var( $wpdb->prepare(
+            "SELECT page_url FROM $live_table WHERE session_id = %s",
+            $session_id
+        ) );
+
+        $should_log_to_history = empty( $current_live_page ) || ( $current_live_page !== $page_url );
+
+        // === Existing live_sessions logic (unchanged) ===
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT page_url FROM $live_table WHERE " . ($is_logged_in ? "user_id = %d" : "session_id = %s"),
+            $is_logged_in ? $user_id : $session_id
+        ));
+
         if ($existing) {
-            $wpdb->update($table_name, [
-                'last_active' => $last_seen,
-                'last_seen' => $last_seen,
-                'page_url' => $page_url,
-                'is_logged_in' => $is_logged_in,
-                'user_id' => $user_id,
-                'device_info' => $device_info,
-                'geo_location' => $geo_location
+            $wpdb->update($live_table, [
+                'last_active'   => $last_seen,
+                'last_seen'     => $last_seen,
+                'page_url'      => $page_url,
+                'is_logged_in'  => $is_logged_in,
+                'user_id'       => $user_id,
+                'device_info'   => $device_info,
+                'geo_location'  => $geo_location
             ], [
                 $is_logged_in ? 'user_id' : 'session_id' => $is_logged_in ? $user_id : $session_id
             ]);
@@ -264,7 +299,7 @@ if (strpos($user_agent, 'iPad') !== false) {
             $wpdb->query(
                 $wpdb->prepare(
                     "
-                    INSERT INTO $table_name
+                    INSERT INTO $live_table
                     (session_id, user_id, page_url, ip_address, device_info, geo_location, last_active, last_seen, is_logged_in)
                     VALUES (%s, %d, %s, %s, %s, %s, %s, %s, %d)
                     ON DUPLICATE KEY UPDATE
@@ -277,17 +312,38 @@ if (strpos($user_agent, 'iPad') !== false) {
                         last_seen = VALUES(last_seen),
                         is_logged_in = VALUES(is_logged_in)
                     ",
-                    $session_id,
-                    $user_id,
-                    $page_url,
-                    $ip_address,
-                    $device_info,
-                    $geo_location,
-                    $last_seen,
-                    $last_seen,
-                    $is_logged_in
+                    $session_id, $user_id, $page_url, $ip_address, $device_info, $geo_location,
+                    $last_seen, $last_seen, $is_logged_in
                 )
             );
+        }
+
+        // ============================================================
+        // NEW in 3.1: Log to history ONLY when the user actually
+        // navigates to a different page (or it's their first page).
+        // This prevents heartbeat spam from pages left open all day.
+        // ============================================================
+        $last_logged_page = $wpdb->get_var( $wpdb->prepare(
+            "SELECT page_url FROM $history_table 
+             WHERE session_id = %s 
+             ORDER BY viewed_at DESC 
+             LIMIT 1",
+            $session_id
+        ) );
+
+        $is_new_page_for_session = empty( $last_logged_page ) || ( $last_logged_page !== $page_url );
+
+        if ( $is_new_page_for_session ) {
+            $wpdb->insert( $history_table, [
+                'session_id'   => $session_id,
+                'user_id'      => $user_id,
+                'page_url'     => $page_url,
+                'referrer'     => $referrer,
+                'ip_address'   => $ip_address,
+                'device_info'  => $device_info,
+                'geo_location' => $geo_location,
+                'viewed_at'    => $last_seen,
+            ] );
         }
 
         wp_send_json_success(['message' => 'Session updated']);
