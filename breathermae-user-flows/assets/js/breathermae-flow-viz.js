@@ -2,19 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const container = document.getElementById('viz-flow-container');
     if (!container) return;
 
-    // Try to get session_id from URL param or data attribute
     const urlParams = new URLSearchParams(window.location.search);
     let sessionId = urlParams.get('session_id') || container.dataset.sessionId || '';
-
-    const controls = document.querySelector('.viz-controls');
-    if (!controls) return;
-
-    let currentRows = [];
-    let dwells = [];
-    let currentIndex = 0;
-    let isPlaying = false;
-    let playTimeout = null;
-    let speedMultiplier = 1;
 
     const playBtn = document.getElementById('viz-play');
     const pauseBtn = document.getElementById('viz-pause');
@@ -23,117 +12,284 @@ document.addEventListener('DOMContentLoaded', function () {
     const resetBtn = document.getElementById('viz-reset');
     const stepBtn = document.getElementById('viz-step');
 
+    let currentRows = [];
+    let nodes = new Map();
+    let edges = [];
+    let orderedVisits = [];
+    let isPlaying = false;
+    let playTimeout = null;
+    let speedMultiplier = 1;
+    let currentStep = 0;
+
     function getColorForDwell(seconds) {
-        if (seconds < 5) return '#40c6ff';
-        if (seconds < 30) return '#67c9e0';
-        if (seconds < 120) return '#FD5A38';
+        if (seconds < 10) return '#40c6ff';
+        if (seconds < 45) return '#67c9e0';
+        if (seconds < 180) return '#FD5A38';
         return '#c73d1f';
     }
 
     function prettifySlug(slug) {
-        if (!slug) return 'Home';
+        if (!slug || slug === 'home') return 'Home';
         return slug.replace(/-/g, ' ').replace(/\//g, ' → ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
-    function renderBlocks(rows) {
-        container.innerHTML = '';
-        currentRows = rows;
-        dwells = [];
+    function processData(rows) {
+        nodes.clear();
+        edges = [];
+        orderedVisits = rows.map(r => r.page_url);
+
+        const transitionMap = new Map();
 
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
-            let dwell = 0;
-            if (i < rows.length - 1) {
-                const t1 = new Date(rows[i].viewed_at);
-                const t2 = new Date(rows[i + 1].viewed_at);
-                dwell = Math.max(0, (t2 - t1) / 1000);
-            } else {
-                dwell = 8; // default for last block
+            const page = row.page_url;
+
+            if (!nodes.has(page)) {
+                nodes.set(page, {
+                    page_url: page,
+                    totalDwell: 0,
+                    visitCount: 0,
+                    firstSeen: row.viewed_at,
+                    lastSeen: row.viewed_at
+                });
             }
-            dwells.push(dwell);
 
-            const block = document.createElement('div');
-            block.className = 'page-block';
-            block.dataset.index = i;
-            block.innerHTML = `
-                <div class="step-number">${i + 1}</div>
-                <div class="page-slug">${prettifySlug(row.page_url)}</div>
-                <div class="dwell-badge">${dwell.toFixed(0)}s</div>
-            `;
-            block.style.background = getColorForDwell(dwell);
-            block.style.color = dwell > 60 ? 'white' : '#222';
+            const node = nodes.get(page);
+            node.visitCount++;
 
-            block.addEventListener('click', () => {
-                highlightBlock(i);
-                showBlockInfo(i);
-            });
+            let dwell = 8;
+            if (i < rows.length - 1) {
+                const t1 = new Date(row.viewed_at);
+                const t2 = new Date(rows[i + 1].viewed_at);
+                dwell = Math.max(1, (t2 - t1) / 1000);
+            }
+            node.totalDwell += dwell;
 
-            container.appendChild(block);
+            if (new Date(row.viewed_at) < new Date(node.firstSeen)) node.firstSeen = row.viewed_at;
+            if (new Date(row.viewed_at) > new Date(node.lastSeen)) node.lastSeen = row.viewed_at;
+
+            if (i > 0) {
+                const prev = rows[i - 1].page_url;
+                const key = `${prev}|||${page}`;
+                transitionMap.set(key, (transitionMap.get(key) || 0) + 1);
+            }
         }
 
-        // Add legend
-        const legend = document.createElement('div');
-        legend.className = 'color-legend';
-        legend.innerHTML = `
-            <span><span class="color-swatch" style="background:#40c6ff"></span> &lt; 5s</span>
-            <span><span class="color-swatch" style="background:#67c9e0"></span> 5–30s</span>
-            <span><span class="color-swatch" style="background:#FD5A38"></span> 30s–2m</span>
-            <span><span class="color-swatch" style="background:#c73d1f"></span> &gt; 2m</span>
-        `;
-        container.parentNode.appendChild(legend);
-    }
-
-    function highlightBlock(index) {
-        document.querySelectorAll('.page-block').forEach((b, i) => {
-            b.classList.toggle('active', i === index);
+        transitionMap.forEach((count, key) => {
+            const [from, to] = key.split('|||');
+            edges.push({ from, to, count });
         });
-        currentIndex = index;
 
-        // Auto scroll into view
-        const block = document.querySelector(`.page-block[data-index="${index}"]`);
-        if (block) block.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        return { nodes, edges, orderedVisits };
     }
 
-    function showBlockInfo(index) {
-        const row = currentRows[index];
-        const dwell = dwells[index] || 0;
-        const info = document.getElementById('viz-info') || document.createElement('div');
-        info.id = 'viz-info';
-        info.innerHTML = `
-            <strong>Step ${index + 1}</strong> — ${prettifySlug(row.page_url)}<br>
-            <small>Time spent: ${dwell.toFixed(1)}s &nbsp;|&nbsp; 
-            ${new Date(row.viewed_at).toLocaleTimeString()}</small>
+    // Calculate balanced grid columns
+    function calculateColumns(count) {
+        if (count <= 4) return count;
+        if (count <= 9) return 3;
+        if (count <= 16) return 4;
+        return Math.ceil(Math.sqrt(count));
+    }
+
+    function renderNodes(nodeArray) {
+        container.innerHTML = '';
+        container.style.position = 'relative';
+        container.style.display = 'grid';
+        container.style.gap = '48px';           // generous spacing for arrows
+        container.style.padding = '30px 20px';
+
+        const cols = calculateColumns(nodeArray.length);
+        container.style.gridTemplateColumns = `repeat(${cols}, minmax(160px, 1fr))`;
+
+        nodeArray.forEach(node => {
+            const el = document.createElement('div');
+            el.className = 'page-block graph-node';
+            el.dataset.page = node.page_url;
+            el.style.background = getColorForDwell(node.totalDwell);
+            el.style.color = node.totalDwell > 120 ? 'white' : '#222';
+
+            el.innerHTML = `
+                <div class="page-slug">${prettifySlug(node.page_url)}</div>
+                <div class="dwell-badge">${node.totalDwell.toFixed(0)}s total • ${node.visitCount} visits</div>
+            `;
+
+            el.addEventListener('click', () => showNodeDetails(node));
+            container.appendChild(el);
+        });
+    }
+
+    // Draw connectors using side midpoints (much better attachment)
+    function renderConnectors(nodeArray, edgeList) {
+        let svg = container.querySelector('svg.viz-connectors');
+        if (!svg) {
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.classList.add('viz-connectors');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            svg.style.zIndex = '1';
+            container.appendChild(svg);
+        }
+        svg.innerHTML = '';
+
+        // Arrow marker
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        defs.innerHTML = `
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#555" />
+            </marker>
         `;
-        if (!info.parentNode) container.parentNode.appendChild(info);
+        svg.appendChild(defs);
+
+        edgeList.forEach(edge => {
+            const fromEl = container.querySelector(`[data-page="${edge.from}"]`);
+            const toEl = container.querySelector(`[data-page="${edge.to}"]`);
+            if (!fromEl || !toEl) return;
+
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+
+            // Calculate midpoints of all 4 sides
+            const fromPoints = {
+                left:   { x: fromRect.left - containerRect.left,               y: fromRect.top + fromRect.height / 2 - containerRect.top },
+                right:  { x: fromRect.right - containerRect.left,              y: fromRect.top + fromRect.height / 2 - containerRect.top },
+                top:    { x: fromRect.left + fromRect.width / 2 - containerRect.left, y: fromRect.top - containerRect.top },
+                bottom: { x: fromRect.left + fromRect.width / 2 - containerRect.left, y: fromRect.bottom - containerRect.top }
+            };
+
+            const toPoints = {
+                left:   { x: toRect.left - containerRect.left,               y: toRect.top + toRect.height / 2 - containerRect.top },
+                right:  { x: toRect.right - containerRect.left,              y: toRect.top + toRect.height / 2 - containerRect.top },
+                top:    { x: toRect.left + toRect.width / 2 - containerRect.left, y: toRect.top - containerRect.top },
+                bottom: { x: toRect.left + toRect.width / 2 - containerRect.left, y: toRect.bottom - containerRect.top }
+            };
+
+            // Choose best connection points (prefer horizontal when possible)
+            let start = fromPoints.right;
+            let end = toPoints.left;
+
+            if (toRect.left < fromRect.right) { // going left (back edge)
+                start = fromPoints.left;
+                end = toPoints.right;
+            }
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', start.x);
+            line.setAttribute('y1', start.y);
+            line.setAttribute('x2', end.x);
+            line.setAttribute('y2', end.y);
+            line.setAttribute('stroke', '#555');
+            line.setAttribute('stroke-width', '2.2');
+            line.setAttribute('marker-end', 'url(#arrowhead)');
+            line.dataset.from = edge.from;
+            line.dataset.to = edge.to;
+
+            svg.appendChild(line);
+        });
+    }
+
+    function showNodeDetails(node) {
+        const info = document.getElementById('viz-info');
+        info.innerHTML = `
+            <strong>${prettifySlug(node.page_url)}</strong><br>
+            <small>Total time: ${node.totalDwell.toFixed(1)}s &nbsp;|&nbsp; Visits: ${node.visitCount}</small>
+        `;
     }
 
     function playNext() {
-        if (!isPlaying || currentIndex >= currentRows.length) {
+        if (!isPlaying || currentStep >= orderedVisits.length) {
             isPlaying = false;
             return;
         }
 
-        highlightBlock(currentIndex);
-        showBlockInfo(currentIndex);
+        const currentPage = orderedVisits[currentStep];
+        document.querySelectorAll('.page-block').forEach(el => el.classList.remove('active'));
+        const nodeEl = container.querySelector(`[data-page="${currentPage}"]`);
+        if (nodeEl) nodeEl.classList.add('active');
 
-        const dwell = dwells[currentIndex] || 3;
-        const delay = Math.max(800, dwell * 1000 / speedMultiplier); // minimum 800ms per step
+        const svg = container.querySelector('svg.viz-connectors');
+        if (svg && currentStep > 0) {
+            const prevPage = orderedVisits[currentStep - 1];
+            svg.querySelectorAll('line').forEach(line => {
+                line.classList.remove('active-edge');
+                line.setAttribute('stroke', '#555');
+                line.setAttribute('stroke-width', '2.2');
+
+                if (line.dataset.from === prevPage && line.dataset.to === currentPage) {
+                    line.classList.add('active-edge');
+                    line.setAttribute('stroke', '#40c6ff');
+                    line.setAttribute('stroke-width', '3.5');
+                }
+            });
+        }
+
+        const dwell = nodes.get(currentPage)?.totalDwell || 3;
+        const delay = Math.max(650, (dwell * 850) / speedMultiplier);
 
         playTimeout = setTimeout(() => {
-            currentIndex++;
-            if (currentIndex < currentRows.length) {
-                playNext();
-            } else {
-                isPlaying = false;
-            }
+            currentStep++;
+            playNext();
         }, delay);
     }
 
-    // Playback controls
+    function renderGraph(rows) {
+        if (!rows?.length) {
+            container.innerHTML = '<p>No journey data found.</p>';
+            return;
+        }
+
+        currentRows = rows;
+        const processed = processData(rows);
+        const nodeArray = Array.from(processed.nodes.values());
+        nodeArray.sort((a, b) => new Date(a.firstSeen) - new Date(b.firstSeen));
+
+        renderNodes(nodeArray);
+
+        // Wait for grid layout to finish before drawing connectors
+        requestAnimationFrame(() => {
+            renderConnectors(nodeArray, processed.edges);
+        });
+
+        orderedVisits = processed.orderedVisits;
+        currentStep = 0;
+    }
+
+    function loadSessionFlow(sessionIdToLoad) {
+        if (!sessionIdToLoad) {
+            container.innerHTML = '<p>Pass a session_id to load the journey graph.</p>';
+            return;
+        }
+
+        container.innerHTML = '<p class="loading">Building journey graph...</p>';
+
+        fetch(breathermaeFlowViz.ajaxurl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'breathermae_get_session_flow',
+                session_id: sessionIdToLoad
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.data.rows?.length) {
+                renderGraph(data.data.rows);
+            } else {
+                container.innerHTML = '<p>No journey data found for this session.</p>';
+            }
+        })
+        .catch(() => container.innerHTML = '<p>Error loading data.</p>');
+    }
+
+    // Controls (same as before)
     if (playBtn) playBtn.addEventListener('click', () => {
-        if (!currentRows.length) return;
+        if (!orderedVisits.length) return;
         isPlaying = true;
-        if (currentIndex >= currentRows.length - 1) currentIndex = 0;
+        if (currentStep >= orderedVisits.length) currentStep = 0;
         playNext();
     });
 
@@ -150,59 +306,24 @@ document.addEventListener('DOMContentLoaded', function () {
     if (resetBtn) resetBtn.addEventListener('click', () => {
         isPlaying = false;
         clearTimeout(playTimeout);
-        currentIndex = 0;
-        highlightBlock(0);
-        showBlockInfo(0);
+        currentStep = 0;
+        document.querySelectorAll('.page-block').forEach(el => el.classList.remove('active'));
+        const svg = container.querySelector('svg.viz-connectors');
+        if (svg) svg.querySelectorAll('line').forEach(l => {
+            l.classList.remove('active-edge');
+            l.setAttribute('stroke', '#555');
+            l.setAttribute('stroke-width', '2.2');
+        });
     });
 
     if (stepBtn) stepBtn.addEventListener('click', () => {
         isPlaying = false;
         clearTimeout(playTimeout);
-        currentIndex = (currentIndex + 1) % currentRows.length;
-        highlightBlock(currentIndex);
-        showBlockInfo(currentIndex);
+        currentStep = (currentStep + 1) % orderedVisits.length;
     });
 
-    // Main load function
-    function loadSessionFlow(sessionIdToLoad) {
-        if (!sessionIdToLoad) {
-            container.innerHTML = '<p style="padding:20px">No session_id provided. Add <code>?session_id=xxxx</code> to the URL or pass it via shortcode attribute.</p>';
-            return;
-        }
-
-        container.innerHTML = '<p class="loading">Loading user journey...</p>';
-
-        fetch(breathermaeFlowViz.ajaxurl || '/wp-admin/admin-ajax.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'breathermae_get_session_flow',
-                session_id: sessionIdToLoad
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && data.data.rows && data.data.rows.length > 0) {
-                renderBlocks(data.data.rows);
-                highlightBlock(0);
-                showBlockInfo(0);
-            } else {
-                container.innerHTML = '<p>No journey data found for this session.</p>';
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            container.innerHTML = '<p>Error loading journey data.</p>';
-        });
-    }
-
-    // Auto-load if session_id is available
+    // Auto load
     if (sessionId) {
         loadSessionFlow(sessionId);
-    } else {
-        container.innerHTML = '<p>Ready. Pass a <code>session_id</code> via URL parameter or shortcode attribute to load a user journey.</p>';
     }
-
-    // Expose for debugging / future wiring
-    window.BreatherMaeFlowViz = { loadSessionFlow };
 });
