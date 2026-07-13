@@ -22,6 +22,9 @@ class BreatherMaeUserFlows {
         add_shortcode('breathermae_flow_list', [$this, 'render_flow_list']);
         add_action('wp_ajax_breathermae_get_flow_list', [$this, 'ajax_get_flow_list']);
         add_action('wp_ajax_nopriv_breathermae_get_flow_list', [$this, 'ajax_get_flow_list']);
+        add_shortcode('breathermae_flow_viz', [$this, 'render_flow_viz']);
+        add_action('wp_ajax_breathermae_get_session_flow', [$this, 'ajax_get_session_flow']);
+        add_action('wp_ajax_nopriv_breathermae_get_session_flow', [$this, 'ajax_get_session_flow']); // tighten later with caps
     }
 
     public function check_dependency() {
@@ -52,6 +55,74 @@ class BreatherMaeUserFlows {
 
         wp_localize_script('breathermae-user-flows', 'breathermaeFlows', [
             'ajaxurl' => admin_url('admin-ajax.php')
+        ]);
+    }
+
+    public function render_flow_viz($atts = []) {
+        $atts = shortcode_atts(['session_id' => ''], $atts);
+
+        // Enqueue the dedicated viz assets (only when this shortcode is used)
+        wp_enqueue_style(
+            'breathermae-flow-viz',
+            plugin_dir_url(__FILE__) . 'assets/css/breathermae-flow-viz.css',
+            [],
+            '1.0'
+        );
+
+        wp_enqueue_script(
+            'breathermae-flow-viz',
+            plugin_dir_url(__FILE__) . 'assets/js/breathermae-flow-viz.js',
+            [],
+            '1.0',
+            true
+        );
+
+        wp_localize_script('breathermae-flow-viz', 'breathermaeFlowViz', [
+            'ajaxurl' => admin_url('admin-ajax.php')
+        ]);
+
+        ob_start(); ?>
+        <div class="breathermae-flow-viz">
+            <div class="viz-controls">
+                <button id="viz-play">▶ Play</button>
+                <button id="viz-pause">⏸ Pause</button>
+                <label>Speed: <input type="range" id="viz-speed" min="0.25" max="4" step="0.25" value="1"> <span id="speed-val">1x</span></label>
+                <button id="viz-reset">Reset</button>
+                <button id="viz-step">Step ▶</button>
+            </div>
+
+            <div id="viz-flow-container" 
+                class="flow-container" 
+                data-session-id="<?php echo esc_attr($atts['session_id']); ?>">
+                <!-- JS will populate the blocks here -->
+                <p class="loading">Select a session or pass session_id...</p>
+            </div>
+
+            <div id="viz-info"></div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function ajax_get_session_flow() {
+        global $wpdb;
+        $session_id = sanitize_text_field($_POST['session_id'] ?? '');
+
+        if (empty($session_id)) {
+            wp_send_json_error('No session_id');
+        }
+
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}lum_page_history 
+            WHERE session_id = %s 
+            ORDER BY viewed_at ASC",
+            $session_id
+        ) );
+
+        // Compute dwell times client-side is fine, but we can pre-calc here too
+        wp_send_json_success([
+            'rows' => $rows,
+            'user_id' => $rows[0]->user_id ?? 0
         ]);
     }
 

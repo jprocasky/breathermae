@@ -1,0 +1,134 @@
+.breathermae-flow-viz {
+    max-width: 100%;
+    margin: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.viz-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.viz-controls button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 1px solid #40c6ff;
+    background: white;
+    color: #333;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.viz-controls button:hover {
+    background: #40c6ff;
+    color: white;
+}
+
+.viz-controls input[type="range"] {
+    width: 120px;
+}
+
+.flow-container {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 20px 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    scroll-behavior: smooth;
+    min-height: 140px;
+}
+
+.page-block {
+    min-width: 140px;
+    max-width: 220px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.page-block:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+.page-block.active {
+    border-color: #40c6ff;
+    box-shadow: 0 0 0 4px rgba(64, 198, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.page-block .page-slug {
+    font-weight: 600;
+    font-size: 14px;
+    color: #222;
+    margin-bottom: 6px;
+    word-break: break-all;
+}
+
+.page-block .dwell-badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f1f1;
+    color: #555;
+    margin-top: 6px;
+}
+
+.page-block .step-number {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    background: #40c6ff;
+    color: white;
+    font-size: 11px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.viz-info {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #555;
+}
+
+.color-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+.color-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
