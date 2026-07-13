@@ -333,17 +333,36 @@ if (strpos($user_agent, 'iPad') !== false) {
 
         $is_new_page_for_session = empty( $last_logged_page ) || ( $last_logged_page !== $page_url );
 
+        // Extra tuning for session-expired: only log it if this session had real prior activity
+        if ( $page_url === 'session-expired' && ! empty( $last_logged_page ) && $last_logged_page === 'session-expired' ) {
+            $is_new_page_for_session = false; // already have one, skip
+        }
+
         if ( $is_new_page_for_session ) {
-            $wpdb->insert( $history_table, [
-                'session_id'   => $session_id,
-                'user_id'      => $user_id,
-                'page_url'     => $page_url,
-                'referrer'     => $referrer,
-                'ip_address'   => $ip_address,
-                'device_info'  => $device_info,
-                'geo_location' => $geo_location,
-                'viewed_at'    => $last_seen,
-            ] );
+            // optional stricter guard for expired
+            if ( $page_url === 'session-expired' ) {
+                $has_prior_real_activity = $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$history_table} 
+                    WHERE session_id = %s AND page_url != 'session-expired'",
+                    $session_id
+                ) );
+                if ( $has_prior_real_activity == 0 ) {
+                    $is_new_page_for_session = false; // skip empty/phantom expired sessions
+                }
+            }
+
+            if ( $is_new_page_for_session ) {
+                $wpdb->insert( $history_table, [
+                    'session_id'   => $session_id,
+                    'user_id'      => $user_id,
+                    'page_url'     => $page_url,
+                    'referrer'     => $referrer,
+                    'ip_address'   => $ip_address,
+                    'device_info'  => $device_info,
+                    'geo_location' => $geo_location,
+                    'viewed_at'    => $last_seen,
+                ] );
+            }
         }
 
         wp_send_json_success(['message' => 'Session updated']);
