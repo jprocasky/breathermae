@@ -38,18 +38,21 @@ jQuery(document).ready(function($) {
         $('#breathermae-flow-table-container').hide();
         $('#flow-viz-area').show();
 
-        // CRITICAL: Set the data attribute so the viz JS can see it
+        // Set the data attribute on the container
         const vizContainer = document.getElementById('viz-flow-container');
         if (vizContainer) {
             vizContainer.setAttribute('data-session-id', sessionId);
         }
 
-        // Call the viz loader
-        if (typeof window.BreatherMaeFlowViz !== 'undefined' && typeof window.BreatherMaeFlowViz.loadSessionFlow === 'function') {
-            window.BreatherMaeFlowViz.loadSessionFlow(sessionId);
-        } else {
-            console.error('BreatherMaeFlowViz not ready');
-        }
+        // Give a tiny moment for the script to be fully ready
+        setTimeout(() => {
+            if (typeof window.BreatherMaeFlowViz !== 'undefined' && typeof window.BreatherMaeFlowViz.loadSessionFlow === 'function') {
+                console.log('Calling loadSessionFlow with:', sessionId);
+                window.BreatherMaeFlowViz.loadSessionFlow(sessionId);
+            } else {
+                console.error('BreatherMaeFlowViz still not ready after delay');
+            }
+        }, 150);
     });
 
     $(document).on('click', '#back-to-list', function() {
