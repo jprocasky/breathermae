@@ -175,6 +175,15 @@ class BreatherMaeUserFlows {
             <!-- Viz container (hidden until a flow is selected) -->
             <div id="flow-viz-area" style="display: none; margin-top: 30px;">
                 <button id="back-to-list" style="margin-bottom: 12px;">← Back to List</button>
+                
+                <div class="viz-controls">
+                    <button id="viz-play">▶ Play</button>
+                    <button id="viz-pause">⏸ Pause</button>
+                    <label>Speed: <input type="range" id="viz-speed" min="0.25" max="20" step="0.5" value="1"> <span id="speed-val">1x</span></label>
+                    <button id="viz-reset">Reset</button>
+                    <button id="viz-step">Step ▶</button>
+                </div>
+
                 <div id="viz-flow-container" class="flow-container" data-session-id=""></div>
                 <div id="viz-info"></div>
             </div>

@@ -1,18 +1,16 @@
+console.log('=== BreatherMaeFlowViz JS LOADED (Full Graph) ===');
+
 document.addEventListener('DOMContentLoaded', function () {
     const container = document.getElementById('viz-flow-container');
-    if (!container) return;
+    if (!container) {
+        console.error('viz-flow-container not found');
+        return;
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id') || container.dataset.sessionId || '';
 
-    console.log('BreatherMaeFlowViz loaded. Session ID from data/URL:', sessionId);
-
-    const playBtn = document.getElementById('viz-play');
-    const pauseBtn = document.getElementById('viz-pause');
-    const speedSlider = document.getElementById('viz-speed');
-    const speedVal = document.getElementById('speed-val');
-    const resetBtn = document.getElementById('viz-reset');
-    const stepBtn = document.getElementById('viz-step');
+    console.log('Final sessionId resolved:', sessionId);
 
     let currentRows = [];
     let nodes = new Map();
@@ -85,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return { nodes, edges, orderedVisits };
     }
 
-    // Calculate balanced grid columns
     function calculateColumns(count) {
         if (count <= 4) return count;
         if (count <= 9) return 3;
@@ -97,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = '';
         container.style.position = 'relative';
         container.style.display = 'grid';
-        container.style.gap = '48px';           // generous spacing for arrows
+        container.style.gap = '48px';
         container.style.padding = '30px 20px';
 
         const cols = calculateColumns(nodeArray.length);
@@ -120,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Draw connectors using side midpoints (much better attachment)
     function renderConnectors(nodeArray, edgeList) {
         let svg = container.querySelector('svg.viz-connectors');
         if (!svg) {
@@ -137,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         svg.innerHTML = '';
 
-        // Arrow marker
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         defs.innerHTML = `
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -155,35 +150,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const toRect = toEl.getBoundingClientRect();
             const containerRect = container.getBoundingClientRect();
 
-            // Calculate midpoints of all 4 sides
-            const fromPoints = {
-                left:   { x: fromRect.left - containerRect.left,               y: fromRect.top + fromRect.height / 2 - containerRect.top },
-                right:  { x: fromRect.right - containerRect.left,              y: fromRect.top + fromRect.height / 2 - containerRect.top },
-                top:    { x: fromRect.left + fromRect.width / 2 - containerRect.left, y: fromRect.top - containerRect.top },
-                bottom: { x: fromRect.left + fromRect.width / 2 - containerRect.left, y: fromRect.bottom - containerRect.top }
-            };
-
-            const toPoints = {
-                left:   { x: toRect.left - containerRect.left,               y: toRect.top + toRect.height / 2 - containerRect.top },
-                right:  { x: toRect.right - containerRect.left,              y: toRect.top + toRect.height / 2 - containerRect.top },
-                top:    { x: toRect.left + toRect.width / 2 - containerRect.left, y: toRect.top - containerRect.top },
-                bottom: { x: toRect.left + toRect.width / 2 - containerRect.left, y: toRect.bottom - containerRect.top }
-            };
-
-            // Choose best connection points (prefer horizontal when possible)
-            let start = fromPoints.right;
-            let end = toPoints.left;
-
-            if (toRect.left < fromRect.right) { // going left (back edge)
-                start = fromPoints.left;
-                end = toPoints.right;
-            }
+            const fromCenterX = fromRect.left + fromRect.width / 2 - containerRect.left;
+            const fromCenterY = fromRect.top + fromRect.height / 2 - containerRect.top;
+            const toCenterX = toRect.left + toRect.width / 2 - containerRect.left;
+            const toCenterY = toRect.top + toRect.height / 2 - containerRect.top;
 
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', start.x);
-            line.setAttribute('y1', start.y);
-            line.setAttribute('x2', end.x);
-            line.setAttribute('y2', end.y);
+            line.setAttribute('x1', fromCenterX);
+            line.setAttribute('y1', fromCenterY);
+            line.setAttribute('x2', toCenterX);
+            line.setAttribute('y2', toCenterY);
             line.setAttribute('stroke', '#555');
             line.setAttribute('stroke-width', '2.2');
             line.setAttribute('marker-end', 'url(#arrowhead)');
@@ -220,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 line.classList.remove('active-edge');
                 line.setAttribute('stroke', '#555');
                 line.setAttribute('stroke-width', '2.2');
-
                 if (line.dataset.from === prevPage && line.dataset.to === currentPage) {
                     line.classList.add('active-edge');
                     line.setAttribute('stroke', '#40c6ff');
@@ -239,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderGraph(rows) {
-        if (!rows?.length) {
+        if (!rows || rows.length === 0) {
             container.innerHTML = '<p>No journey data found.</p>';
             return;
         }
@@ -251,7 +226,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         renderNodes(nodeArray);
 
-        // Wait for grid layout to finish before drawing connectors
         requestAnimationFrame(() => {
             renderConnectors(nodeArray, processed.edges);
         });
@@ -260,34 +234,47 @@ document.addEventListener('DOMContentLoaded', function () {
         currentStep = 0;
     }
 
-    function loadSessionFlow(sessionIdToLoad) {
-        if (!sessionIdToLoad) {
-            container.innerHTML = '<p>Pass a session_id to load the journey graph.</p>';
-            return;
-        }
-
-        container.innerHTML = '<p class="loading">Building journey graph...</p>';
-
-        fetch(breathermaeFlowViz.ajaxurl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'breathermae_get_session_flow',
-                session_id: sessionIdToLoad
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && data.data.rows?.length) {
-                renderGraph(data.data.rows);
-            } else {
-                container.innerHTML = '<p>No journey data found for this session.</p>';
+    // Expose loader
+    window.BreatherMaeFlowViz = {
+        loadSessionFlow: function(sid) {
+            console.log('loadSessionFlow called with:', sid);
+            if (!sid) {
+                container.innerHTML = '<p style="color:red">No session_id provided.</p>';
+                return;
             }
-        })
-        .catch(() => container.innerHTML = '<p>Error loading data.</p>');
+            container.innerHTML = '<p class="loading">Building journey graph...</p>';
+
+            fetch(breathermaeFlowViz.ajaxurl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'breathermae_get_session_flow',
+                    session_id: sid
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data.rows && data.data.rows.length) {
+                    renderGraph(data.data.rows);
+                } else {
+                    container.innerHTML = '<p>No journey data found for this session.</p>';
+                }
+            })
+            .catch(err => {
+                console.error('Fetch error:', err);
+                container.innerHTML = '<p>Error loading journey data.</p>';
+            });
+        }
+    };
+
+    console.log('BreatherMaeFlowViz global exposed successfully');
+
+    if (sessionId) {
+        window.BreatherMaeFlowViz.loadSessionFlow(sessionId);
     }
 
-    // Controls (same as before)
+
+    // Playback controls
     if (playBtn) playBtn.addEventListener('click', () => {
         if (!orderedVisits.length) return;
         isPlaying = true;
@@ -324,8 +311,4 @@ document.addEventListener('DOMContentLoaded', function () {
         currentStep = (currentStep + 1) % orderedVisits.length;
     });
 
-    // Auto load
-    if (sessionId) {
-        loadSessionFlow(sessionId);
-    }
 });

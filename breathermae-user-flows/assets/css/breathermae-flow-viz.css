@@ -142,6 +142,7 @@
 
 .viz-connectors {
     z-index: 1;
+    stroke-width: 1 !important;   
 }
 
 line.active-edge {
@@ -153,7 +154,11 @@ line.active-edge {
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
+.viz-connectors line {
+    stroke-width: 1 !important;   /* thinner default */
+}
+
 line.active-edge {
     stroke: #40c6ff !important;
-    stroke-width: 3.5 !important;
+    stroke-width: 4 !important;     /* thicker only during playback */
 }
