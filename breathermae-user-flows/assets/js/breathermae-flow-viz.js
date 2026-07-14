@@ -3,7 +3,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!container) return;
 
     const urlParams = new URLSearchParams(window.location.search);
-    let sessionId = urlParams.get('session_id') || container.dataset.sessionId || '';
+    const sessionId = urlParams.get('session_id') || container.dataset.sessionId || '';
+
+    console.log('BreatherMaeFlowViz loaded. Session ID from data/URL:', sessionId);
 
     const playBtn = document.getElementById('viz-play');
     const pauseBtn = document.getElementById('viz-pause');

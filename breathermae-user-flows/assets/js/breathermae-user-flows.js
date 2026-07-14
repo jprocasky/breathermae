@@ -18,10 +18,8 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Initial load
     loadFlowList();
 
-    // Filter + Search
     $('#flow-filter-type').on('change', loadFlowList);
     let searchTimeout;
     $('#flow-search').on('keyup', function() {
@@ -29,27 +27,35 @@ jQuery(document).ready(function($) {
         searchTimeout = setTimeout(loadFlowList, 350);
     });
 
-    // Wire "View Flow" buttons
+    // === View Flow wiring ===
     $(document).on('click', '.view-flow-btn', function() {
         const sessionId = $(this).data('session');
+        if (!sessionId) {
+            console.error('No session_id on button');
+            return;
+        }
 
-        // Hide list, show viz area
         $('#breathermae-flow-table-container').hide();
         $('#flow-viz-area').show();
 
-        // Load the graph
-        if (typeof window.BreatherMaeFlowViz !== 'undefined' && window.BreatherMaeFlowViz.loadSessionFlow) {
+        // CRITICAL: Set the data attribute so the viz JS can see it
+        const vizContainer = document.getElementById('viz-flow-container');
+        if (vizContainer) {
+            vizContainer.setAttribute('data-session-id', sessionId);
+        }
+
+        // Call the viz loader
+        if (typeof window.BreatherMaeFlowViz !== 'undefined' && typeof window.BreatherMaeFlowViz.loadSessionFlow === 'function') {
             window.BreatherMaeFlowViz.loadSessionFlow(sessionId);
         } else {
-            console.error('BreatherMaeFlowViz not loaded');
+            console.error('BreatherMaeFlowViz not ready');
         }
     });
 
-    // Back to list button
     $(document).on('click', '#back-to-list', function() {
         $('#flow-viz-area').hide();
         $('#breathermae-flow-table-container').show();
+        // Optional: clear the viz container for next time
+        $('#viz-flow-container').html('<p class="loading">Ready for next session...</p>');
     });
-
-    // Make sure the viz assets are available (they should already be enqueued when needed)
 });

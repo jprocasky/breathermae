@@ -38,6 +38,21 @@ class BreatherMaeUserFlows {
     public function enqueue_scripts() {
         wp_enqueue_script('jquery');
 
+        // Viz assets (pre-load so they are ready when button is clicked)
+        wp_enqueue_style(
+            'breathermae-flow-viz',
+            plugin_dir_url(__FILE__) . 'assets/css/breathermae-flow-viz.css',
+            [],
+            '1.0'
+        );
+        wp_enqueue_script(
+            'breathermae-flow-viz',
+            plugin_dir_url(__FILE__) . 'assets/js/breathermae-flow-viz.js',
+            [],
+            '1.0',
+            true
+        );
+
         // List assets
         wp_enqueue_style(
             'breathermae-user-flows',
@@ -53,20 +68,7 @@ class BreatherMaeUserFlows {
             true
         );
 
-        // Viz assets (pre-load so they are ready when button is clicked)
-        wp_enqueue_style(
-            'breathermae-flow-viz',
-            plugin_dir_url(__FILE__) . 'assets/css/breathermae-flow-viz.css',
-            [],
-            '1.0'
-        );
-        wp_enqueue_script(
-            'breathermae-flow-viz',
-            plugin_dir_url(__FILE__) . 'assets/js/breathermae-flow-viz.js',
-            [],
-            '1.0',
-            true
-        );
+
 
         // Correct PHP array syntax for localize_script
         wp_localize_script('breathermae-user-flows', 'breathermaeFlows', [
