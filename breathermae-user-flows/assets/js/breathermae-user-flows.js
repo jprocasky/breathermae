@@ -1,4 +1,21 @@
 jQuery(document).ready(function($) {
+    
+    let currentPage = 1;
+    let perPage = 25;
+
+    function updatePagination(data) {
+        const pagination = $('#breathermae-flow-pagination');
+        if (data.total_pages <= 1) {
+            pagination.hide();
+            return;
+        }
+        pagination.show();
+        $('#current-page-info').text(`Page ${data.current_page} of ${data.total_pages} (${data.total} total)`);
+        
+        $('#prev-page').prop('disabled', data.current_page <= 1);
+        $('#next-page').prop('disabled', data.current_page >= data.total_pages);
+    }    
+
     function loadFlowList() {
         const filterType = $('#flow-filter-type').val();
         const searchTerm = $('#flow-search').val();
@@ -19,6 +36,24 @@ jQuery(document).ready(function($) {
     }
 
     loadFlowList();
+
+    $('#prev-page').on('click', function() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadFlowList();
+        }
+    });
+
+    $('#next-page').on('click', function() {
+        currentPage++;
+        loadFlowList();
+    });
+
+    $('#per-page').on('change', function() {
+        perPage = parseInt($(this).val());
+        currentPage = 1;
+        loadFlowList();
+    });
 
     $('#flow-filter-type').on('change', loadFlowList);
     let searchTimeout;

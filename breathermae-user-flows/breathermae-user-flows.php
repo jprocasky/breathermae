@@ -168,6 +168,16 @@ class BreatherMaeUserFlows {
                 </div>
             </div>
 
+            <div class="filter-group">
+                <label for="per-page"><strong>Per page:</strong></label>
+                <select id="per-page">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+
             <div id="breathermae-flow-table-container">
                 <p class="loading">Loading recent sessions...</p>
             </div>
@@ -179,7 +189,7 @@ class BreatherMaeUserFlows {
                 <div class="viz-controls">
                     <button id="viz-play">▶ Play</button>
                     <button id="viz-pause">⏸ Pause</button>
-                    <label>Speed: <input type="range" id="viz-speed" min="0.25" max="20" step="0.5" value="1"> <span id="speed-val">1x</span></label>
+                    <label>Speed: <input type="range" id="viz-speed" min="0.25" max="100" step="0.5" value="1"> <span id="speed-val">1x</span></label>
                     <button id="viz-reset">Reset</button>
                     <button id="viz-step">Step ▶</button>
                 </div>
@@ -187,6 +197,11 @@ class BreatherMaeUserFlows {
                 <div id="viz-flow-container" class="flow-container" data-session-id=""></div>
                 <div id="viz-info"></div>
             </div>
+            <div id="breathermae-flow-pagination" style="margin-top: 15px; text-align: center; display: none;">
+                <button id="prev-page" style="margin: 0 8px;">← Previous</button>
+                <span id="current-page-info" style="margin: 0 15px; font-weight: 500;"></span>
+                <button id="next-page" style="margin: 0 8px;">Next →</button>
+            </div>            
         </div>
         <?php
         return ob_get_clean();
@@ -199,6 +214,9 @@ class BreatherMaeUserFlows {
 
         $filter_type = sanitize_text_field($_POST['filter_type'] ?? 'all');
         $search = sanitize_text_field($_POST['search'] ?? '');
+        $page = max(1, intval($_POST['page'] ?? 1));
+        $per_page = in_array(intval($_POST['per_page'] ?? 25), [10,25,50,100]) ? intval($_POST['per_page']) : 25;
+        $offset = ($page - 1) * $per_page;        
 
         $sql = "
             SELECT h1.* 
@@ -210,6 +228,7 @@ class BreatherMaeUserFlows {
                 GROUP BY session_id
             ) h2 ON h1.session_id = h2.session_id AND h1.viewed_at = h2.max_viewed_at
         ";
+
 
         $where = [];
         $params = [];
@@ -239,7 +258,7 @@ class BreatherMaeUserFlows {
             $sql .= " WHERE " . implode(' AND ', $where);
         }
 
-        $sql .= " ORDER BY h1.viewed_at DESC LIMIT 300";
+        $sql .= " ORDER BY h1.viewed_at DESC LIMIT $per_page OFFSET $offset";
 
         $results = !empty($params) 
             ? $wpdb->get_results($wpdb->prepare($sql, $params)) 
@@ -293,7 +312,15 @@ class BreatherMaeUserFlows {
         <?php
         $html = ob_get_clean();
 
-        wp_send_json_success(['html' => $html]);
+        $total = $wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM $table" . (empty($where) ? "" : " WHERE " . implode(' AND ', $where)));
+        $total_pages = ceil($total / $per_page);
+
+        wp_send_json_success([
+            'html' => $html,
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total
+        ]);
     }
 }
 

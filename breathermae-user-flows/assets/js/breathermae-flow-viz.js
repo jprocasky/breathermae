@@ -232,6 +232,75 @@ document.addEventListener('DOMContentLoaded', function () {
 
         orderedVisits = processed.orderedVisits;
         currentStep = 0;
+        // Attach control listeners after rendering (dynamic content)
+        const playBtn = document.getElementById('viz-play');
+        const pauseBtn = document.getElementById('viz-pause');
+        const speedSlider = document.getElementById('viz-speed');
+        const speedVal = document.getElementById('speed-val');
+        const resetBtn = document.getElementById('viz-reset');
+        const stepBtn = document.getElementById('viz-step');
+
+        if (playBtn) playBtn.addEventListener('click', () => {
+            if (!orderedVisits.length) return;
+            isPlaying = true;
+            if (currentStep >= orderedVisits.length) currentStep = 0;
+            playNext();
+        });
+
+        if (pauseBtn) pauseBtn.addEventListener('click', () => {
+            isPlaying = false;
+            clearTimeout(playTimeout);
+        });
+
+        if (speedSlider) speedSlider.addEventListener('input', () => {
+            speedMultiplier = parseFloat(speedSlider.value);
+            if (speedVal) speedVal.textContent = speedMultiplier.toFixed(2) + 'x';
+        });
+
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+            isPlaying = false;
+            clearTimeout(playTimeout);
+            currentStep = 0;
+            document.querySelectorAll('.page-block').forEach(el => el.classList.remove('active'));
+            const svg = container.querySelector('svg.viz-connectors');
+            if (svg) svg.querySelectorAll('line').forEach(l => {
+                l.classList.remove('active-edge');
+                l.setAttribute('stroke', '#555');
+                l.setAttribute('stroke-width', '1');
+            });
+        });
+
+        if (stepBtn) stepBtn.addEventListener('click', () => {
+            isPlaying = false;
+            clearTimeout(playTimeout);
+            currentStep = (currentStep + 1) % orderedVisits.length;
+            
+            // Highlight current node
+            document.querySelectorAll('.page-block').forEach(el => el.classList.remove('active'));
+            const nodeEl = container.querySelector(`[data-page="${orderedVisits[currentStep]}"]`);
+            if (nodeEl) nodeEl.classList.add('active');
+            
+            // Highlight the connecting edge
+            const svg = container.querySelector('svg.viz-connectors');
+            if (svg && currentStep > 0) {
+                const prevPage = orderedVisits[currentStep - 1];
+                svg.querySelectorAll('line').forEach(line => {
+                    line.classList.remove('active-edge');
+                    line.setAttribute('stroke', '#555');
+                    line.setAttribute('stroke-width', '1');
+                    if (line.dataset.from === prevPage && line.dataset.to === orderedVisits[currentStep]) {
+                        line.classList.add('active-edge');
+                        line.setAttribute('stroke', '#40c6ff');
+                        line.setAttribute('stroke-width', '4');
+                    }
+                });
+            }
+            
+            // Optional: show info
+            const currentNode = Array.from(nodes.values()).find(n => n.page_url === orderedVisits[currentStep]);
+            if (currentNode) showNodeDetails(currentNode);
+        });
+
     }
 
     // Expose loader
