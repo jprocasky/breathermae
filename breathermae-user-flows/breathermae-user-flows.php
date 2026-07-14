@@ -38,13 +38,13 @@ class BreatherMaeUserFlows {
     public function enqueue_scripts() {
         wp_enqueue_script('jquery');
 
+        // List assets
         wp_enqueue_style(
             'breathermae-user-flows',
             plugin_dir_url(__FILE__) . 'assets/css/breathermae-user-flows.css',
             [],
             '1.1'
         );
-
         wp_enqueue_script(
             'breathermae-user-flows',
             plugin_dir_url(__FILE__) . 'assets/js/breathermae-user-flows.js',
@@ -53,7 +53,27 @@ class BreatherMaeUserFlows {
             true
         );
 
+        // Viz assets (pre-load so they are ready when button is clicked)
+        wp_enqueue_style(
+            'breathermae-flow-viz',
+            plugin_dir_url(__FILE__) . 'assets/css/breathermae-flow-viz.css',
+            [],
+            '1.0'
+        );
+        wp_enqueue_script(
+            'breathermae-flow-viz',
+            plugin_dir_url(__FILE__) . 'assets/js/breathermae-flow-viz.js',
+            [],
+            '1.0',
+            true
+        );
+
+        // Correct PHP array syntax for localize_script
         wp_localize_script('breathermae-user-flows', 'breathermaeFlows', [
+            'ajaxurl' => admin_url('admin-ajax.php')
+        ]);
+
+        wp_localize_script('breathermae-flow-viz', 'breathermaeFlowViz', [
             'ajaxurl' => admin_url('admin-ajax.php')
         ]);
     }
@@ -148,6 +168,13 @@ class BreatherMaeUserFlows {
 
             <div id="breathermae-flow-table-container">
                 <p class="loading">Loading recent sessions...</p>
+            </div>
+
+            <!-- Viz container (hidden until a flow is selected) -->
+            <div id="flow-viz-area" style="display: none; margin-top: 30px;">
+                <button id="back-to-list" style="margin-bottom: 12px;">← Back to List</button>
+                <div id="viz-flow-container" class="flow-container" data-session-id=""></div>
+                <div id="viz-info"></div>
             </div>
         </div>
         <?php

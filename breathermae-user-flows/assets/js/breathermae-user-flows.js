@@ -21,20 +21,35 @@ jQuery(document).ready(function($) {
     // Initial load
     loadFlowList();
 
-    // Filter change
+    // Filter + Search
     $('#flow-filter-type').on('change', loadFlowList);
-
-    // Live search with debounce
     let searchTimeout;
     $('#flow-search').on('keyup', function() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(loadFlowList, 350);
     });
 
-    // View Flow button (placeholder for Phase 3)
+    // Wire "View Flow" buttons
     $(document).on('click', '.view-flow-btn', function() {
         const sessionId = $(this).data('session');
-        alert('View Flow clicked for session: ' + sessionId + '\n\n(Phase 3 will open the graphical playback here)');
-        // Future: Trigger modal or load second shortcode with this sessionId
+
+        // Hide list, show viz area
+        $('#breathermae-flow-table-container').hide();
+        $('#flow-viz-area').show();
+
+        // Load the graph
+        if (typeof window.BreatherMaeFlowViz !== 'undefined' && window.BreatherMaeFlowViz.loadSessionFlow) {
+            window.BreatherMaeFlowViz.loadSessionFlow(sessionId);
+        } else {
+            console.error('BreatherMaeFlowViz not loaded');
+        }
     });
+
+    // Back to list button
+    $(document).on('click', '#back-to-list', function() {
+        $('#flow-viz-area').hide();
+        $('#breathermae-flow-table-container').show();
+    });
+
+    // Make sure the viz assets are available (they should already be enqueued when needed)
 });
