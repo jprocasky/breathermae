@@ -25,6 +25,9 @@ class BreatherMaeUserFlows {
         add_shortcode('breathermae_flow_viz', [$this, 'render_flow_viz']);
         add_action('wp_ajax_breathermae_get_session_flow', [$this, 'ajax_get_session_flow']);
         add_action('wp_ajax_nopriv_breathermae_get_session_flow', [$this, 'ajax_get_session_flow']); // tighten later with caps
+        add_shortcode('breathermae_bar_chart', [$this, 'render_bar_chart']);
+        add_action('wp_ajax_breathermae_get_bar_data', [$this, 'ajax_get_bar_data']);
+        add_action('wp_ajax_nopriv_breathermae_get_bar_data', [$this, 'ajax_get_bar_data']);
     }
 
     public function check_dependency() {
@@ -148,6 +151,110 @@ class BreatherMaeUserFlows {
         ]);
     }
 
+    public function render_bar_chart($atts = []) {
+        $atts = shortcode_atts(['mode' => 'session', 'id' => '', 'exclude_pages' => ''], $atts);
+
+        // Smart defaults
+        if (empty($atts['id'])) {
+            if ($atts['mode'] === 'session') {
+                $atts['id'] = isset($_COOKIE['lum_session']) ? sanitize_text_field($_COOKIE['lum_session']) : '';
+            } elseif ($atts['mode'] === 'user') {
+                $atts['id'] = get_current_user_id();
+            }
+        }
+
+        wp_enqueue_script('chartjs', 'https://cdn.jsdelivr.net/npm/chart.js', [], null, true);
+
+        ob_start(); ?>
+        <div class="breathermae-bar-chart">
+            <select id="bar-mode">
+                <option value="session">This Session</option>
+                <option value="user">This User (all sessions)</option>
+                <option value="all">All Users / All Pages</option>
+            </select>
+            <canvas id="bar-chart-canvas" style="max-height: 400px;"></canvas>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            let chartInstance = null;
+            const currentUserId = <?php echo get_current_user_id(); ?>;
+            const currentSessionId = '<?php echo esc_js(isset($_COOKIE['lum_session']) ? sanitize_text_field($_COOKIE['lum_session']) : ''); ?>';
+            const excludePages = '<?php echo esc_js($atts['exclude_pages']); ?>';
+
+            function formatTime(seconds) {
+                const d = Math.floor(seconds / 86400);
+                const h = Math.floor((seconds % 86400) / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = Math.floor(seconds % 60);
+                return `${d}:${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
+
+            function loadBarChart(mode) {
+                let id = '';
+                if (mode === 'session') id = currentSessionId;
+                if (mode === 'user') id = currentUserId;
+
+                $.post(breathermaeFlowViz.ajaxurl, {
+                    action: 'breathermae_get_bar_data',
+                    mode: mode,
+                    id: id,
+                    exclude_pages: excludePages
+                }, function(response) {
+                    if (response.success) {
+                        if (chartInstance) chartInstance.destroy();
+                        chartInstance = new Chart(document.getElementById('bar-chart-canvas'), {
+                            type: 'bar',
+                            data: {
+                                labels: response.data.labels,
+                                datasets: [{
+                                    label: 'Total Time',
+                                    data: response.data.values,
+                                    backgroundColor: '#40c6ff',
+                                    borderColor: '#2aa8d8',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            callback: function(value) {
+                                                return formatTime(value);
+                                            }
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.dataset.label + ': ' + formatTime(context.raw);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            $('#bar-mode').on('change', function() {
+                loadBarChart($(this).val());
+            });
+
+            loadBarChart('session');
+        });
+        </script>
+        <?php
+        return ob_get_clean();
+    }
+
+
+
     public function render_flow_list() {
         ob_start();
         ?>
@@ -207,6 +314,62 @@ class BreatherMaeUserFlows {
         return ob_get_clean();
     }
 
+    
+    public function ajax_get_bar_data() {
+        global $wpdb;
+        $table = $this->history_table;
+        $mode = sanitize_text_field($_POST['mode'] ?? 'session');
+        $id = sanitize_text_field($_POST['id'] ?? '');
+
+        error_log("Bar chart AJAX - mode: " . $mode . ", id: " . $id);
+
+        $sql = "SELECT session_id, user_id, page_url, viewed_at FROM $table";
+
+        if ($mode === 'session' && !empty($id)) {
+            $sql .= $wpdb->prepare(" WHERE session_id = %s", $id);
+        } elseif ($mode === 'user' && !empty($id)) {
+            $sql .= $wpdb->prepare(" WHERE user_id = %d", $id);
+        }
+
+        $sql .= " ORDER BY session_id, viewed_at ASC";
+
+        $rows = $wpdb->get_results($sql);
+
+        $page_times = [];
+
+        // Calculate accurate dwell per page
+        $prev_time = null;
+        $prev_page = null;
+        $prev_session = null;
+
+        foreach ($rows as $row) {
+            $key = $row->page_url;
+            if (!isset($page_times[$key])) $page_times[$key] = 0;
+
+            if ($prev_time && $row->session_id === $prev_session) {
+                $dwell = (strtotime($row->viewed_at) - strtotime($prev_time));
+                if ($dwell > 0) $page_times[$key] += $dwell;
+            }
+
+            $prev_time = $row->viewed_at;
+            $prev_page = $row->page_url;
+            $prev_session = $row->session_id;
+        }
+
+        arsort($page_times); // sort by time descending
+
+        $labels = [];
+        $values = [];
+
+        foreach ($page_times as $page => $seconds) {
+            $labels[] = $page;
+            $values[] = $seconds;
+        }
+
+        wp_send_json_success(['labels' => $labels, 'values' => $values]);
+    }
+
+
     public function ajax_get_flow_list() {
         global $wpdb;
         $table = $this->history_table;
@@ -228,7 +391,6 @@ class BreatherMaeUserFlows {
                 GROUP BY session_id
             ) h2 ON h1.session_id = h2.session_id AND h1.viewed_at = h2.max_viewed_at
         ";
-
 
         $where = [];
         $params = [];
@@ -263,6 +425,9 @@ class BreatherMaeUserFlows {
         $results = !empty($params) 
             ? $wpdb->get_results($wpdb->prepare($sql, $params)) 
             : $wpdb->get_results($sql);
+
+        // Temporary debug - remove later
+        bm_log("Flow list query - filter: $filter_type, search: '$search', page: $page, per_page: $per_page, results: " . count($results));
 
         ob_start();
         ?>
@@ -312,8 +477,12 @@ class BreatherMaeUserFlows {
         <?php
         $html = ob_get_clean();
 
-        $total = $wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM $table" . (empty($where) ? "" : " WHERE " . implode(' AND ', $where)));
-        $total_pages = ceil($total / $per_page);
+        $total_sql = "SELECT COUNT(DISTINCT session_id) FROM $table";
+        if (!empty($where)) {
+            $total_sql .= " WHERE " . implode(' AND ', $where);
+        }
+        $total = $wpdb->get_var($total_sql) ?: 0;
+        $total_pages = $per_page > 0 ? ceil($total / $per_page) : 1;
 
         wp_send_json_success([
             'html' => $html,

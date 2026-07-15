@@ -25,10 +25,14 @@ jQuery(document).ready(function($) {
         $.post(breathermaeFlows.ajaxurl, {
             action: 'breathermae_get_flow_list',
             filter_type: filterType,
-            search: searchTerm
+            search: searchTerm,
+            page: currentPage,
+            per_page: perPage
         }, function(response) {
             if (response.success) {
                 $('#breathermae-flow-table-container').html(response.data.html);
+                currentPage = response.data.current_page;
+                updatePagination(response.data);
             } else {
                 $('#breathermae-flow-table-container').html('<p>Error loading data.</p>');
             }
