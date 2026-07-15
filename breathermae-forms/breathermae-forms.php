@@ -189,6 +189,11 @@ private function __construct() {
         require_once __DIR__ . '/includes/bmf-rsi-forms-shortcodes.php';
     }
 
+    // Pillars
+    if ( file_exists( __DIR__ . '/includes/bmf-pillars-shortcodes.php' ) ) {
+        require_once __DIR__ . '/includes/bmf-pillars-shortcodes.php';
+    }    
+
     // ✅ ADMIN CONTROLLERS
     if ( is_admin() ) {
 
