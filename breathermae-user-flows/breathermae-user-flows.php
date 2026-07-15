@@ -320,8 +320,11 @@ class BreatherMaeUserFlows {
         $table = $this->history_table;
         $mode = sanitize_text_field($_POST['mode'] ?? 'session');
         $id = sanitize_text_field($_POST['id'] ?? '');
+        $exclude = sanitize_text_field($_POST['exclude_pages'] ?? '');
 
-        error_log("Bar chart AJAX - mode: " . $mode . ", id: " . $id);
+        $exclude_list = array_filter(array_map('trim', explode(',', $exclude)));
+
+        error_log("Bar chart AJAX - mode: " . $mode . ", id: " . $id . ", exclude: " . $exclude);
 
         $sql = "SELECT session_id, user_id, page_url, viewed_at FROM $table";
 
@@ -337,12 +340,13 @@ class BreatherMaeUserFlows {
 
         $page_times = [];
 
-        // Calculate accurate dwell per page
         $prev_time = null;
         $prev_page = null;
         $prev_session = null;
 
         foreach ($rows as $row) {
+            if (in_array($row->page_url, $exclude_list)) continue; // exclude
+
             $key = $row->page_url;
             if (!isset($page_times[$key])) $page_times[$key] = 0;
 
