@@ -331,7 +331,6 @@ console.log('Bar chart AJAX called with mode:', mode);
 
                     function loadBarChart(mode) {
                         const sessionId = getCurrentSessionId();
-
                         console.log('loadBarChart called with mode:', mode, 'sessionId:', sessionId);
 
                         $.post(breathermaeFlowViz.ajaxurl, {
@@ -368,7 +367,7 @@ console.log('Bar chart AJAX called with mode:', mode);
                     // Wait for the block diagram to set the attribute
                     setTimeout(() => {
                         loadBarChart('session');
-                    }, 800); // longer delay
+                    }, 1000); // longer delay
                 });
                 </script>
 
