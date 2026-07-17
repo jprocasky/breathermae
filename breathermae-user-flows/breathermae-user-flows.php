@@ -326,7 +326,8 @@ console.log('Bar chart AJAX called with mode:', mode);
                     let chartInstance = null;
 
                     function getCurrentSessionId() {
-                        return $('#viz-flow-container').data('session-id') || '';
+                        // IMPORTANT: use .attr() — never .data() here
+                        return $('#viz-flow-container').attr('data-session-id') || '';
                     }
 
                     function loadBarChart(mode) {
@@ -339,35 +340,70 @@ console.log('Bar chart AJAX called with mode:', mode);
                             id: sessionId
                         }, function(response) {
                             console.log('AJAX response:', response);
-                            if (response.success && response.data.labels.length > 0) {
+                            if (response.success && response.data.labels && response.data.labels.length > 0) {
                                 if (chartInstance) chartInstance.destroy();
                                 chartInstance = new Chart(document.getElementById('bar-chart-canvas'), {
                                     type: 'bar',
                                     data: {
                                         labels: response.data.labels,
                                         datasets: [{
-                                            label: 'Total Time (seconds)',
+                                            label: 'Total Time',
                                             data: response.data.values,
-                                            backgroundColor: '#40c6ff'
+                                            backgroundColor: '#40c6ff',
+                                            borderColor: '#2aa8d8',
+                                            borderWidth: 1
                                         }]
                                     },
                                     options: {
                                         responsive: true,
-                                        scales: { y: { beginAtZero: true } }
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                ticks: {
+                                                    callback: function(value) {
+                                                        // keep the dd:hh:mm:ss formatter if you still have it
+                                                        const d = Math.floor(value / 86400);
+                                                        const h = Math.floor((value % 86400) / 3600);
+                                                        const m = Math.floor((value % 3600) / 60);
+                                                        const s = Math.floor(value % 60);
+                                                        return `${d}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        plugins: {
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: function(context) {
+                                                        const value = context.raw;
+                                                        const d = Math.floor(value / 86400);
+                                                        const h = Math.floor((value % 86400) / 3600);
+                                                        const m = Math.floor((value % 3600) / 60);
+                                                        const s = Math.floor(value % 60);
+                                                        return context.dataset.label + ': ' +
+                                                            `${d}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 });
                             }
                         });
                     }
 
+                    // Expose so it can be called from the list JS if needed
+                    window.loadBarChart = loadBarChart;
+
                     $('#bar-mode').on('change', function() {
                         loadBarChart($(this).val());
                     });
 
-                    // Wait for the block diagram to set the attribute
-                    setTimeout(() => {
+                    // Initial load – the attribute is already set by the time the user clicks “View Flow”
+                    // and the setTimeout in the list JS has finished
+                    setTimeout(function() {
                         loadBarChart('session');
-                    }, 1000); // longer delay
+                    }, 300);
                 });
                 </script>
 
