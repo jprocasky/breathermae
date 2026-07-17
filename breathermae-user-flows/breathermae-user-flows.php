@@ -182,6 +182,9 @@ class BreatherMaeUserFlows {
             const currentSessionId = '<?php echo esc_js(isset($_COOKIE['lum_session']) ? sanitize_text_field($_COOKIE['lum_session']) : ''); ?>';
             const excludePages = '<?php echo esc_js($atts['exclude_pages']); ?>';
 
+            console.log('Bar chart JS initialized');
+            let chartInstance = null;
+
             function formatTime(seconds) {
                 const d = Math.floor(seconds / 86400);
                 const h = Math.floor((seconds % 86400) / 3600);
@@ -194,13 +197,14 @@ class BreatherMaeUserFlows {
                 let id = '';
                 if (mode === 'session') id = currentSessionId;
                 if (mode === 'user') id = currentUserId;
-
+console.log('Bar chart AJAX called with mode:', mode);    
                 $.post(breathermaeFlowViz.ajaxurl, {
                     action: 'breathermae_get_bar_data',
                     mode: mode,
                     id: id,
                     exclude_pages: excludePages
                 }, function(response) {
+                    
                     if (response.success) {
                         if (chartInstance) chartInstance.destroy();
                         chartInstance = new Chart(document.getElementById('bar-chart-canvas'), {
@@ -254,7 +258,6 @@ class BreatherMaeUserFlows {
     }
 
 
-
     public function render_flow_list() {
         ob_start();
         ?>
@@ -273,37 +276,49 @@ class BreatherMaeUserFlows {
                     <label for="flow-search"><strong>Search:</strong></label>
                     <input type="text" id="flow-search" placeholder="Search user, email, IP, or device...">
                 </div>
-            </div>
 
-            <div class="filter-group">
-                <label for="per-page"><strong>Per page:</strong></label>
-                <select id="per-page">
-                    <option value="10">10</option>
-                    <option value="25" selected>25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
+                <div class="filter-group">
+                    <label for="per-page"><strong>Per page:</strong></label>
+                    <select id="per-page">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
             </div>
 
             <div id="breathermae-flow-table-container">
                 <p class="loading">Loading recent sessions...</p>
             </div>
 
-            <!-- Viz container (hidden until a flow is selected) -->
+            <!-- Viz container (block diagram + bar chart) -->
             <div id="flow-viz-area" style="display: none; margin-top: 30px;">
                 <button id="back-to-list" style="margin-bottom: 12px;">← Back to List</button>
                 
                 <div class="viz-controls">
                     <button id="viz-play">▶ Play</button>
                     <button id="viz-pause">⏸ Pause</button>
-                    <label>Speed: <input type="range" id="viz-speed" min="0.25" max="100" step="0.5" value="1"> <span id="speed-val">1x</span></label>
+                    <label>Speed: <input type="range" id="viz-speed" min="0.25" max="4" step="0.25" value="1"> <span id="speed-val">1x</span></label>
                     <button id="viz-reset">Reset</button>
                     <button id="viz-step">Step ▶</button>
                 </div>
 
                 <div id="viz-flow-container" class="flow-container" data-session-id=""></div>
                 <div id="viz-info"></div>
+
+                <!-- Bar chart below the block diagram -->
+                <h3 style="margin-top: 30px;">Page Dwell Analysis</h3>
+                <div class="breathermae-bar-chart">
+                    <select id="bar-mode" style="margin-bottom: 10px;">
+                        <option value="session">This Session</option>
+                        <option value="user">This User (all sessions)</option>
+                        <option value="all">All Users / All Pages</option>
+                    </select>
+                    <canvas id="bar-chart-canvas" style="max-height: 400px;"></canvas>
+                </div>
             </div>
+
             <div id="breathermae-flow-pagination" style="margin-top: 15px; text-align: center; display: none;">
                 <button id="prev-page" style="margin: 0 8px;">← Previous</button>
                 <span id="current-page-info" style="margin: 0 15px; font-weight: 500;"></span>
@@ -313,7 +328,6 @@ class BreatherMaeUserFlows {
         <?php
         return ob_get_clean();
     }
-
     
     public function ajax_get_bar_data() {
         global $wpdb;

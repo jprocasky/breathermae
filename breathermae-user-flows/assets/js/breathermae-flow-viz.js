@@ -343,41 +343,5 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    // Playback controls
-    if (playBtn) playBtn.addEventListener('click', () => {
-        if (!orderedVisits.length) return;
-        isPlaying = true;
-        if (currentStep >= orderedVisits.length) currentStep = 0;
-        playNext();
-    });
-
-    if (pauseBtn) pauseBtn.addEventListener('click', () => {
-        isPlaying = false;
-        clearTimeout(playTimeout);
-    });
-
-    if (speedSlider) speedSlider.addEventListener('input', () => {
-        speedMultiplier = parseFloat(speedSlider.value);
-        if (speedVal) speedVal.textContent = speedMultiplier.toFixed(2) + 'x';
-    });
-
-    if (resetBtn) resetBtn.addEventListener('click', () => {
-        isPlaying = false;
-        clearTimeout(playTimeout);
-        currentStep = 0;
-        document.querySelectorAll('.page-block').forEach(el => el.classList.remove('active'));
-        const svg = container.querySelector('svg.viz-connectors');
-        if (svg) svg.querySelectorAll('line').forEach(l => {
-            l.classList.remove('active-edge');
-            l.setAttribute('stroke', '#555');
-            l.setAttribute('stroke-width', '2.2');
-        });
-    });
-
-    if (stepBtn) stepBtn.addEventListener('click', () => {
-        isPlaying = false;
-        clearTimeout(playTimeout);
-        currentStep = (currentStep + 1) % orderedVisits.length;
-    });
 
 });

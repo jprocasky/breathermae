@@ -194,10 +194,10 @@ class BMF_Pillars_Shortcodes {
                     if ( $diff === 0 ) {
                         $icon = '✓';
                         $color = '#22c55e';
-                    } elseif ( $diff < 0 ) {
+                    } elseif ( $diff > 0 ) {
                         $icon = '↑ ' . abs( $diff );
                         $color = '#3b82f6';
-                    } elseif ( $diff > 0 ) {
+                    } elseif ( $diff < 0 ) {
                         $icon = '↓ ' . $diff;
                         $color = '#f97316';
                     }
