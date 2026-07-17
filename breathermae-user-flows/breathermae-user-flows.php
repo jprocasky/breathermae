@@ -258,9 +258,15 @@ console.log('Bar chart AJAX called with mode:', mode);
     }
 
 
-    public function render_flow_list() {
+    public function render_flow_list($atts = []) {
+        $atts = shortcode_atts([
+            'exclude_pages' => ''
+        ], $atts);
+
+        // Clean the exclude list
+        $exclude_pages = sanitize_text_field($atts['exclude_pages']);
+
         ob_start();
-        
         ?>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <div class="breathermae-flow-list">
@@ -310,7 +316,6 @@ console.log('Bar chart AJAX called with mode:', mode);
                 <div id="viz-info"></div>
 
                 <!-- Bar chart below the block diagram -->
-                <!-- Bar chart -->
                 <h3 style="margin-top: 30px;">Page Dwell Analysis</h3>
                 <div class="breathermae-bar-chart">
                     <select id="bar-mode" style="margin-bottom: 10px;">
@@ -320,105 +325,106 @@ console.log('Bar chart AJAX called with mode:', mode);
                     </select>
                     <canvas id="bar-chart-canvas" style="max-height: 400px;"></canvas>
                 </div>
-
-                <script>
-                jQuery(document).ready(function($) {
-                    let chartInstance = null;
-
-                    function getCurrentSessionId() {
-                        // IMPORTANT: use .attr() — never .data() here
-                        return $('#viz-flow-container').attr('data-session-id') || '';
-                    }
-
-                    function loadBarChart(mode) {
-                        const sessionId = getCurrentSessionId();
-                        console.log('loadBarChart called with mode:', mode, 'sessionId:', sessionId);
-
-                        $.post(breathermaeFlowViz.ajaxurl, {
-                            action: 'breathermae_get_bar_data',
-                            mode: mode,
-                            id: sessionId
-                        }, function(response) {
-                            console.log('AJAX response:', response);
-                            if (response.success && response.data.labels && response.data.labels.length > 0) {
-                                if (chartInstance) chartInstance.destroy();
-                                chartInstance = new Chart(document.getElementById('bar-chart-canvas'), {
-                                    type: 'bar',
-                                    data: {
-                                        labels: response.data.labels,
-                                        datasets: [{
-                                            label: 'Total Time',
-                                            data: response.data.values,
-                                            backgroundColor: '#40c6ff',
-                                            borderColor: '#2aa8d8',
-                                            borderWidth: 1
-                                        }]
-                                    },
-                                    options: {
-                                        responsive: true,
-                                        scales: {
-                                            y: {
-                                                beginAtZero: true,
-                                                ticks: {
-                                                    callback: function(value) {
-                                                        // keep the dd:hh:mm:ss formatter if you still have it
-                                                        const d = Math.floor(value / 86400);
-                                                        const h = Math.floor((value % 86400) / 3600);
-                                                        const m = Math.floor((value % 3600) / 60);
-                                                        const s = Math.floor(value % 60);
-                                                        return `${d}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        plugins: {
-                                            tooltip: {
-                                                callbacks: {
-                                                    label: function(context) {
-                                                        const value = context.raw;
-                                                        const d = Math.floor(value / 86400);
-                                                        const h = Math.floor((value % 86400) / 3600);
-                                                        const m = Math.floor((value % 3600) / 60);
-                                                        const s = Math.floor(value % 60);
-                                                        return context.dataset.label + ': ' +
-                                                            `${d}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    }
-
-                    // Expose so it can be called from the list JS if needed
-                    window.loadBarChart = loadBarChart;
-
-                    $('#bar-mode').on('change', function() {
-                        loadBarChart($(this).val());
-                    });
-
-                    // Initial load – the attribute is already set by the time the user clicks “View Flow”
-                    // and the setTimeout in the list JS has finished
-                    setTimeout(function() {
-                        loadBarChart('session');
-                    }, 300);
-                });
-                </script>
-
             </div>
 
             <div id="breathermae-flow-pagination" style="margin-top: 15px; text-align: center; display: none;">
                 <button id="prev-page" style="margin: 0 8px;">← Previous</button>
                 <span id="current-page-info" style="margin: 0 15px; font-weight: 500;"></span>
                 <button id="next-page" style="margin: 0 8px;">Next →</button>
-            </div>            
+            </div>
         </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            let chartInstance = null;
+            // Pass the exclude list from the shortcode into JS
+            const excludePages = '<?php echo esc_js($exclude_pages); ?>';
+
+            function getCurrentSessionId() {
+                // Use .attr() – never .data()
+                return $('#viz-flow-container').attr('data-session-id') || '';
+            }
+
+            function loadBarChart(mode) {
+                const sessionId = getCurrentSessionId();
+                console.log('loadBarChart called with mode:', mode, 'sessionId:', sessionId, 'exclude:', excludePages);
+
+                $.post(breathermaeFlowViz.ajaxurl, {
+                    action: 'breathermae_get_bar_data',
+                    mode: mode,
+                    id: sessionId,
+                    exclude_pages: excludePages
+                }, function(response) {
+                    console.log('AJAX response:', response);
+                    if (response.success && response.data.labels && response.data.labels.length > 0) {
+                        if (chartInstance) chartInstance.destroy();
+                        chartInstance = new Chart(document.getElementById('bar-chart-canvas'), {
+                            type: 'bar',
+                            data: {
+                                labels: response.data.labels,
+                                datasets: [{
+                                    label: 'Total Time',
+                                    data: response.data.values,
+                                    backgroundColor: '#40c6ff',
+                                    borderColor: '#2aa8d8',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            callback: function(value) {
+                                                const d = Math.floor(value / 86400);
+                                                const h = Math.floor((value % 86400) / 3600);
+                                                const m = Math.floor((value % 3600) / 60);
+                                                const s = Math.floor(value % 60);
+                                                return `${d}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                            }
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const value = context.raw;
+                                                const d = Math.floor(value / 86400);
+                                                const h = Math.floor((value % 86400) / 3600);
+                                                const m = Math.floor((value % 3600) / 60);
+                                                const s = Math.floor(value % 60);
+                                                return context.dataset.label + ': ' +
+                                                    `${d}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            window.loadBarChart = loadBarChart;
+
+            $('#bar-mode').on('change', function() {
+                loadBarChart($(this).val());
+            });
+
+            // The list JS will set the data-session-id attribute.
+            // We wait a short moment so the attribute is present, then load.
+            setTimeout(function() {
+                loadBarChart('session');
+            }, 400);
+        });
+        </script>
         <?php
         return ob_get_clean();
     }
-    
+
+
     public function ajax_get_bar_data() {
         global $wpdb;
         $table = $this->history_table;

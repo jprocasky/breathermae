@@ -56,16 +56,18 @@
         const shortDesc = $('<div/>').text(row.short_desc || '').html();
         const hasGraphic = row.graphic_url ? `<img src="${row.graphic_url}" class="bmif-graphic" alt="Graphic">` : '<span class="bmif-icon bmif-empty">—</span>';
         
-        const internalFile = row.internal_file_url 
-            ? `<a href="${row.internal_file_url}" target="_blank" class="bmif-file-link" data-download-id="${row.id}" data-type="internal_file">${BMIF.getFileIconHTML(row.internal_file_ext, false)}</a>`
+        const internalFileLink = row.internal_file_url || row.internal_file_attachment_url;
+        const internalFile = internalFileLink 
+            ? `<a href="${internalFileLink}" target="_blank" class="bmif-file-link" data-download-id="${row.id}" data-type="internal_file">${BMIF.getFileIconHTML(row.internal_file_ext, false)}</a>`
             : '<span class="bmif-icon bmif-empty">—</span>';
         
         const internalVideo = row.internal_video_url 
             ? `<a href="${row.internal_video_url}" target="_blank" class="bmif-file-link">${BMIF.getFileIconHTML('', true)}</a>`
             : '<span class="bmif-icon bmif-empty">—</span>';
         
-        const sharableFile = row.sharable_file_url 
-            ? `<a href="${row.sharable_file_url}" target="_blank" class="bmif-file-link" data-download-id="${row.id}" data-type="sharable_file">${BMIF.getFileIconHTML(row.sharable_file_ext, false)}</a>`
+        const sharableFileLink = row.sharable_file_url || row.sharable_file_attachment_url;
+        const sharableFile = sharableFileLink 
+            ? `<a href="${sharableFileLink}" target="_blank" class="bmif-file-link" data-download-id="${row.id}" data-type="sharable_file">${BMIF.getFileIconHTML(row.sharable_file_ext, false)}</a>`
             : '<span class="bmif-icon bmif-empty">—</span>';
         
         const sharableVideo = row.sharable_video_url 
