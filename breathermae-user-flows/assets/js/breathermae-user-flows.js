@@ -88,6 +88,8 @@ jQuery(document).ready(function($) {
             if (typeof window.BreatherMaeFlowViz !== 'undefined' && typeof window.BreatherMaeFlowViz.loadSessionFlow === 'function') {
                 console.log('Calling loadSessionFlow with:', sessionId);
                 window.BreatherMaeFlowViz.loadSessionFlow(sessionId);
+
+                
             } else {
                 console.error('BreatherMaeFlowViz still not ready after delay');
             }
