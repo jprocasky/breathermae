@@ -260,7 +260,9 @@ console.log('Bar chart AJAX called with mode:', mode);
 
     public function render_flow_list() {
         ob_start();
+        
         ?>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <div class="breathermae-flow-list">
             <div class="breathermae-flow-filters">
                 <div class="filter-group">
@@ -308,6 +310,7 @@ console.log('Bar chart AJAX called with mode:', mode);
                 <div id="viz-info"></div>
 
                 <!-- Bar chart below the block diagram -->
+                <!-- Bar chart -->
                 <h3 style="margin-top: 30px;">Page Dwell Analysis</h3>
                 <div class="breathermae-bar-chart">
                     <select id="bar-mode" style="margin-bottom: 10px;">
@@ -317,6 +320,57 @@ console.log('Bar chart AJAX called with mode:', mode);
                     </select>
                     <canvas id="bar-chart-canvas" style="max-height: 400px;"></canvas>
                 </div>
+
+                <script>
+                jQuery(document).ready(function($) {
+                    let chartInstance = null;
+
+                    function getCurrentSessionId() {
+                        return $('#viz-flow-container').data('session-id') || '';
+                    }
+
+                    function loadBarChart(mode) {
+                        const sessionId = getCurrentSessionId();
+                        console.log('loadBarChart called with mode:', mode, 'sessionId:', sessionId);
+
+                        $.post(breathermaeFlowViz.ajaxurl, {
+                            action: 'breathermae_get_bar_data',
+                            mode: mode,
+                            id: sessionId
+                        }, function(response) {
+                            console.log('AJAX response:', response);
+                            if (response.success && response.data.labels.length > 0) {
+                                if (chartInstance) chartInstance.destroy();
+                                chartInstance = new Chart(document.getElementById('bar-chart-canvas'), {
+                                    type: 'bar',
+                                    data: {
+                                        labels: response.data.labels,
+                                        datasets: [{
+                                            label: 'Total Time (seconds)',
+                                            data: response.data.values,
+                                            backgroundColor: '#40c6ff'
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        scales: { y: { beginAtZero: true } }
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    $('#bar-mode').on('change', function() {
+                        loadBarChart($(this).val());
+                    });
+
+                    // Initial load with delay
+                    setTimeout(() => {
+                        loadBarChart('session');
+                    }, 500);
+                });
+                </script>
+                
             </div>
 
             <div id="breathermae-flow-pagination" style="margin-top: 15px; text-align: center; display: none;">
