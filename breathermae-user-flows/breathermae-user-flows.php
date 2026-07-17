@@ -341,18 +341,28 @@ console.log('Bar chart AJAX called with mode:', mode);
             const excludePages = '<?php echo esc_js($exclude_pages); ?>';
 
             function getCurrentSessionId() {
-                // Use .attr() – never .data()
                 return $('#viz-flow-container').attr('data-session-id') || '';
             }
 
+            function getCurrentUserId() {
+                return $('#viz-flow-container').attr('data-user-id') || '';
+            }
+
             function loadBarChart(mode) {
-                const sessionId = getCurrentSessionId();
-                console.log('loadBarChart called with mode:', mode, 'sessionId:', sessionId, 'exclude:', excludePages);
+                let id = '';
+                if (mode === 'session') {
+                    id = getCurrentSessionId();
+                } else if (mode === 'user') {
+                    id = getCurrentUserId();
+                }
+                // mode === 'all' → id stays empty
+
+                console.log('loadBarChart called with mode:', mode, 'id:', id, 'exclude:', excludePages);
 
                 $.post(breathermaeFlowViz.ajaxurl, {
                     action: 'breathermae_get_bar_data',
                     mode: mode,
-                    id: sessionId,
+                    id: id,
                     exclude_pages: excludePages
                 }, function(response) {
                     console.log('AJAX response:', response);
@@ -406,7 +416,6 @@ console.log('Bar chart AJAX called with mode:', mode);
                     }
                 });
             }
-
             window.loadBarChart = loadBarChart;
 
             $('#bar-mode').on('change', function() {

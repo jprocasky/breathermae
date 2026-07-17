@@ -324,6 +324,8 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data.rows && data.data.rows.length) {
+                    container.setAttribute('data-user-id', data.data.user_id || 0);
+                    
                     renderGraph(data.data.rows);
                 } else {
                     container.innerHTML = '<p>No journey data found for this session.</p>';
