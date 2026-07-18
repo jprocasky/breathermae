@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.6.0
+ * Version: 1.6.1
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -245,11 +245,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.6.0' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.6.1' );
         wp_enqueue_style( 'uls-members-css' );
 
         // JS for row selection + AJAX + pagination
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.6.0', true );
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.6.1', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -425,6 +425,33 @@ class ULS_Members_Plugin {
             }
         }
 
+        // Ensure children are always immediately after their parent
+        // (fixes the “parent is last row → child appears above it” case)
+        $grouped       = [];
+        $children_map  = [];
+        foreach ( $all_matched as $item ) {
+            $level = (int) ( $item['hierarchy_level'] ?? 1 );
+            if ( $level === 2 ) {
+                $pid = (int) ( $item['parent_id'] ?? 0 );
+                if ( ! isset( $children_map[ $pid ] ) ) {
+                    $children_map[ $pid ] = [];
+                }
+                $children_map[ $pid ][] = $item;
+            } else {
+                $grouped[] = $item; // preserve original parent order
+            }
+        }
+        $all_matched = [];
+        foreach ( $grouped as $p ) {
+            $all_matched[] = $p;
+            $pid = (int) $p['ID'];
+            if ( ! empty( $children_map[ $pid ] ) ) {
+                foreach ( $children_map[ $pid ] as $c ) {
+                    $all_matched[] = $c;
+                }
+            }
+        }
+
         // Attach visits + extra data
         $rows = $this->attach_visits_from_view( $all_matched );
 
@@ -473,12 +500,11 @@ class ULS_Members_Plugin {
         }
         unset($r);
 
-        // Mark which first-level parents actually have children (for the ▼ icon)
+        // Mark which parents actually have children (for the ▼ icon) - robust parent_id based
         $has_child_map = [];
-        $row_count = count($rows);
-        for ($i = 0; $i < $row_count - 1; $i++) {
-            if (isset($rows[$i+1]['hierarchy_level']) && $rows[$i+1]['hierarchy_level'] == 2) {
-                $has_child_map[ $rows[$i]['ID'] ] = true;
+        foreach ( $rows as $r ) {
+            if ( (int) ( $r['hierarchy_level'] ?? 1 ) === 2 && ! empty( $r['parent_id'] ) ) {
+                $has_child_map[ (int) $r['parent_id'] ] = true;
             }
         }
 
@@ -530,7 +556,8 @@ class ULS_Members_Plugin {
                         <tr class="uls-members__row <?php echo $is_sub ? 'uls-sub-level' : 'uls-parent-level'; ?>" 
                             data-email="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>"
                             data-level="<?php echo esc_attr( $level ); ?>"
-                            data-parent-id="<?php echo esc_attr( $r['parent_id'] ?? 0 ); ?>">
+                            data-parent-id="<?php echo esc_attr( $r['parent_id'] ?? 0 ); ?>"
+                            data-user-id="<?php echo esc_attr( $r['ID'] ); ?>">
                             
                             <!-- Hierarchy Column -->
                             <td class="uls-hierarchy-col" style="width: 40px; text-align: center; vertical-align: middle;">
