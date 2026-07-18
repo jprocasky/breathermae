@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.6.1
+ * Version: 1.6.2
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -245,11 +245,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.6.1' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.6.2' );
         wp_enqueue_style( 'uls-members-css' );
 
         // JS for row selection + AJAX + pagination
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.6.1', true );
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.6.2', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -404,22 +404,51 @@ class ULS_Members_Plugin {
         }
 
         // SECOND LEVEL - Insert directly after parent
+        // Only claim a child if one of its tags starts with this parent's SA code
+        // (prevents SA000 from incorrectly claiming SA160-1 via a broad pattern)
         $all_matched = [];
         $seen_ids = wp_list_pluck( $matched_users, 'ID' );
 
         foreach ( $matched_users as $first_level ) {
             $all_matched[] = $first_level;
 
+            $parent_tags = $this->get_user_wpf_tag_labels( $first_level['ID'] );
+            $parent_sa_tags = array_filter( $parent_tags, function( $t ) {
+                return preg_match( '/^SA\d+/i', trim( $t ) );
+            } );
+
+            if ( empty( $parent_sa_tags ) ) {
+                continue;
+            }
+
             $sub_patterns = $this->get_child_patterns_for_single_user( $first_level['ID'], $parent_pattern_input );
 
             if ( ! empty( $sub_patterns ) ) {
                 $sub_users = $this->find_users_matching_child_patterns( $sub_patterns, $exclude_patterns ?? [] );
                 foreach ( $sub_users as $sub ) {
-                    if ( ! in_array( $sub['ID'], $seen_ids ) ) {
+                    if ( in_array( $sub['ID'], $seen_ids, true ) ) {
+                        continue;
+                    }
+
+                    // Strict hierarchical check: child tag must start with one of this parent's SA codes
+                    $child_tags = $sub['matched_tags'] ?? [];
+                    $belongs = false;
+                    foreach ( $parent_sa_tags as $ptag ) {
+                        $ptag = trim( $ptag );
+                        foreach ( $child_tags as $ctag ) {
+                            $ctag = trim( $ctag );
+                            if ( $ctag !== '' && stripos( $ctag, $ptag ) === 0 ) {
+                                $belongs = true;
+                                break 2;
+                            }
+                        }
+                    }
+
+                    if ( $belongs ) {
                         $sub['hierarchy_level'] = 2;
-                        $sub['parent_id'] = $first_level['ID'];
-                        $all_matched[] = $sub;
-                        $seen_ids[] = $sub['ID'];
+                        $sub['parent_id']       = $first_level['ID'];
+                        $all_matched[]          = $sub;
+                        $seen_ids[]             = $sub['ID'];
                     }
                 }
             }
