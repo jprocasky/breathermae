@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.5.1
+ * Version: 1.6.0
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -245,11 +245,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.5.1' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.6.0' );
         wp_enqueue_style( 'uls-members-css' );
 
         // JS for row selection + AJAX + pagination
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.5.1', true );
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.6.0', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -282,7 +282,7 @@ class ULS_Members_Plugin {
 
     /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name"] */
     /** Shortcode: [uls_members_table per_page="10" fields="..." patterns="..." exclude_patterns="..." export="no"] */
-    /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name,all_tags" ...] */
+    /** Shortcode: [uls_members_table per_page="10" fields="email,first_name,last_name,display_name,all_tags" metakeys="reward_points_balance,user_id" ...] */
     
     public function shortcode_members_table( $atts ) {
 
@@ -295,6 +295,7 @@ class ULS_Members_Plugin {
                 'exclude_patterns' => '',
                 'export'           => 'no',
                 'parent_pattern'   => '',
+                'metakeys'         => '',
             ],
             $atts,
             'uls_members_table'
@@ -319,32 +320,53 @@ class ULS_Members_Plugin {
             $fields = $default_fields;
         }
 
-        // Labels
+        // Parse metakeys (supports reward_points_balance or [reward_points_balance])
+        $meta_keys = array_filter( array_map( 'trim', explode( ',', (string) $atts['metakeys'] ) ) );
+        $meta_keys = array_map( function( $k ) {
+            return trim( $k, '[] ' );
+        }, $meta_keys );
+
+        // Final list of columns to display (built-ins first, then meta)
+        $display_fields = array_merge( $fields, $meta_keys );
+
+        // Labels for built-in fields
         $labels_map = [
-            'email'        => 'Email',
-            'display_name' => 'Name',
-            'first_name'   => 'First Name',
-            'last_name'    => 'Last Name',
-            'first_visit'  => 'First Visit',
-            'last_visit'   => 'Last Visit',
-            'all_tags'     => 'All Tags',
+            'email'          => 'Email',
+            'display_name'   => 'Name',
+            'first_name'     => 'First Name',
+            'last_name'      => 'Last Name',
+            'first_visit'    => 'First Visit',
+            'last_visit'     => 'Last Visit',
+            'all_tags'       => 'All Tags',
             'rewards_points' => 'Reward Points',
         ];
 
+        // Build headers (hierarchy column first)
         $headers = [];
-        
-        // Always add empty header for the hierarchy icon column
-        $headers[] = '';
+        $headers[] = ''; // hierarchy icon column
+
+        $custom_headers = [];
         if ( (string) $atts['headers'] !== '' ) {
-            $custom = array_map( 'trim', explode( ',', (string) $atts['headers'] ) );
-            foreach ( $fields as $i => $f ) {
-                $headers[] = isset( $custom[ $i ] ) && $custom[ $i ] !== '' ? $custom[ $i ] : $labels_map[ $f ];
-            }
-        } else {
-            foreach ( $fields as $f ) {
+            $custom_headers = array_map( 'trim', explode( ',', (string) $atts['headers'] ) );
+        }
+
+        foreach ( $display_fields as $i => $f ) {
+            if ( isset( $custom_headers[ $i ] ) && $custom_headers[ $i ] !== '' ) {
+                $headers[] = $custom_headers[ $i ];
+            } elseif ( isset( $labels_map[ $f ] ) ) {
                 $headers[] = $labels_map[ $f ];
+            } else {
+                // Humanize meta key: reward_points_balance → Reward Points Balance
+                $headers[] = ucwords( str_replace( [ '_', '-' ], ' ', $f ) );
             }
         }
+
+        // Date/time format used for both visits and meta timestamps
+        $dt_format = trim( sprintf(
+            '%s %s',
+            (string) get_option( 'date_format', 'M j, Y' ),
+            (string) get_option( 'time_format', 'g:i a' )
+        ) );
 
         // Patterns
         $override_patterns = array_filter( array_map( 'trim', explode( ',', (string) $atts['patterns'] ) ) );
@@ -422,6 +444,24 @@ class ULS_Members_Plugin {
             $r['last_name']      = (string) get_user_meta( $r['ID'], 'last_name', true );
             $r['all_tags']       = $this->get_user_wpf_tag_labels( $r['ID'] );
 
+            // Pull requested usermeta + auto-format Unix timestamps
+            foreach ( $meta_keys as $mk ) {
+                if ( in_array( strtolower( $mk ), [ 'user_id', 'id' ], true ) ) {
+                    $r[ $mk ] = (int) $r['ID'];
+                } else {
+                    $val = get_user_meta( $r['ID'], $mk, true );
+
+                    // Convert Unix timestamps (roughly year 2000–2100) to readable datetime
+                    if ( is_numeric( $val ) && (int) $val > 946684800 && (int) $val < 4102444800 ) {
+                        $val = date_i18n( $dt_format, (int) $val );
+                    } elseif ( is_array( $val ) ) {
+                        $val = implode( ', ', $val );
+                    }
+
+                    $r[ $mk ] = $val;
+                }
+            }
+
             // Restore hierarchy info
             if (isset($hierarchy_data[$r['ID']])) {
                 $r['hierarchy_level'] = $hierarchy_data[$r['ID']]['hierarchy_level'];
@@ -447,8 +487,6 @@ class ULS_Members_Plugin {
         unset($r);
 
         bm_log( 'Has child map (after fix): ' . print_r( $has_child_map, true ) );
-
-        // === RENDER STARTS HERE ===
 
         // === RENDER STARTS HERE ===
         $per_page = intval( $atts['per_page'] );
@@ -503,7 +541,7 @@ class ULS_Members_Plugin {
                                 <?php endif; ?>
                             </td>
 
-                            <?php foreach ( $fields as $f ): ?>
+                            <?php foreach ( $display_fields as $f ): ?>
                                 <?php
                                 $key = ($f === 'email') ? 'user_email' : $f;
                                 $td_attr = '';
@@ -908,16 +946,29 @@ class ULS_Members_Plugin {
     }
 
     /**
-     * Convert wildcard pattern (e.g. SA200*) to regex for matching.
+     * Convert wildcard pattern to regex.
+     * Supports:
+     *   *  → any characters (.*)
+     *   #  → a single digit (\d)
+     *
+     * Examples:
+     *   SA###     → /^SA\d\d\d$/i     (exact 3-digit sales codes)
+     *   SA*       → /^SA.*$/i         (anything starting with SA)
+     *   SA###-*   → /^SA\d\d\d-.*$/i  (customers under a 3-digit rep)
      */
     private function wildcard_to_regex( $pattern ) {
         if ( empty( $pattern ) ) {
             return '/^$/';
         }
-        // Escape and convert * to .*
+
+        // Escape regex special chars first
         $regex = preg_quote( $pattern, '/' );
-        $regex = str_replace( '\*', '.*', $regex );
-        return '/^' . $regex . '$/i';  // case-insensitive full match
+
+        // Restore our wildcards
+        $regex = str_replace( '\\*', '.*', $regex );  // * → any sequence
+        $regex = str_replace( '\\#', '\\d', $regex );  // # → one digit
+
+        return '/^' . $regex . '$/i';  // full-string, case-insensitive
     }
 
 
@@ -1173,20 +1224,6 @@ class ULS_Members_Plugin {
         // === NEW: Generic usermeta support ===
         $usermeta = [];
         if ( $member_user_id ) {
-            // Fetch common/useful keys (add more as needed)
-/*             $meta_keys_to_fetch = [
-                'referral_count',
-                'first_name',
-                'last_name',
-                'nickname',
-                // Add any other frequently used usermeta keys here
-            ];
-            foreach ( $meta_keys_to_fetch as $mk ) {
-                $val = get_user_meta( $member_user_id, $mk, true );
-                if ( $val !== '' && $val !== false && $val !== null ) {
-                    $usermeta[ $mk ] = $val;
-                }
-            } */
             // Optional: fetch ALL usermeta (heavier but very flexible)
             $usermeta = array_map( function($v){ return maybe_unserialize($v[0] ?? $v); }, get_user_meta( $member_user_id ) );
         }
