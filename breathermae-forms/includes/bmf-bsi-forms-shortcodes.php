@@ -15,6 +15,10 @@
  *  - ?bsi_date=YYYY-MM-DD switches all “latest” queries to that finalized row
  *  - Snapshot mode continues to ignore the date param (rolling non-empty)
  *
+ * Additional shortcodes:
+ *  - [bmf_bsi_results_field]  – raw / formatted field value (supports colorize)
+ *  - [bmf_bsi_results_delta]  – difference vs previous finalized row
+ *
  * Cache invalidation hook (fire this right after saving/updating results):
  * do_action('bmf_bsi_results_updated', $user_id, $form_id);
  */
@@ -31,6 +35,39 @@ if ( ! class_exists( 'BMF_BSI_DBX' ) ) {
     BMF_BSI_DBX::init();
 } else {
     if ( empty( BMF_BSI_DBX::$db ) ) { BMF_BSI_DBX::init(); }
+}
+
+/**
+ * Detect whether we are currently inside the Elementor editor or preview.
+ */
+if ( ! function_exists( 'bmf_in_elementor_editor' ) ) {
+    function bmf_in_elementor_editor(): bool {
+        if ( ! defined( 'ELEMENTOR_VERSION' ) || ! class_exists( '\Elementor\Plugin' ) ) {
+            return false;
+        }
+
+        $plugin = \Elementor\Plugin::$instance;
+
+        // Edit mode (the main editor canvas)
+        if ( $plugin->editor && $plugin->editor->is_edit_mode() ) {
+            //bm_log("BSI Edit Mode active");
+            return true;
+        }
+
+        // Preview mode (the live preview iframe)
+        if ( $plugin->preview && $plugin->preview->is_preview_mode() ) {
+            //bm_log("BSI Live Preview Mode active");
+            return true;
+        }
+
+        // Fallback query-string checks
+        if ( isset( $_GET['elementor-preview'] ) || isset( $_GET['elementor_library'] ) ) {
+            //bm_log("BSI Fallback Mode active");
+            return true;
+        }
+
+        return false;
+    }
 }
 
 /** Resolve form_id by id\slug\name. */
@@ -168,6 +205,40 @@ class BMF_BSI_Form_Service {
         return self::get_results_row_for_user( $user_id, $date_str );
     }
 
+    /**
+     * Get the previous finalized row (the most recent one before the given date).
+     * If $date_str is null, uses the latest row and returns the one before it.
+     */
+    public static function get_previous_results_row_for_user( $user_id, $date_str = null ) {
+        $db   = BMF_BSI_DBX::$db;
+        $t_r  = BMF_BSI_DBX::t('bm_bsi_results');
+        $user = get_userdata( $user_id );
+        if ( ! $user || empty( $user->user_email ) ) return null;
+        $email = $user->user_email;
+
+        $date_str = self::normalize_date_str( $date_str );
+
+        // If no date supplied, find the latest final row first so we know the "current" date
+        if ( ! $date_str ) {
+            $current = self::get_results_row_for_user( $user_id, null );
+            if ( ! $current || empty( $current['results_date'] ) ) return null;
+            $date_str = self::normalize_date_str( $current['results_date'] );
+        }
+
+        // Most recent final row that is strictly older than the reference date
+        $sql = $db->prepare(
+            "SELECT * FROM {$t_r}
+             WHERE user_email = %s
+               AND is_final = 1
+               AND results_date < %s
+             ORDER BY results_date DESC, id DESC
+             LIMIT 1",
+            $email, $date_str
+        );
+        $row = $db->get_row( $sql, ARRAY_A );
+        return $row ?: null;
+    }
+
     /** Latest per-form score for a user (F1..F9, fallback final_sci_score). */
     public static function get_latest_user_form_score( $user_id, $form_id ) {
         $row = self::get_latest_results_row_for_user( $user_id ); if ( ! $row ) return null;
@@ -302,16 +373,26 @@ class BMF_BSI_Form_Service {
         if ( ! $snap || $snap['final_sci_score'] === null ) return null;
         return [ 'score_percent'=>(float)$snap['final_sci_score'], 'updated_at'=>$snap['updated_at'], 'have_count'=>(int)$snap['have_count'] ];
     }
+
+    /**
+     * Convert a raw column value to 0–100 scale (same logic used everywhere else).
+     */
+    public static function to_percent( $raw ) {
+        if ( $raw === null || $raw === '' || ! is_numeric( $raw ) ) return null;
+        $val = (float) $raw;
+        return ( $val <= 1.0 ) ? round( $val * 100, 2 ) : round( $val, 2 );
+    }
 }
 
 /** Form shortcodes for Elementor cards. */
 class BMF_BSI_Form_Shortcodes {
     public static function init() {
-        add_shortcode( 'bmf_bsi_form',          [ __CLASS__, 'shortcode_form' ] );
-        add_shortcode( 'bmf_bsi_form_icon',     [ __CLASS__, 'shortcode_form_icon' ] );
-        add_shortcode( 'bmf_bsi_form_gauge',    [ __CLASS__, 'shortcode_form_gauge' ] );
-        add_shortcode( 'bmf_bsi_results_field', [ __CLASS__, 'shortcode_results_field' ] );
-        add_shortcode( 'bmf_bsi_history_select',[ __CLASS__, 'shortcode_history_select' ] );
+        add_shortcode( 'bmf_bsi_form',           [ __CLASS__, 'shortcode_form' ] );
+        add_shortcode( 'bmf_bsi_form_icon',      [ __CLASS__, 'shortcode_form_icon' ] );
+        add_shortcode( 'bmf_bsi_form_gauge',     [ __CLASS__, 'shortcode_form_gauge' ] );
+        add_shortcode( 'bmf_bsi_results_field',  [ __CLASS__, 'shortcode_results_field' ] );
+        add_shortcode( 'bmf_bsi_results_delta',  [ __CLASS__, 'shortcode_results_delta' ] );
+        add_shortcode( 'bmf_bsi_history_select', [ __CLASS__, 'shortcode_history_select' ] );
         add_action( 'bmf_bsi_results_updated', [ __CLASS__, 'invalidate_cache' ], 10, 2 );
     }
 
@@ -646,10 +727,26 @@ if ($score_str === '') {
         return $svg;
     }
 
-    /** Results field passthrough (now supports mode="snapshot|latest" + ?bsi_date) */
+    /**
+     * [bmf_bsi_results_field field="F4" format="number" decimals="0" colorize="1" mode="latest"]
+     *
+     * Supports colorize="1" – wraps the output in the form_color from the overall (form_id=0) lookup.
+     */
     public static function shortcode_results_field( $atts ) {
         if (self::should_bail_for_editor()) return '';
-        $atts = shortcode_atts( [ 'field'=>'', 'user_id'=>get_current_user_id(), 'date'=>'', 'format'=>'text', 'format_date'=>'Y-m-d', 'decimals'=>'2', 'autop'=>'0', 'max_chars'=>'0', 'mode'=>'latest' ], $atts, 'bmf_bsi_results_field' );
+        $atts = shortcode_atts( [
+            'field'      => '',
+            'user_id'    => get_current_user_id(),
+            'date'       => '',
+            'format'     => 'text',
+            'format_date'=> 'Y-m-d',
+            'decimals'   => '2',
+            'autop'      => '0',
+            'max_chars'  => '0',
+            'mode'       => 'latest',
+            'colorize'   => '0',
+        ], $atts, 'bmf_bsi_results_field' );
+
         $user_id = (int)$atts['user_id']; if ( ! $user_id ) return '';
         $field = trim( (string) $atts['field'] ); if ( $field === '' ) return '';
 
@@ -683,6 +780,7 @@ if ($score_str === '') {
         $format = strtolower( (string) $atts['format'] );
         $autop  = ((int)$atts['autop'] === 1);
         $max    = max( 0, (int)$atts['max_chars'] );
+        $colorize = ( (int)$atts['colorize'] === 1 );
 
         $truncate = function( $text, $limit ) {
             $text = (string) $text;
@@ -692,6 +790,8 @@ if ($score_str === '') {
             if ( $space !== false && $space >= $limit - 20 ) $cut = mb_substr( $cut, 0, $space );
             return rtrim( $cut ) . '…';
         };
+
+        $numeric_for_color = null; // will hold 0–100 value if we want to colorize
 
         switch ( $format ) {
             case 'raw':
@@ -708,7 +808,7 @@ if ($score_str === '') {
                 if ( $num <= 1.0 ) {
                     $num = $num * 100;
                 }
-
+                $numeric_for_color = $num;
                 $out = number_format( $num, $dec, '.', ',' );
                 break;
             case 'date':
@@ -730,6 +830,107 @@ if ($score_str === '') {
                 if ( $autop ) { $raw = (string) $value; if ( $max > 0 ) $raw = $truncate( $raw, $max ); $out = wpautop( esc_html( $raw ) ); }
                 break;
         }
+
+        // Colorize support – use overall (form_id = 0) lookup ranges
+        if ( $colorize && $numeric_for_color !== null ) {
+            $meta  = BMF_BSI_Form_Service::resolve_form_lookup( 0, (float)$numeric_for_color );
+            $color = $meta['form_color'] ?? '';
+            if ( $color !== '' ) {
+                $out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * [bmf_bsi_results_delta field="F4" decimals="0" show_arrow="1" show_sign="1" colorize="1"]
+     *
+     * Shows the difference between the currently selected (or latest) row
+     * and the previous finalized row.
+     *
+     * Because lower is better on BSI:
+     *   negative delta → green  + ↓  (improvement)
+     *   positive delta → red    + ↑  (worse)
+     *   zero           → gray
+     *
+     * Returns 0 (gray) when there is no previous row to compare against.
+     */
+    public static function shortcode_results_delta( $atts ) {
+        if ( self::should_bail_for_editor() ) return '';
+
+        $atts = shortcode_atts( [
+            'field'      => '',
+            'user_id'    => get_current_user_id(),
+            'decimals'   => '0',
+            'show_arrow' => '1',
+            'show_sign'  => '1',
+            'colorize'   => '1',
+        ], $atts, 'bmf_bsi_results_delta' );
+
+        $user_id = (int) $atts['user_id'];
+        $field   = trim( (string) $atts['field'] );
+        if ( ! $user_id || $field === '' ) return '';
+
+        $cols = BMF_BSI_Form_Service::get_results_table_columns();
+        if ( empty( $cols[ $field ] ) ) return '';
+
+        // Current row (respects ?bsi_date)
+        $date_str = isset( $_GET['bsi_date'] ) ? $_GET['bsi_date'] : null;
+        $current  = BMF_BSI_Form_Service::get_results_row_for_user( $user_id, $date_str );
+        if ( ! $current || ! array_key_exists( $field, $current ) || $current[ $field ] === null || $current[ $field ] === '' ) {
+            return '0';
+        }
+
+        // Previous row
+        $prev = BMF_BSI_Form_Service::get_previous_results_row_for_user( $user_id, $date_str );
+        if ( ! $prev || ! array_key_exists( $field, $prev ) || $prev[ $field ] === null || $prev[ $field ] === '' ) {
+            // No previous data → show 0 in gray
+            $out = '0';
+            if ( (int)$atts['colorize'] === 1 ) {
+                $out = '<span style="color:#888888;">' . $out . '</span>';
+            }
+            return $out;
+        }
+
+        $cur_pct  = BMF_BSI_Form_Service::to_percent( $current[ $field ] );
+        $prev_pct = BMF_BSI_Form_Service::to_percent( $prev[ $field ] );
+
+        if ( $cur_pct === null || $prev_pct === null ) return '0';
+
+        $delta = $cur_pct - $prev_pct;
+        $dec   = max( 0, (int) $atts['decimals'] );
+
+        // Format the number
+        $abs   = abs( $delta );
+        $num   = number_format( $abs, $dec, '.', ',' );
+
+        $sign  = '';
+        if ( (int)$atts['show_sign'] === 1 ) {
+            if ( $delta > 0 )      $sign = '+';
+            elseif ( $delta < 0 )  $sign = '−'; // proper minus sign
+        }
+
+        $arrow = '';
+        if ( (int)$atts['show_arrow'] === 1 ) {
+            if ( $delta > 0 )      $arrow = ' ↑';
+            elseif ( $delta < 0 )  $arrow = ' ↓';
+        }
+
+        $out = $sign . $num . $arrow;
+
+        // Color: lower is better → negative = green, positive = red, zero = gray
+        if ( (int)$atts['colorize'] === 1 ) {
+            if ( $delta < 0 ) {
+                $color = '#44dd30'; // green – improvement
+            } elseif ( $delta > 0 ) {
+                $color = '#c62828'; // red – worse
+            } else {
+                $color = '#888888'; // gray
+            }
+            $out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+        }
+
         return $out;
     }
 }
