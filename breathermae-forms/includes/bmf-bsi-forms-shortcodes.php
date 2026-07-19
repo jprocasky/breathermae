@@ -701,8 +701,16 @@ if ($score_str === '') {
             case 'number':
                 if ( $value === '' ) return '';
                 $dec = max( 0, (int)$atts['decimals'] );
-                $num = is_numeric( $value ) ? (float)$value : null; if ( $num === null ) return '';
-                $out = number_format( $num, $dec, '.', ',' ); break;
+                $num = is_numeric( $value ) ? (float)$value : null;
+                if ( $num === null ) return '';
+
+                // Auto-convert 0–1 decimals to percent (same as form score logic)
+                if ( $num <= 1.0 ) {
+                    $num = $num * 100;
+                }
+
+                $out = number_format( $num, $dec, '.', ',' );
+                break;
             case 'date':
                 if ( empty( $value ) ) return '';
                 $ts = strtotime( (string)$value );
