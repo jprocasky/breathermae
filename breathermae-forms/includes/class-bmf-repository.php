@@ -196,6 +196,26 @@ class BMF_Repository {
         );
     }
 
+    /**
+     * Available finalized BSI result dates for a user (newest first).
+     * Used by [bmf_bsi_history_select].
+     */
+    public static function get_bsi_result_dates($user_email) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'bm_bsi_results';
+
+        return $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT results_date 
+                FROM $table
+                WHERE user_email = %s
+                AND is_final = 1
+                ORDER BY results_date DESC",
+                $user_email
+            )
+        );
+    }
+
     public static function get_form_by_slug($slug){
         global $wpdb; $t = $wpdb->prefix . 'bm_forms';
         return $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE slug=%s", $slug));

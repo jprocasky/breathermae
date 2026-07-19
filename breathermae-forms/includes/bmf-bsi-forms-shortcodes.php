@@ -10,6 +10,11 @@
  * {prefix}bm_bsi_form_lookup : form ranges + metadata to display on cards
  * {prefix}bm_forms : (for resolving form by id\slug\name)
  *
+ * History support (mirrors RSI):
+ *  - [bmf_bsi_history_select] renders a date dropdown
+ *  - ?bsi_date=YYYY-MM-DD switches all “latest” queries to that finalized row
+ *  - Snapshot mode continues to ignore the date param (rolling non-empty)
+ *
  * Cache invalidation hook (fire this right after saving/updating results):
  * do_action('bmf_bsi_results_updated', $user_id, $form_id);
  */
@@ -82,14 +87,68 @@ class BMF_BSI_FormId_Resolver {
 
 /** Data access + resolution for form scores and form lookup. */
 class BMF_BSI_Form_Service {
-    /** Latest results row for the user's email. */
-    public static function get_latest_results_row_for_user( $user_id ) {
+    /**
+     * Results row for a user.
+     * - When $date_str is provided: exact match or same-day, always is_final = 1
+     * - When $date_str is null: most recent is_final = 1 row
+     */
+    public static function get_results_row_for_user( $user_id, $date_str = null ) {
         $db = BMF_BSI_DBX::$db; $t_r = BMF_BSI_DBX::t('bm_bsi_results');
         $user = get_userdata( $user_id ); if ( ! $user || empty( $user->user_email ) ) return null;
         $email = $user->user_email;
-        $sql = $db->prepare("SELECT * FROM {$t_r} WHERE user_email = %s AND is_final = 1 ORDER BY results_date DESC, id DESC LIMIT 1", $email);
+
+        // --- 1. Exact date match, FINAL only ---
+        if ( $date_str ) {
+            $sql = $db->prepare(
+                "SELECT * FROM {$t_r}
+                 WHERE user_email = %s
+                   AND results_date = %s
+                   AND is_final = 1
+                 ORDER BY id DESC
+                 LIMIT 1",
+                $email, $date_str
+            );
+            $row = $db->get_row( $sql, ARRAY_A );
+            if ( $row ) return $row;
+
+            // --- 2. Same-day FINAL (YYYY-MM-DD) ---
+            if ( preg_match('/^\d{4}\-\d{2}\-\d{2}$/', $date_str) ) {
+                $sql = $db->prepare(
+                    "SELECT * FROM {$t_r}
+                     WHERE user_email = %s
+                       AND DATE(results_date) = %s
+                       AND is_final = 1
+                     ORDER BY results_date DESC, id DESC
+                     LIMIT 1",
+                    $email, $date_str
+                );
+                $row = $db->get_row( $sql, ARRAY_A );
+                if ( $row ) return $row;
+            }
+        }
+
+        // --- 3. Most recent FINAL result (default) ---
+        $sql = $db->prepare(
+            "SELECT * FROM {$t_r}
+             WHERE user_email = %s
+               AND is_final = 1
+             ORDER BY results_date DESC, id DESC
+             LIMIT 1",
+            $email
+        );
         $row = $db->get_row( $sql, ARRAY_A );
         return $row ?: null;
+    }
+
+    /**
+     * Convenience wrapper used by all “latest” score methods.
+     * Honors ?bsi_date=YYYY-MM-DD when present.
+     */
+    public static function get_latest_results_row_for_user( $user_id ) {
+        $date_str = isset($_GET['bsi_date'])
+            ? sanitize_text_field($_GET['bsi_date'])
+            : null;
+        return self::get_results_row_for_user( $user_id, $date_str );
     }
 
     /** Latest per-form score for a user (F1..F9, fallback final_sci_score). */
@@ -150,7 +209,10 @@ class BMF_BSI_Form_Service {
     public static function resolve_form_lookup( $form_id, $score_percent ) {
         $db = BMF_BSI_DBX::$db; $t_lu = BMF_BSI_DBX::t('bm_bsi_form_lookup');
         $sql = $db->prepare(
-            "SELECT form_title, form_text, form_focus, icon_url, form_color, Suggestions AS suggestions\n             FROM {$t_lu}\n             WHERE form_id = %d AND %f >= low_value AND %f < high_value\n             ORDER BY id ASC LIMIT 1",
+            "SELECT form_title, form_text, form_focus, icon_url, form_color, Suggestions AS suggestions
+             FROM {$t_lu}
+             WHERE form_id = %d AND %f >= low_value AND %f < high_value
+             ORDER BY id ASC LIMIT 1",
             $form_id, $score_percent, $score_percent
         );
         $row = $db->get_row( $sql, ARRAY_A );
@@ -169,27 +231,6 @@ class BMF_BSI_Form_Service {
         $cols = []; if ( $rows ) { foreach ( $rows as $r ) { if ( ! empty( $r['Field'] ) ) $cols[ $r['Field'] ] = true; } }
         set_transient( $cache_key, $cols, 12 * HOUR_IN_SECONDS );
         return $cols;
-    }
-
-    /** Fetch results row for a user (latest or by exact date / same-day latest). */
-    public static function get_results_row_for_user( $user_id, $date_str = null ) {
-        $db = BMF_BSI_DBX::$db; $t_r = BMF_BSI_DBX::t('bm_bsi_results');
-        $user = get_userdata( $user_id ); if ( ! $user || empty( $user->user_email ) ) return null;
-        $email = $user->user_email;
-        if ( $date_str ) {
-            $sql = $db->prepare("SELECT * FROM {$t_r} WHERE user_email = %s AND results_date = %s AND is_final = 1 LIMIT 1", $email, $date_str);
-            $row = $db->get_row( $sql, ARRAY_A ); if ( $row ) return $row;
-            if ( preg_match('/^\d{4}\-\d{2}\-\d{2}$/', $date_str) ) {
-                $sql = $db->prepare(
-                    "SELECT * FROM {$t_r} WHERE user_email = %s AND DATE(results_date) = %s AND is_final = 1 ORDER BY results_date DESC, id DESC LIMIT 1",
-                    $email, $date_str
-                );
-                $row = $db->get_row( $sql, ARRAY_A ); if ( $row ) return $row;
-            }
-        }
-        $sql = $db->prepare("SELECT * FROM {$t_r} WHERE user_email = %s ORDER BY results_date DESC, id DESC LIMIT 1", $email);
-        $row = $db->get_row( $sql, ARRAY_A );
-        return $row ?: null;
     }
 
     /** Rolling latest-non-null snapshot across ALL rows for a user. */
@@ -253,8 +294,64 @@ class BMF_BSI_Form_Shortcodes {
         add_shortcode( 'bmf_bsi_form_icon',     [ __CLASS__, 'shortcode_form_icon' ] );
         add_shortcode( 'bmf_bsi_form_gauge',    [ __CLASS__, 'shortcode_form_gauge' ] );
         add_shortcode( 'bmf_bsi_results_field', [ __CLASS__, 'shortcode_results_field' ] );
+        add_shortcode( 'bmf_bsi_history_select',[ __CLASS__, 'shortcode_history_select' ] );
         add_action( 'bmf_bsi_results_updated', [ __CLASS__, 'invalidate_cache' ], 10, 2 );
     }
+
+    /**
+     * [bmf_bsi_history_select]
+     * Renders a dropdown of finalized BSI assessment dates.
+     * Selecting a date reloads the page with ?bsi_date=YYYY-MM-DD
+     */
+    public static function shortcode_history_select($atts) {
+        if (!is_user_logged_in()) return '';
+
+        $user  = wp_get_current_user();
+        $email = $user->user_email ?? '';
+        if (!$email) return '';
+
+        $dates = BMF_Repository::get_bsi_result_dates($email);
+        if (empty($dates)) return '';
+
+        $selected = isset($_GET['bsi_date'])
+            ? sanitize_text_field($_GET['bsi_date'])
+            : '';
+
+        ob_start();
+        ?>
+        <div class="bmf-bsi-history-select" style="margin-bottom:10px; font-size:0.9rem; color:#001d50; display:flex; align-items:center; gap:8px;">
+            <b style="white-space:nowrap;">Assessment Date:</b>
+            <select id="bmf_bsi_date_select" style="padding:4px 8px; font-size:0.9rem; border:1px solid #001d50; border-radius:4px; width:150px;">
+                <?php foreach ($dates as $d): ?>
+                    <option value="<?php echo esc_attr($d); ?>" <?php selected($selected, $d); ?>>
+                        <?php echo esc_html(date('M j, Y', strtotime($d))); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var el = document.getElementById('bmf_bsi_date_select');
+            if (!el) return;
+
+            el.addEventListener('change', function() {
+                var selected = this.value;
+                var url = new URL(window.location.href);
+
+                if (selected) {
+                    url.searchParams.set('bsi_date', selected);
+                } else {
+                    url.searchParams.delete('bsi_date');
+                }
+
+                window.location.href = url.toString();
+            });
+        });
+        </script>
+        <?php
+        return ob_get_clean();
+    }
+
     private static function should_bail_for_editor(): bool {
         $disable = apply_filters('bmf/shortcodes/disable_in_elementor', true); if (!$disable) return false;
         return function_exists('bmf_in_elementor_editor') && bmf_in_elementor_editor();
@@ -296,7 +393,10 @@ class BMF_BSI_Form_Shortcodes {
         $mode = strtolower( (string)$atts['mode'] ); if ($mode !== 'latest') $mode = 'snapshot';
         $form_id = $is_overall ? 0 : BMF_BSI_FormId_Resolver::resolve( $form_raw ); if ( $form_id === null ) return '';
 
-        $ckey = self::cache_key( $user_id, $form_id, $mode ); $ttl = max(0, (int)$atts['cache_ttl']);
+        // Include bsi_date in cache key so historical views do not collide with “latest”
+        $date_str = isset($_GET['bsi_date']) ? sanitize_text_field($_GET['bsi_date']) : '';
+        $ckey = self::cache_key( $user_id, $form_id, $mode . '_' . ($date_str ?: 'latest') );
+        $ttl  = max(0, (int)$atts['cache_ttl']);
         $data = get_transient( $ckey );
         if ( ! is_array( $data ) ) {
             if ( $is_overall ) {
@@ -522,7 +622,7 @@ if ($score_str === '') {
         return $svg;
     }
 
-    /** Results field passthrough (now supports mode="snapshot|latest") */
+    /** Results field passthrough (now supports mode="snapshot|latest" + ?bsi_date) */
     public static function shortcode_results_field( $atts ) {
         if (self::should_bail_for_editor()) return '';
         $atts = shortcode_atts( [ 'field'=>'', 'user_id'=>get_current_user_id(), 'date'=>'', 'format'=>'text', 'format_date'=>'Y-m-d', 'decimals'=>'2', 'autop'=>'0', 'max_chars'=>'0', 'mode'=>'snapshot' ], $atts, 'bmf_bsi_results_field' );
@@ -534,7 +634,7 @@ if ($score_str === '') {
         $mode = strtolower((string)$atts['mode']); if ($mode!=='latest') $mode='snapshot';
 
         if ( $mode === 'snapshot' ) {
-            // Rolling latest-non-empty across all rows for this field (ignores 'date')
+            // Rolling latest-non-empty across all rows for this field (ignores 'date' and ?bsi_date)
             $db  = BMF_BSI_DBX::$db; $t_r = BMF_BSI_DBX::t('bm_bsi_results');
             $user = get_userdata( $user_id ); if ( ! $user || empty( $user->user_email ) ) return '';
             $email = $user->user_email;
@@ -546,8 +646,12 @@ if ($score_str === '') {
             }
             if ( ! $row ) return '';
         } else {
-            // Latest single row (honors exact/same-day 'date' if provided)
-            $row = BMF_BSI_Form_Service::get_results_row_for_user( $user_id, $atts['date'] ?: null ); if ( ! $row ) return '';
+            // Latest single row (honors exact/same-day 'date' attr or ?bsi_date)
+            $date_str = ! empty( $atts['date'] )
+                ? $atts['date']
+                : ( isset($_GET['bsi_date']) ? sanitize_text_field($_GET['bsi_date']) : null );
+            $row = BMF_BSI_Form_Service::get_results_row_for_user( $user_id, $date_str );
+            if ( ! $row ) return '';
             $value = array_key_exists( $field, $row ) && $row[ $field ] !== null ? $row[ $field ] : '';
         }
 
