@@ -387,7 +387,7 @@ class BMF_BSI_Form_Shortcodes {
             delete_transient( self::cache_key($user_id, (int)$form_id, 'latest') );
         }
     }
-    private static function cache_key( $user_id, $form_id, $mode = 'snapshot' ) {
+    private static function cache_key( $user_id, $form_id, $mode = 'latest' ) {
         $mode = $mode ? strtolower((string)$mode) : 'snapshot';
         return "bmf_bsi_form_{$user_id}_{$form_id}_{$mode}";
     }
@@ -412,7 +412,7 @@ class BMF_BSI_Form_Shortcodes {
         $form_raw = function_exists('bmf_resolve_form_from_atts_or_query') ? bmf_resolve_form_from_atts_or_query($raw_attr) : trim($raw_attr);
         $form_lower = strtolower( $form_raw );
         $is_overall = ( $form_lower === 'overall' ) || ( is_numeric($form_raw) && (int)$form_raw === 0 );
-        $mode = strtolower( (string)$atts['mode'] ); if ($mode !== 'latest') $mode = 'latest';
+        $mode = strtolower( (string)$atts['mode'] ); if ($mode !== 'snapshot') $mode = 'latest';
         $form_id = $is_overall ? 0 : BMF_BSI_FormId_Resolver::resolve( $form_raw ); if ( $form_id === null ) return '';
 
         // Include bsi_date in cache key so historical views do not collide with “latest”
@@ -495,7 +495,7 @@ class BMF_BSI_Form_Shortcodes {
             'mode' => 'latest',
         ], $atts, 'bmf_bsi_form_icon' );
         $user_id = (int) $atts['user_id']; if ( ! $user_id ) return '';
-        $mode = strtolower((string)$atts['mode']); if ($mode!=='latest') $mode='latest';
+        $mode = strtolower((string)$atts['mode']); if ($mode!=='snapshot') $mode='latest';
         $raw_attr = (string) $atts['form'];
         $form_raw = function_exists('bmf_resolve_form_from_atts_or_query') ? bmf_resolve_form_from_atts_or_query($raw_attr) : trim($raw_attr);
         $form_lower = strtolower( trim($form_raw) );
@@ -578,7 +578,7 @@ if ($score_str === '') {
         ], $atts, 'bmf_bsi_form_gauge' );
         $user_id = (int)$atts['user_id']; if ( ! $user_id ) return '';
         $metric = strtolower( trim((string)$atts['metric']) );
-        $mode = strtolower((string)$atts['mode']); if($mode!=='latest') $mode='latest';
+        $mode = strtolower((string)$atts['mode']); if($mode!=='snapshot') $mode='latest';
         $raw_attr = (string)$atts['form'];
         $form_raw = function_exists('bmf_resolve_form_from_atts_or_query') ? bmf_resolve_form_from_atts_or_query($raw_attr) : trim($raw_attr);
         $form_lower = strtolower(trim($form_raw)); $is_overall = ( $form_lower==='overall' ) || ( is_numeric($form_raw) && (int)$form_raw===0 );
@@ -649,7 +649,7 @@ if ($score_str === '') {
     /** Results field passthrough (now supports mode="snapshot|latest" + ?bsi_date) */
     public static function shortcode_results_field( $atts ) {
         if (self::should_bail_for_editor()) return '';
-        $atts = shortcode_atts( [ 'field'=>'', 'user_id'=>get_current_user_id(), 'date'=>'', 'format'=>'text', 'format_date'=>'Y-m-d', 'decimals'=>'2', 'autop'=>'0', 'max_chars'=>'0', 'mode'=>'snapshot' ], $atts, 'bmf_bsi_results_field' );
+        $atts = shortcode_atts( [ 'field'=>'', 'user_id'=>get_current_user_id(), 'date'=>'', 'format'=>'text', 'format_date'=>'Y-m-d', 'decimals'=>'2', 'autop'=>'0', 'max_chars'=>'0', 'mode'=>'latest' ], $atts, 'bmf_bsi_results_field' );
         $user_id = (int)$atts['user_id']; if ( ! $user_id ) return '';
         $field = trim( (string) $atts['field'] ); if ( $field === '' ) return '';
 
