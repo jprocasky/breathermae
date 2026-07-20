@@ -500,9 +500,16 @@ console.log('Bar chart AJAX called with mode:', mode);
 
         $filter_type = sanitize_text_field($_POST['filter_type'] ?? 'all');
         $search = sanitize_text_field($_POST['search'] ?? '');
-        $page = max(1, intval($_POST['page'] ?? 1));
-        $per_page = in_array(intval($_POST['per_page'] ?? 25), [10,25,50,100]) ? intval($_POST['per_page']) : 25;
-        $offset = ($page - 1) * $per_page;        
+        // Safe paging parameters – never produces "Undefined array key" warnings
+        $page     = max(1, intval($_POST['page'] ?? 1));
+        $per_page = intval($_POST['per_page'] ?? 25);
+
+        // Whitelist allowed values
+        if (!in_array($per_page, [10, 25, 50, 100], true)) {
+            $per_page = 25;
+        }
+
+        $offset = ($page - 1) * $per_page;    
 
         $sql = "
             SELECT h1.* 
