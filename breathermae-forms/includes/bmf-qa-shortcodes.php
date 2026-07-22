@@ -106,7 +106,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		public static function enqueue_assets() {
-			wp_register_style( 'bmf-qa', false, [], '1.1.0' );
+			wp_register_style( 'bmf-qa', false, [], '1.1.1' );
 
 			$css = '
 .bmf-qa-wrap { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; }
@@ -172,7 +172,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$member_label = $target_user
 				? ( $target_user->display_name ?: $target_user->user_email )
 				: '— select a member —';
-			$member_email = $target_user ? $target_user->user_email : '';
 
 			$responses = $target_user_id
 				? BMF_Repository::get_submitted_responses_for_user( $target_user_id, $form_id )
@@ -182,7 +181,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			$uid = 'bmf_qa_' . $form_id . '_' . wp_unique_id();
 
-			obst_start();
+			ob_start();
 			?>
 <div class="bmf-qa-wrap"
 	 id="<?php echo esc_attr( $uid ); ?>"
@@ -435,7 +434,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			$form_id = absint( $_POST['form_id'] ?? 0 );
 			$user_id = absint( $_POST['user_id'] ?? 0 );
-			$email   = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+			email   = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 
 			if ( ! $form_id ) {
 				wp_send_json_error( [ 'message' => 'Missing form_id' ], 400 );
