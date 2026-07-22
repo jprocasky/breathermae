@@ -1066,7 +1066,7 @@ class BMF_BSI_Form_Shortcodes {
             pointBackgroundColor: '#0b1220',
             pointBorderColor: cDrivers,
             pointBorderWidth: 2,
-            tension: 0.35,
+            tension: 0.65,
             spanGaps: true
           },
           {
