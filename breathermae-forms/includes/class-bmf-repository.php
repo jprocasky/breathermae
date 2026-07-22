@@ -423,4 +423,241 @@ class BMF_Repository {
         return (int) $wpdb->insert_id;
     }
 
+    // =========================================================================
+    // Q&A viewer helpers (used by [bmf_qa])
+    // =========================================================================
+
+    /**
+     * Resolve a human-readable option label from a stored choice_value.
+     * Handles the "value|{json-meta}" format written by ajax_save_answer.
+     */
+    public static function resolve_choice_label( $choice_value, $choices_json = null, $options_string = null ): string {
+        $raw = (string) $choice_value;
+
+        // Strip meta payload if present: "value|{json}"
+        if ( strpos( $raw, '|' ) !== false ) {
+            $parts = explode( '|', $raw, 2 );
+            $raw   = $parts[0];
+        }
+        $raw = trim( $raw );
+
+        if ( $raw === '' ) {
+            return '—';
+        }
+
+        // Prefer choices_json (array of {value, label})
+        if ( ! empty( $choices_json ) ) {
+            $choices = is_string( $choices_json ) ? json_decode( $choices_json, true ) : $choices_json;
+            if ( is_array( $choices ) ) {
+                foreach ( $choices as $c ) {
+                    if ( ! is_array( $c ) ) {
+                        continue;
+                    }
+                    $cval = isset( $c['value'] ) ? (string) $c['value'] : '';
+                    // Also compare the part before | on the stored choice side
+                    if ( $cval === $raw || (string) ( $c['value'] ?? '' ) === (string) $choice_value ) {
+                        return (string) ( $c['label'] ?? $raw );
+                    }
+                }
+            }
+        }
+
+        // Fallback: options_string patterns like "0=Never|1=Rarely|2=Sometimes"
+        if ( ! empty( $options_string ) && is_string( $options_string ) ) {
+            $pairs = preg_split( '/\s*[|,]\s*/', $options_string );
+            foreach ( $pairs as $pair ) {
+                if ( strpos( $pair, '=' ) !== false ) {
+                    list( $k, $v ) = array_map( 'trim', explode( '=', $pair, 2 ) );
+                    if ( (string) $k === $raw ) {
+                        return $v !== '' ? $v : $raw;
+                    }
+                }
+            }
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Submitted responses for a user + form (newest first).
+     * Returns array of objects: id, submitted_at, status, version.
+     */
+    public static function get_submitted_responses_for_user( int $user_id, int $form_id ): array {
+        if ( $user_id <= 0 || $form_id <= 0 ) {
+            return [];
+        }
+
+        global $wpdb;
+        $t = $wpdb->prefix . 'bm_responses';
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, submitted_at, status, version
+                 FROM {$t}
+                 WHERE user_id = %d
+                   AND form_id = %d
+                   AND status = 'submitted'
+                 ORDER BY submitted_at DESC, id DESC",
+                $user_id,
+                $form_id
+            )
+        );
+
+        return $rows ?: [];
+    }
+
+    /**
+     * Full Q&A payload for one response, grouped by section (order_index).
+     *
+     * Returns:
+     * [
+     *   'response' => {id, submitted_at, ...},
+     *   'form'     => {id, title, slug},
+     *   'sections' => [
+     *     [
+     *       'id', 'title', 'order_index',
+     *       'questions' => [
+     *         ['id','code','prompt','type','order_index',
+     *          'choice_value','answer_label','free_text','score']
+     *       ]
+     *     ], ...
+     *   ]
+     * ]
+     */
+    public static function get_response_qa( int $response_id ): ?array {
+        if ( $response_id <= 0 ) {
+            return null;
+        }
+
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $response = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$p}bm_responses WHERE id = %d LIMIT 1",
+                $response_id
+            )
+        );
+        if ( ! $response ) {
+            return null;
+        }
+
+        $form = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, title, slug FROM {$p}bm_forms WHERE id = %d LIMIT 1",
+                (int) $response->form_id
+            )
+        );
+
+        $sections = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, title, order_index, choices_json, options_string
+                 FROM {$p}bm_form_sections
+                 WHERE form_id = %d
+                 ORDER BY order_index ASC",
+                (int) $response->form_id
+            )
+        ) ?: [];
+
+        // All answers for this response, keyed by question_id
+        $items = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT question_id, choice_value, free_text, score
+                 FROM {$p}bm_response_items
+                 WHERE response_id = %d",
+                $response_id
+            )
+        ) ?: [];
+
+        $answers = [];
+        foreach ( $items as $it ) {
+            $answers[ (int) $it->question_id ] = $it;
+        }
+
+        $out_sections = [];
+
+        foreach ( $sections as $sec ) {
+            $questions = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, code, prompt, type, order_index, choices_json, options_string
+                     FROM {$p}bm_questions
+                     WHERE section_id = %d
+                     ORDER BY order_index ASC",
+                    (int) $sec->id
+                )
+            ) ?: [];
+
+            $q_out = [];
+            foreach ( $questions as $q ) {
+                $ans = $answers[ (int) $q->id ] ?? null;
+
+                $choice_value = $ans ? (string) $ans->choice_value : '';
+                $free_text    = $ans ? (string) $ans->free_text : '';
+                $score        = ( $ans && $ans->score !== null ) ? (float) $ans->score : null;
+
+                // Prefer question-level choices, fall back to section-level
+                $choices_src = ! empty( $q->choices_json ) ? $q->choices_json : $sec->choices_json;
+                $options_src = ! empty( $q->options_string ) ? $q->options_string : $sec->options_string;
+
+                $label = self::resolve_choice_label( $choice_value, $choices_src, $options_src );
+
+                // For rank / multi-value answers, try to expand each token
+                if ( $q->type === 'rank' || strpos( $choice_value, ',' ) !== false ) {
+                    $tokens = array_filter( array_map( 'trim', explode( ',', $choice_value ) ) );
+                    if ( count( $tokens ) > 1 ) {
+                        $labels = [];
+                        foreach ( $tokens as $tok ) {
+                            $labels[] = self::resolve_choice_label( $tok, $choices_src, $options_src );
+                        }
+                        $label = implode( ' → ', $labels );
+                    }
+                }
+
+                // Prefer free_text when present and choice is empty
+                if ( $free_text !== '' && ( $choice_value === '' || $label === '—' ) ) {
+                    $label = $free_text;
+                } elseif ( $free_text !== '' && $label !== $free_text ) {
+                    // Show both when useful
+                    $label = $label . ( $label !== '—' ? ' — ' : '' ) . $free_text;
+                }
+
+                $q_out[] = [
+                    'id'            => (int) $q->id,
+                    'code'          => (string) ( $q->code ?? '' ),
+                    'prompt'        => (string) $q->prompt,
+                    'type'          => (string) $q->type,
+                    'order_index'   => (int) $q->order_index,
+                    'choice_value'  => $choice_value,
+                    'answer_label'  => $label,
+                    'free_text'     => $free_text,
+                    'score'         => $score,
+                ];
+            }
+
+            $out_sections[] = [
+                'id'          => (int) $sec->id,
+                'title'       => (string) $sec->title,
+                'order_index' => (int) $sec->order_index,
+                'questions'   => $q_out,
+            ];
+        }
+
+        return [
+            'response' => [
+                'id'           => (int) $response->id,
+                'user_id'      => (int) $response->user_id,
+                'form_id'      => (int) $response->form_id,
+                'status'       => (string) $response->status,
+                'submitted_at' => (string) ( $response->submitted_at ?? '' ),
+                'version'      => (int) $response->version,
+            ],
+            'form' => [
+                'id'    => $form ? (int) $form->id : 0,
+                'title' => $form ? (string) $form->title : '',
+                'slug'  => $form ? (string) $form->slug : '',
+            ],
+            'sections' => $out_sections,
+        ];
+    }
+
 }

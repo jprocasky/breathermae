@@ -192,7 +192,12 @@ private function __construct() {
     // Pillars
     if ( file_exists( __DIR__ . '/includes/bmf-pillars-shortcodes.php' ) ) {
         require_once __DIR__ . '/includes/bmf-pillars-shortcodes.php';
-    }    
+    }
+
+    // Q&A viewer (selected-member / provider view)
+    if ( file_exists( __DIR__ . '/includes/bmf-qa-shortcodes.php' ) ) {
+        require_once __DIR__ . '/includes/bmf-qa-shortcodes.php';
+    }
 
     // ✅ ADMIN CONTROLLERS
     if ( is_admin() ) {
