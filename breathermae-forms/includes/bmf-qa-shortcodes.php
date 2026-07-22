@@ -2,13 +2,17 @@
 /**
  * Breathermae Forms – Q&A Viewer Shortcode
  *
- * [bmf_qa form="slug|id" user_id="" show_scores="0"]
+ * [bmf_qa form="slug|id" user_id="" show_scores="0" self="0"]
  *
- * Primary mode: reacts to the member selected via uls-members
- * (user meta + the `uls:selected-member` custom event) with pure AJAX.
- * No page reload — selection stays intact.
+ * Driven by two selections (both pure AJAX, no page reload):
+ *   1. Member  – uls-members (`uls:selected-member` / uls_selected_user_id meta)
+ *   2. Form    – click on [data-bmf-qa-form="slug"] or `bmf:selected-form` event
  *
- * Falls back to current user when no selection exists (self-view).
+ * form="" is optional. If omitted the panel waits until a form is selected.
+ *
+ * Helper:
+ *   [bmf_qa_form_link form="biological-strain"]Biological Strain[/bmf_qa_form_link]
+ *   Renders a clickable title that drives the Q&A panel.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -20,6 +24,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 		public static function init() {
 			add_shortcode( 'bmf_qa', [ __CLASS__, 'shortcode_qa' ] );
+			add_shortcode( 'bmf_qa_form_link', [ __CLASS__, 'shortcode_form_link' ] );
 
 			add_action( 'wp_ajax_bmf_get_response_qa', [ __CLASS__, 'ajax_get_response_qa' ] );
 			add_action( 'wp_ajax_bmf_list_responses', [ __CLASS__, 'ajax_list_responses' ] );
@@ -39,8 +44,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		/**
 		 * Resolve target member user_id.
 		 * Priority: shortcode attr → uls_selected_user_id → 0 (wait for selection).
-		 * Does NOT fall back to current user when used in provider context —
-		 * empty selection shows the empty state instead of the provider's own answers.
 		 */
 		private static function resolve_target_user_id( $atts_user_id = '', $fallback_to_self = false ): int {
 			$attr = absint( $atts_user_id );
@@ -59,7 +62,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		/**
-		 * Resolve form_id from slug or numeric id.
+		 * Resolve form_id from slug or numeric id. Returns 0 if empty/unknown.
 		 */
 		private static function resolve_form_id( string $form_attr ): int {
 			$form_attr = trim( $form_attr );
@@ -88,12 +91,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				|| current_user_can( 'manage_options' )
 				|| ( $selected_id > 0 && $selected_id === $subject_user_id );
 
-			/**
-			 * Providers who can already see a member in uls_members_table
-			 * are effectively trusted; open the gate for any logged-in user
-			 * when viewing a subject that was just selected via the event.
-			 * Tighten later with hierarchy checks if needed.
-			 */
 			$allowed = (bool) apply_filters( 'bmf_qa_can_view_subject', $allowed, $subject_user_id, $current_id );
 
 			// Practical default for provider pages: if logged in, allow.
@@ -106,7 +103,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		public static function enqueue_assets() {
-			wp_register_style( 'bmf-qa', false, [], '1.1.2' );
+			wp_register_style( 'bmf-qa', false, [], '1.2.0' );
 
 			$css = '
 .bmf-qa-wrap { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; }
@@ -124,13 +121,84 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 .bmf-qa-answer { font-weight:500; color:#0f172a; }
 .bmf-qa-loading { opacity:0.55; pointer-events:none; }
 .bmf-qa-score { white-space:nowrap; color:#475569; }
+
+/* Form title triggers (results cards / [bmf_qa_form_link]) */
+.bmf-qa-form-link,
+[data-bmf-qa-form] {
+	cursor: pointer;
+	text-decoration: none;
+	color: #001d50;
+	border-bottom: 1px dashed transparent;
+	transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.bmf-qa-form-link:hover,
+[data-bmf-qa-form]:hover {
+	color: #0b3a8a;
+	border-bottom-color: #6ec1e4;
+}
+.bmf-qa-form-link.is-active,
+[data-bmf-qa-form].is-active {
+	color: #0b3a8a;
+	font-weight: 600;
+	border-bottom-color: #6ec1e4;
+	background: rgba(110, 193, 228, 0.15);
+	padding: 0 4px;
+	border-radius: 3px;
+}
 ';
 			wp_add_inline_style( 'bmf-qa', $css );
 		}
 
 		/**
+		 * [bmf_qa_form_link form="slug"]Label[/bmf_qa_form_link]
+		 * Clickable form title that drives the Q&A panel (no page reload).
+		 */
+		public static function shortcode_form_link( $atts, $content = null ) {
+			if ( self::should_bail_for_editor() ) {
+				return is_string( $content ) ? $content : '';
+			}
+
+			$atts = shortcode_atts(
+				[
+					'form'  => '',
+					'class' => '',
+				],
+				$atts,
+				'bmf_qa_form_link'
+			);
+
+			$form = trim( (string) $atts['form'] );
+			if ( $form === '' ) {
+				return is_string( $content ) ? $content : '';
+			}
+
+			// Prefer inner content; fall back to form title from DB
+			$label = is_string( $content ) ? trim( $content ) : '';
+			if ( $label === '' ) {
+				$form_id = self::resolve_form_id( $form );
+				$row     = $form_id ? BMF_Repository::get_form( $form_id ) : null;
+				$label   = $row ? (string) $row->title : $form;
+			}
+
+			$class = 'bmf-qa-form-link';
+			if ( $atts['class'] !== '' ) {
+				$class .= ' ' . sanitize_html_class( $atts['class'] );
+			}
+
+			wp_enqueue_style( 'bmf-qa' );
+
+			return sprintf(
+				'<a href="#" class="%s" data-bmf-qa-form="%s" role="button">%s</a>',
+				esc_attr( $class ),
+				esc_attr( $form ),
+				esc_html( $label )
+			);
+		}
+
+		/**
 		 * [bmf_qa form="slug|id" user_id="" show_scores="0" self="0"]
 		 *
+		 * form is optional. When omitted the panel waits for a form click / event.
 		 * self="1" falls back to the current user when nothing is selected
 		 * (useful on member-facing results pages).
 		 */
@@ -154,15 +222,16 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				'bmf_qa'
 			);
 
-			$form_id = self::resolve_form_id( (string) $atts['form'] );
-			if ( ! $form_id ) {
+			$form_attr = trim( (string) $atts['form'] );
+			$form_id   = self::resolve_form_id( $form_attr );
+
+			// If a form was explicitly provided but not found, show error.
+			// If form attr is empty, we wait for selection — not an error.
+			if ( $form_attr !== '' && ! $form_id ) {
 				return '<div class="bmf-qa-empty">Form not found. Provide a valid form slug or id.</div>';
 			}
 
-			$form = BMF_Repository::get_form( $form_id );
-			if ( ! $form ) {
-				return '<div class="bmf-qa-empty">Form not found.</div>';
-			}
+			$form = $form_id ? BMF_Repository::get_form( $form_id ) : null;
 
 			$fallback_self  = ( (int) $atts['self'] === 1 );
 			$target_user_id = self::resolve_target_user_id( $atts['user_id'], $fallback_self );
@@ -172,27 +241,46 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$member_label = $target_user
 				? ( $target_user->display_name ?: $target_user->user_email )
 				: '— select a member —';
+			$member_email = $target_user ? (string) $target_user->user_email : '';
 
-			$responses = $target_user_id
+			$form_title = $form ? (string) $form->title : '— select a form —';
+			$form_slug  = $form ? (string) $form->slug : $form_attr;
+
+			$responses = ( $target_user_id && $form_id )
 				? BMF_Repository::get_submitted_responses_for_user( $target_user_id, $form_id )
 				: [];
 
 			wp_enqueue_style( 'bmf-qa' );
 
-			$uid = 'bmf_qa_' . $form_id . '_' . wp_unique_id();
+			$uid = 'bmf_qa_' . ( $form_id ?: 'any' ) . '_' . wp_unique_id();
+
+			// Empty-state message for first paint
+			if ( ! $form_id && ! $target_user_id ) {
+				$empty_msg = 'Select a member, then click a form name to view answers.';
+			} elseif ( ! $form_id ) {
+				$empty_msg = 'Click a form name to view this member’s answers.';
+			} elseif ( ! $target_user_id ) {
+				$empty_msg = 'Select a member to view their answers.';
+			} elseif ( empty( $responses ) ) {
+				$empty_msg = 'No submitted responses found for this member and form.';
+			} else {
+				$empty_msg = 'Loading answers…';
+			}
 
 			ob_start();
 			?>
 <div class="bmf-qa-wrap"
 	 id="<?php echo esc_attr( $uid ); ?>"
 	 data-form-id="<?php echo esc_attr( $form_id ); ?>"
+	 data-form-slug="<?php echo esc_attr( $form_slug ); ?>"
 	 data-user-id="<?php echo esc_attr( $target_user_id ); ?>"
+	 data-email="<?php echo esc_attr( $member_email ); ?>"
 	 data-show-scores="<?php echo $show_scores ? '1' : '0'; ?>"
 	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'bmf_qa_nonce' ) ); ?>"
 	 data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>">
 
 	<div class="bmf-qa-header">
-		<h4 class="bmf-qa-title"><?php echo esc_html( $form->title ); ?></h4>
+		<h4 class="bmf-qa-title"><?php echo esc_html( $form_title ); ?></h4>
 		<span class="bmf-qa-meta">Member: <strong class="bmf-qa-member-label"><?php echo esc_html( $member_label ); ?></strong></span>
 
 		<label class="bmf-qa-meta bmf-qa-select-wrap" <?php echo empty( $responses ) ? 'style="display:none"' : ''; ?>>
@@ -213,15 +301,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 	<div class="bmf-qa-body">
 		<div class="bmf-qa-table-wrap">
-			<?php if ( empty( $responses ) ) : ?>
-				<div class="bmf-qa-empty bmf-qa-placeholder">
-					<?php echo $target_user_id
-						? 'No submitted responses found for this member and form.'
-						: 'Select a member to view their answers.'; ?>
-				</div>
-			<?php else : ?>
-				<div class="bmf-qa-placeholder bmf-qa-empty">Loading answers…</div>
-			<?php endif; ?>
+			<div class="bmf-qa-empty bmf-qa-placeholder"><?php echo esc_html( $empty_msg ); ?></div>
 		</div>
 	</div>
 </div>
@@ -233,12 +313,20 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 	var ajaxUrl    = root.dataset.ajax;
 	var nonce      = root.dataset.nonce;
-	var formId     = root.dataset.formId;
 	var showScores = root.dataset.showScores === '1';
 	var selectWrap = root.querySelector('.bmf-qa-select-wrap');
 	var selectEl   = root.querySelector('.bmf-qa-response-select');
 	var bodyEl     = root.querySelector('.bmf-qa-table-wrap');
 	var memberEl   = root.querySelector('.bmf-qa-member-label');
+	var titleEl    = root.querySelector('.bmf-qa-title');
+
+	// Mutable selection state
+	var state = {
+		formId:   root.dataset.formId || '',
+		formSlug: root.dataset.formSlug || '',
+		userId:   root.dataset.userId || '',
+		email:    root.dataset.email || ''
+	};
 
 	function esc(s) {
 		var d = document.createElement('div');
@@ -341,13 +429,23 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		if (selectWrap) selectWrap.style.display = 'inline-flex';
 	}
 
-	function loadMemberResponses(userId, email, displayName) {
-		if (memberEl) {
-			memberEl.textContent = displayName || email || ('User #' + userId) || '—';
-		}
-		root.dataset.userId = userId || '';
+	/**
+	 * Load responses for current state.formId + state.userId/email.
+	 * Safe to call whenever either selection changes.
+	 */
+	function refresh() {
+		var hasForm   = !!(state.formId || state.formSlug);
+		var hasMember = !!(state.userId || state.email);
 
-		if (!userId && !email) {
+		if (!hasForm && !hasMember) {
+			setEmpty('Select a member, then click a form name to view answers.');
+			return;
+		}
+		if (!hasForm) {
+			setEmpty('Click a form name to view this member’s answers.');
+			return;
+		}
+		if (!hasMember) {
 			setEmpty('Select a member to view their answers.');
 			return;
 		}
@@ -358,9 +456,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		var fd = new FormData();
 		fd.append('action', 'bmf_list_responses');
 		fd.append('nonce', nonce);
-		fd.append('form_id', formId);
-		if (userId) fd.append('user_id', userId);
-		if (email)  fd.append('email', email);
+		if (state.formId)   fd.append('form_id', state.formId);
+		if (state.formSlug) fd.append('form', state.formSlug);
+		if (state.userId)   fd.append('user_id', state.userId);
+		if (state.email)    fd.append('email', state.email);
 
 		fetch(ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
 			.then(function(r){ return r.json(); })
@@ -373,11 +472,24 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				}
 
 				var data = resp.data || {};
+
 				if (data.member_label && memberEl) {
 					memberEl.textContent = data.member_label;
 				}
 				if (data.user_id) {
-					root.dataset.userId = data.user_id;
+					state.userId = String(data.user_id);
+					root.dataset.userId = state.userId;
+				}
+				if (data.form_id) {
+					state.formId = String(data.form_id);
+					root.dataset.formId = state.formId;
+				}
+				if (data.form_slug) {
+					state.formSlug = data.form_slug;
+					root.dataset.formSlug = state.formSlug;
+				}
+				if (data.form_title && titleEl) {
+					titleEl.textContent = data.form_title;
 				}
 
 				var list = data.responses || [];
@@ -395,6 +507,41 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			});
 	}
 
+	function setMember(userId, email, displayName) {
+		if (memberEl) {
+			memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : '— select a member —');
+		}
+		state.userId = userId ? String(userId) : '';
+		state.email  = email || '';
+		root.dataset.userId = state.userId;
+		root.dataset.email  = state.email;
+		refresh();
+	}
+
+	function setForm(formKey, label) {
+		formKey = (formKey || '').toString().trim();
+		if (!formKey) return;
+
+		// Accept either numeric id or slug
+		if (/^\d+$/.test(formKey)) {
+			state.formId   = formKey;
+			state.formSlug = '';
+		} else {
+			state.formId   = '';
+			state.formSlug = formKey;
+		}
+		root.dataset.formId   = state.formId;
+		root.dataset.formSlug = state.formSlug;
+
+		if (label && titleEl) {
+			titleEl.textContent = label;
+		} else if (titleEl && state.formSlug) {
+			titleEl.textContent = state.formSlug;
+		}
+
+		refresh();
+	}
+
 	// Date dropdown change
 	if (selectEl) {
 		selectEl.addEventListener('change', function(){
@@ -402,19 +549,54 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		});
 	}
 
-	// Initial load if we already have a selected response
-	if (selectEl && selectEl.value) {
+	// Initial load if both already known
+	if ((state.formId || state.formSlug) && (state.userId || state.email)) {
+		refresh();
+	} else if (selectEl && selectEl.value) {
 		loadResponse(selectEl.value);
 	}
 
-	// React to uls-members selection — pure AJAX, no page reload
+	// Member selection (uls-members) — no page reload
 	document.addEventListener('uls:selected-member', function(e) {
 		if (!document.body.contains(root)) return;
 		var email = (e && e.detail && e.detail.email) ? String(e.detail.email).trim() : '';
 		if (!email) return;
-		// user_id may also be present on the event in future; email is the stable key today
-		loadMemberResponses(0, email, email);
+		setMember(0, email, email);
 	});
+
+	// Form selection event — no page reload
+	document.addEventListener('bmf:selected-form', function(e) {
+		if (!document.body.contains(root)) return;
+		var form  = (e && e.detail && e.detail.form) ? String(e.detail.form).trim() : '';
+		var label = (e && e.detail && e.detail.label) ? String(e.detail.label).trim() : '';
+		if (!form) return;
+		setForm(form, label);
+	});
+
+	// Delegated click on [data-bmf-qa-form] — once per page
+	if (!window.__bmfQaFormClickBound) {
+		window.__bmfQaFormClickBound = true;
+		document.addEventListener('click', function(e) {
+			var el = e.target.closest('[data-bmf-qa-form]');
+			if (!el) return;
+			var form = (el.getAttribute('data-bmf-qa-form') || '').trim();
+			if (!form) return;
+			e.preventDefault();
+
+			// Highlight active trigger
+			document.querySelectorAll('[data-bmf-qa-form].is-active').forEach(function(n) {
+				n.classList.remove('is-active');
+			});
+			el.classList.add('is-active');
+
+			document.dispatchEvent(new CustomEvent('bmf:selected-form', {
+				detail: {
+					form: form,
+					label: (el.textContent || '').trim()
+				}
+			}));
+		});
+	}
 })();
 </script>
 			<?php
@@ -423,7 +605,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 		/**
 		 * AJAX: list submitted responses for a user + form.
-		 * Accepts user_id and/or email.
+		 * Accepts form_id and/or form (slug), plus user_id and/or email.
 		 */
 		public static function ajax_list_responses() {
 			check_ajax_referer( 'bmf_qa_nonce', 'nonce' );
@@ -432,12 +614,23 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
 			}
 
-			$form_id = absint( $_POST['form_id'] ?? 0 );
-			$user_id = absint( $_POST['user_id'] ?? 0 );
-			$email   = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+			$form_id   = absint( $_POST['form_id'] ?? 0 );
+			$form_attr = isset( $_POST['form'] ) ? sanitize_text_field( wp_unslash( $_POST['form'] ) ) : '';
+			$user_id   = absint( $_POST['user_id'] ?? 0 );
+			$email     = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+
+			// Resolve form from slug if needed
+			if ( ! $form_id && $form_attr !== '' ) {
+				$form_id = self::resolve_form_id( $form_attr );
+			}
 
 			if ( ! $form_id ) {
-				wp_send_json_error( [ 'message' => 'Missing form_id' ], 400 );
+				wp_send_json_error( [ 'message' => 'Form not found. Provide a valid form slug or id.' ], 400 );
+			}
+
+			$form = BMF_Repository::get_form( $form_id );
+			if ( ! $form ) {
+				wp_send_json_error( [ 'message' => 'Form not found.' ], 404 );
 			}
 
 			// Resolve user from email if needed
@@ -456,15 +649,15 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				wp_send_json_error( [ 'message' => 'Forbidden' ], 403 );
 			}
 
-			$user = get_userdata( $user_id );
+			$user  = get_userdata( $user_id );
 			$label = $user ? ( $user->display_name ?: $user->user_email ) : ( 'User #' . $user_id );
 
 			$rows = BMF_Repository::get_submitted_responses_for_user( $user_id, $form_id );
 			$list = [];
 			foreach ( $rows as $r ) {
 				$list[] = [
-					'id'    => (int) $r->id,
-					'label' => $r->submitted_at
+					'id'           => (int) $r->id,
+					'label'        => $r->submitted_at
 						? date_i18n( 'M j, Y g:i a', strtotime( $r->submitted_at ) )
 						: ( 'Response #' . $r->id ),
 					'submitted_at' => (string) ( $r->submitted_at ?? '' ),
@@ -474,6 +667,9 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			wp_send_json_success( [
 				'user_id'      => $user_id,
 				'member_label' => $label,
+				'form_id'      => $form_id,
+				'form_slug'    => (string) $form->slug,
+				'form_title'   => (string) $form->title,
 				'responses'    => $list,
 			] );
 		}
