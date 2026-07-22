@@ -1028,6 +1028,25 @@ class BMF_BSI_Form_Shortcodes {
       }
     };
 
+    // Soft glow under each line (color matches the series)
+    // Tweak shadowBlur (e.g. 8–20) to adjust strength
+    var glowPlugin = {
+      id: 'bmfGlow',
+      beforeDatasetDraw: function(chart, args) {
+        var ctx = chart.ctx;
+        var ds  = chart.data.datasets[args.index];
+        if (!ds) return;
+        ctx.save();
+        ctx.shadowColor   = ds.borderColor || 'rgba(255,255,255,0.4)';
+        ctx.shadowBlur    = 8;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+      },
+      afterDatasetDraw: function(chart) {
+        chart.ctx.restore();
+      }
+    };    
+
     // Vertical phase markers
     var phasePlugin = {
       id: 'bmfPhases',
@@ -1155,7 +1174,7 @@ class BMF_BSI_Form_Shortcodes {
           }
         }
       },
-      plugins: [ zonePlugin, phasePlugin ]
+      plugins: [ zonePlugin, phasePlugin, glowPlugin ]
     });
   }
 
