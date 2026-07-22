@@ -337,6 +337,75 @@ class BMF_BSI_Form_Service {
         return [ 'score_percent'=>(float)$snap['final_sci_score'], 'updated_at'=>$snap['updated_at'], 'have_count'=>(int)$snap['have_count'] ];
     }
 
+    /**
+     * Safe average of a list of raw 0–1 (or already %) field values.
+     * Ignores null / empty / non-numeric. Returns null if nothing usable.
+     */
+    private static function avg_fields( $row, array $cols ) {
+        $vals = [];
+        foreach ( $cols as $col ) {
+            if ( ! array_key_exists( $col, $row ) ) continue;
+            $raw = $row[ $col ];
+            if ( $raw === null || $raw === '' || ! is_numeric( $raw ) ) continue;
+            $vals[] = self::to_percent( $raw );
+        }
+        if ( empty( $vals ) ) return null;
+        return round( array_sum( $vals ) / count( $vals ), 1 );
+    }
+
+    /**
+     * Trend series for [bmf_bsi_trend_chart].
+     *
+     * Drivers   = avg(F4, F7, F8)
+     * Mediators = avg(F2, F3, F5)
+     * Outcomes  = avg(F1, F6, F9)
+     *
+     * Returns [
+     *   'baseline_date' => 'Y-m-d',
+     *   'points' => [ ['date'=>'Y-m-d','drivers'=>?,'mediators'=>?,'outcomes'=>?], ... ]
+     * ] or null.
+     */
+    public static function get_trend_series_for_user( $user_id ) {
+        $user_id = (int) $user_id;
+        $db   = BMF_BSI_DBX::$db;
+        $t_r  = BMF_BSI_DBX::t( 'bm_bsi_results' );
+        $user = get_userdata( $user_id );
+        if ( ! $user || empty( $user->user_email ) ) return null;
+        $email = $user->user_email;
+
+        // Oldest first → index 0 is Baseline
+        $rows = $db->get_results(
+            $db->prepare(
+                "SELECT * FROM {$t_r}
+                 WHERE user_email = %s AND is_final = 1
+                 ORDER BY results_date ASC, id ASC",
+                $email
+            ),
+            ARRAY_A
+        );
+        if ( empty( $rows ) ) return null;
+
+        $baseline_date = self::normalize_date_str( $rows[0]['results_date'] );
+        if ( ! $baseline_date ) return null;
+
+        $points = [];
+        foreach ( $rows as $r ) {
+            $d = self::normalize_date_str( $r['results_date'] );
+            if ( ! $d ) continue;
+            $points[] = [
+                'date'      => $d,
+                'drivers'   => self::avg_fields( $r, [ 'F4', 'F7', 'F8' ] ),
+                'mediators' => self::avg_fields( $r, [ 'F2', 'F3', 'F5' ] ),
+                'outcomes'  => self::avg_fields( $r, [ 'F1', 'F6', 'F9' ] ),
+            ];
+        }
+
+        return [
+            'baseline_date' => $baseline_date,
+            'points'        => $points,
+        ];
+    }
+
     public static function to_percent( $raw ) {
         if ( $raw === null || $raw === '' || ! is_numeric( $raw ) ) return null;
         $val = (float) $raw;
@@ -353,6 +422,7 @@ class BMF_BSI_Form_Shortcodes {
         add_shortcode( 'bmf_bsi_results_field',  [ __CLASS__, 'shortcode_results_field' ] );
         add_shortcode( 'bmf_bsi_results_delta',  [ __CLASS__, 'shortcode_results_delta' ] );
         add_shortcode( 'bmf_bsi_history_select', [ __CLASS__, 'shortcode_history_select' ] );
+        add_shortcode( 'bmf_bsi_trend_chart',    [ __CLASS__, 'shortcode_trend_chart' ] );
         add_action( 'bmf_bsi_results_updated', [ __CLASS__, 'invalidate_cache' ], 10, 2 );
     }
 
@@ -780,5 +850,325 @@ class BMF_BSI_Form_Shortcodes {
         }
         return $out;
     }
+
+    /**
+     * [bmf_bsi_trend_chart height="360" user_id=""]
+     *
+     * Multi-series line chart:
+     *   Drivers   = avg(F4,F7,F8)
+     *   Mediators = avg(F2,F3,F5)
+     *   Outcomes  = avg(F1,F6,F9)
+     *
+     * X-axis is relative to the user's first is_final=1 record (Baseline).
+     * Phase markers at Baseline, +90d (Early Alignment), +180d (System Response),
+     * +270d (Adaptive Stability). Window ≈ 1 year from baseline − 10 days.
+     */
+    public static function shortcode_trend_chart( $atts ) {
+        if ( self::should_bail_for_editor() ) return '';
+
+        $atts = shortcode_atts( [
+            'user_id' => get_current_user_id(),
+            'height'  => '360',
+        ], $atts, 'bmf_bsi_trend_chart' );
+
+        $user_id = (int) $atts['user_id'];
+        if ( ! $user_id ) return '';
+
+        $data = BMF_BSI_Form_Service::get_trend_series_for_user( $user_id );
+        if ( ! $data || empty( $data['points'] ) ) {
+            return '<div class="bmf-bsi-trend-empty" style="padding:24px;text-align:center;color:#8892a4;background:#0b1220;border-radius:12px;">No historical BSI data</div>';
+        }
+
+        $baseline = $data['baseline_date'];
+        $points   = $data['points'];
+        $height   = max( 240, (int) $atts['height'] );
+
+        // Phase marker dates (fixed from baseline)
+        $phases = [
+            [ 'key' => 'baseline',  'label' => 'Baseline',           'sub' => 'Assessment',      'offset' => 0   ],
+            [ 'key' => 'early',     'label' => 'Early Alignment',    'sub' => '+90 days',         'offset' => 90  ],
+            [ 'key' => 'system',    'label' => 'System Response',    'sub' => '+180 days',        'offset' => 180 ],
+            [ 'key' => 'adaptive',  'label' => 'Adaptive Stability', 'sub' => '+270 days',        'offset' => 270 ],
+        ];
+
+        $base_ts = strtotime( $baseline . ' 00:00:00' );
+        foreach ( $phases as &$ph ) {
+            $ph['date'] = date( 'Y-m-d', strtotime( '+' . $ph['offset'] . ' days', $base_ts ) );
+            $ph['ts']   = strtotime( $ph['date'] . ' 00:00:00' ) * 1000; // ms for Chart.js
+        }
+        unset( $ph );
+
+        // Chart window: baseline − 10 days → baseline + 365 days
+        $x_min_ts = ( $base_ts - 10 * DAY_IN_SECONDS ) * 1000;
+        $x_max_ts = ( $base_ts + 365 * DAY_IN_SECONDS ) * 1000;
+
+        // Build series data (x as ms timestamp)
+        $series = [ 'drivers' => [], 'mediators' => [], 'outcomes' => [] ];
+        $latest = [ 'drivers' => null, 'mediators' => null, 'outcomes' => null ];
+        foreach ( $points as $pt ) {
+            $ts = strtotime( $pt['date'] . ' 00:00:00' ) * 1000;
+            foreach ( [ 'drivers', 'mediators', 'outcomes' ] as $key ) {
+                if ( $pt[ $key ] !== null ) {
+                    $series[ $key ][] = [ 'x' => $ts, 'y' => $pt[ $key ] ];
+                    $latest[ $key ] = $pt[ $key ];
+                }
+            }
+        }
+
+        $uid = 'bmf_bsi_trend_' . $user_id . '_' . wp_unique_id();
+        $json_drivers   = wp_json_encode( $series['drivers'] );
+        $json_mediators = wp_json_encode( $series['mediators'] );
+        $json_outcomes  = wp_json_encode( $series['outcomes'] );
+        $json_phases    = wp_json_encode( $phases );
+
+        // Colors matching mockup
+        $c_drivers   = '#e91e8c'; // magenta / pink
+        $c_mediators = '#3b82f6'; // blue
+        $c_outcomes  = '#22d3ee'; // cyan
+
+        ob_start();
+        ?>
+<div class="bmf-bsi-trend-wrap" style="background:#0b1220;border-radius:16px;padding:20px 16px 16px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
+  <!-- Phase cards -->
+  <div class="bmf-bsi-trend-phases" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+    <?php foreach ( $phases as $i => $ph ):
+        $icons = [ '📋', '🎯', '📈', '🛡️' ];
+        $icon  = $icons[ $i ] ?? '●';
+    ?>
+    <div style="background:#121a2b;border:1px solid #1e2a44;border-radius:10px;padding:10px 8px;text-align:center;">
+      <div style="font-size:1.25rem;margin-bottom:4px;"><?php echo $icon; ?></div>
+      <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.02em;color:#93c5fd;"><?php echo esc_html( $ph['label'] ); ?></div>
+      <div style="font-size:0.65rem;color:#64748b;margin-top:2px;"><?php echo esc_html( date( 'M j, Y', $ph['ts'] / 1000 ) ); ?></div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+
+  <!-- Chart area -->
+  <div style="position:relative;height:<?php echo (int)$height; ?>px;">
+    <canvas id="<?php echo esc_attr( $uid ); ?>"></canvas>
+  </div>
+
+  <!-- Legend + end values -->
+  <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:14px;font-size:0.85rem;">
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo $c_drivers; ?>;border-radius:2px;display:inline-block;"></span>
+      Drivers
+      <?php if ( $latest['drivers'] !== null ): ?>
+        <strong style="color:<?php echo $c_drivers; ?>;"><?php echo esc_html( number_format( $latest['drivers'], 0 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo $c_mediators; ?>;border-radius:2px;display:inline-block;"></span>
+      Mediators
+      <?php if ( $latest['mediators'] !== null ): ?>
+        <strong style="color:<?php echo $c_mediators; ?>;"><?php echo esc_html( number_format( $latest['mediators'], 0 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo $c_outcomes; ?>;border-radius:2px;display:inline-block;"></span>
+      Outcomes
+      <?php if ( $latest['outcomes'] !== null ): ?>
+        <strong style="color:<?php echo $c_outcomes; ?>;"><?php echo esc_html( number_format( $latest['outcomes'], 0 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+  </div>
+</div>
+
+<script>
+(function(){
+  var canvasId = <?php echo wp_json_encode( $uid ); ?>;
+  var drivers  = <?php echo $json_drivers; ?>;
+  var mediators= <?php echo $json_mediators; ?>;
+  var outcomes = <?php echo $json_outcomes; ?>;
+  var phases   = <?php echo $json_phases; ?>;
+  var xMin     = <?php echo (int)$x_min_ts; ?>;
+  var xMax     = <?php echo (int)$x_max_ts; ?>;
+  var cDrivers = <?php echo wp_json_encode( $c_drivers ); ?>;
+  var cMediators=<?php echo wp_json_encode( $c_mediators ); ?>;
+  var cOutcomes= <?php echo wp_json_encode( $c_outcomes ); ?>;
+
+  function loadScript(src, cb) {
+    if (document.querySelector('script[src="'+src+'"]')) { cb(); return; }
+    var s = document.createElement('script');
+    s.src = src; s.onload = cb; document.head.appendChild(s);
+  }
+
+  function boot() {
+    // Chart.js time scale needs the date adapter
+    loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', function(){
+      loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js', function(){
+        render();
+      });
+    });
+  }
+
+  function render() {
+    var ctx = document.getElementById(canvasId);
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    // Zone plugin – draws background bands
+    var zonePlugin = {
+      id: 'bmfZones',
+      beforeDraw: function(chart) {
+        var y = chart.scales.y;
+        var x = chart.scales.x;
+        var areas = [
+          { from: 75, to: 100, color: 'rgba(198,40,40,0.12)' },   // High Strain
+          { from: 50, to: 75,  color: 'rgba(234,88,12,0.10)' },   // Elevated
+          { from: 25, to: 50,  color: 'rgba(234,179,8,0.08)' },   // Moderate
+          { from: 0,  to: 25,  color: 'rgba(34,197,94,0.08)' }    // Optimal
+        ];
+        var ctx2 = chart.ctx;
+        areas.forEach(function(a){
+          var y1 = y.getPixelForValue(a.to);
+          var y2 = y.getPixelForValue(a.from);
+          ctx2.fillStyle = a.color;
+          ctx2.fillRect(x.left, y1, x.right - x.left, y2 - y1);
+        });
+      }
+    };
+
+    // Vertical phase markers
+    var phasePlugin = {
+      id: 'bmfPhases',
+      afterDraw: function(chart) {
+        var x = chart.scales.x;
+        var y = chart.scales.y;
+        var ctx2 = chart.ctx;
+        phases.forEach(function(ph){
+          var px = x.getPixelForValue(ph.ts);
+          if (px < x.left || px > x.right) return;
+          ctx2.save();
+          ctx2.beginPath();
+          ctx2.setLineDash([4, 4]);
+          ctx2.strokeStyle = 'rgba(148,163,184,0.45)';
+          ctx2.lineWidth = 1;
+          ctx2.moveTo(px, y.top);
+          ctx2.lineTo(px, y.bottom);
+          ctx2.stroke();
+          ctx2.restore();
+        });
+      }
+    };
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Drivers',
+            data: drivers,
+            borderColor: cDrivers,
+            backgroundColor: cDrivers,
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#0b1220',
+            pointBorderColor: cDrivers,
+            pointBorderWidth: 2,
+            tension: 0.35,
+            spanGaps: true
+          },
+          {
+            label: 'Mediators',
+            data: mediators,
+            borderColor: cMediators,
+            backgroundColor: cMediators,
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#0b1220',
+            pointBorderColor: cMediators,
+            pointBorderWidth: 2,
+            tension: 0.35,
+            spanGaps: true
+          },
+          {
+            label: 'Outcomes',
+            data: outcomes,
+            borderColor: cOutcomes,
+            backgroundColor: cOutcomes,
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#0b1220',
+            pointBorderColor: cOutcomes,
+            pointBorderWidth: 2,
+            tension: 0.35,
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#121a2b',
+            titleColor: '#e2e8f0',
+            bodyColor: '#cbd5e1',
+            borderColor: '#1e2a44',
+            borderWidth: 1,
+            callbacks: {
+              title: function(items) {
+                if (!items.length) return '';
+                var d = new Date(items[0].parsed.x);
+                return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            min: xMin,
+            max: xMax,
+            time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+            grid: { color: 'rgba(30,42,68,0.8)', drawBorder: false },
+            ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            grid: { color: 'rgba(30,42,68,0.6)', drawBorder: false },
+            ticks: {
+              stepSize: 25,
+              color: function(ctx) {
+                var v = ctx.tick && ctx.tick.value;
+                if (v === 0)  return '#00da17';
+                if (v === 25) return '#eff012';
+                if (v === 50) return '#ff6600';
+                if (v === 75) return '#d60008';
+                return '#94a3b8';
+              },
+              callback: function(v) {
+                if (v === 100) return '100';
+                if (v === 75)  return '75  HIGH STRAIN';
+                if (v === 50)  return '50  ELEVATED';
+                if (v === 25)  return '25  MODERATE';
+                if (v === 0)   return '0   OPTIMAL';
+                return v;
+              }
+            }
+          }
+        }
+      },
+      plugins: [ zonePlugin, phasePlugin ]
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+        <?php
+        return ob_get_clean();
+    }
 }
 BMF_BSI_Form_Shortcodes::init();
+
