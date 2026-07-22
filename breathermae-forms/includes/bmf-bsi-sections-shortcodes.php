@@ -39,9 +39,9 @@ class BMF_BSI_Section_Service {
     /**
      * Section score for a user, optionally pinned to a specific assessment date.
      *
-     * When $date_str is provided (or ?bsi_date is present), finds the response
-     * submitted on that calendar day and returns its section score.
-     * Falls back to the most recent score when no date match / no date given.
+     * When $date_str is provided (or ?bsi_date is present), returns the most recent
+     * section score whose response was submitted on or before that date ("as of").
+     * Falls back to the absolute latest score when no date is given.
      *
      * @return array{score_percent:float,updated_at:?string,raw_score:float}|null
      */
@@ -63,14 +63,19 @@ class BMF_BSI_Section_Service {
         $row = null;
 
         if ( $date_str ) {
-            // Exact calendar-day match on the response submission date
+            // "As of" the selected assessment date:
+            // BSI forms are completed over multiple days; results_date is set only when
+            // all 9 pillars finalize. Exact DATE equality almost never matches, so we take
+            // the most recent section score whose response was submitted on or before
+            // the selected bsi_date (historical snapshot as of that day).
             $sql = $db->prepare(
                 "SELECT s.score, s.created_at, r.submitted_at
                  FROM {$t_sc} s
                  JOIN {$t_rs} r ON r.id = s.response_id
                  WHERE r.user_id = %d
                    AND s.section_id = %d
-                   AND DATE(r.submitted_at) = %s
+                   AND r.submitted_at IS NOT NULL
+                   AND DATE(r.submitted_at) <= %s
                  ORDER BY r.submitted_at DESC, s.id DESC
                  LIMIT 1",
                 $user_id, $section_id, $date_str
@@ -78,7 +83,7 @@ class BMF_BSI_Section_Service {
             $row = $db->get_row( $sql, ARRAY_A );
         }
 
-        // Fallback: most recent score for this section (current behavior)
+        // No date (or nothing on/before that date): most recent score for this section
         if ( ! $row ) {
             $sql = $db->prepare(
                 "SELECT s.score, s.created_at, r.submitted_at
