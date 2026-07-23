@@ -32,7 +32,17 @@
 .bmse-hscroll-top { overflow-x: auto; overflow-y: hidden; height: 16px; }
 .bmse-scroll      { overflow-x: auto; overflow-y: auto;   max-width: 100%; -webkit-overflow-scrolling: touch; }
 
-.bmse-status { margin-bottom: 6px; color: #334155; }
+.bmse-status {
+  margin-bottom: 6px;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.bmse-export-btn {
+  margin-left: auto;
+}
 
 /* Panels */
 .bmse-panel { border: 1px solid #e2e8f0; background: #fff; }

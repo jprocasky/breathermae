@@ -46,6 +46,48 @@
         }
     }
 
+    // ---------- CSV Export ----------
+    var lastExportData = null; // { columns: [], rows: [] }
+
+    function escapeCSV(val) {
+        if (val === null || typeof val === 'undefined') return '';
+        var s = String(val);
+        // Quote if contains comma, quote, CR or LF
+        if (/[",\r\n]/.test(s)) {
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+    }
+
+    function downloadCSV(columns, rows, filename) {
+        // Skip internal injected PK alias
+        var exportCols = columns.filter(function(c){ return c !== '__bmse_pk__'; });
+
+        var lines = [];
+        lines.push(exportCols.map(escapeCSV).join(','));
+        (rows || []).forEach(function(r){
+            lines.push(exportCols.map(function(c){ return escapeCSV(r[c]); }).join(','));
+        });
+
+        var csv  = lines.join('\r\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href     = url;
+        a.download = filename || ('bmse-export-' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.csv');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    }
+
+    function buildStatusBar(rowCount, ms) {
+        return '<div class="bmse-status">' +
+               '<span>' + rowCount + ' row(s) · ' + ms + 'ms</span>' +
+               '<button type="button" id="bmse-export-csv" class="button button-small bmse-export-btn">Export CSV</button>' +
+               '</div>';
+    }
+
     // ---------- Toasts ----------
     function ensureToastHost(){
         var $host = $('#bmse-toast-host');
@@ -104,11 +146,13 @@
                 var rows    = resp.data.rows    || [];
                 var meta    = resp.data.edit_meta || {};
 
+                lastExportData = { columns: columns, rows: rows };
+
                 var tableHtml = renderTable(columns, rows);
                 $('#bmse-results').html(
-                    '<div class="bmse-status">'+(rows?rows.length:0)+' row(s) · '+resp.data.runtime_ms+'ms</div>'+
-                    '<div class="bmse-hscroll-top"></div>'+
-                    '<div class="bmse-scroll">'+tableHtml+'</div>'
+                    buildStatusBar(rows ? rows.length : 0, resp.data.runtime_ms) +
+                    '<div class="bmse-hscroll-top"></div>' +
+                    '<div class="bmse-scroll">' + tableHtml + '</div>'
                 );
 
                 // top scroll rail
@@ -478,11 +522,13 @@
                 var rows    = resp.data.rows    || [];
                 var meta    = resp.data.edit_meta || {};
 
+                lastExportData = { columns: columns, rows: rows };
+
                 var tableHtml = renderTable(columns, rows);
                 $('#bmse-results').html(
-                    '<div class="bmse-status">'+(rows?rows.length:0)+' row(s) · '+resp.data.runtime_ms+'ms</div>'+
-                    '<div class="bmse-hscroll-top"></div>'+
-                    '<div class="bmse-scroll">'+tableHtml+'</div>'
+                    buildStatusBar(rows ? rows.length : 0, resp.data.runtime_ms) +
+                    '<div class="bmse-hscroll-top"></div>' +
+                    '<div class="bmse-scroll">' + tableHtml + '</div>'
                 );
 
                 var $bottom = $('#bmse-results .bmse-scroll');
@@ -501,6 +547,7 @@
 
                 enableEditIfEligible(columns, rows, meta);
             } else {
+                lastExportData = null;
                 $('#bmse-results').html('<div class="bmse-status">Affected rows: '+resp.data.affected_rows+' · '+resp.data.runtime_ms+'ms</div>');
             }
 
@@ -526,6 +573,17 @@
 
         $('#bmse-run').on('click', runQuery);
         $('#bmse-sql').on('keydown', function(e){ if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ runQuery(); }});
+
+        // Export CSV (event delegation so it survives re-renders)
+        $(document).on('click', '#bmse-export-csv', function(){
+            if (!lastExportData || !lastExportData.columns) {
+                showToast('Nothing to export', 'err');
+                return;
+            }
+            var ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+            downloadCSV(lastExportData.columns, lastExportData.rows, 'bmse-export-' + ts + '.csv');
+            showToast('CSV downloaded', 'ok');
+        });
 
         // Apply toolbar defaults (from BMSE.defaults)
         (function applyDefaults(){
