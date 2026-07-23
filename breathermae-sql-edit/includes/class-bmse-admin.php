@@ -180,13 +180,15 @@ class BMSE_Admin {
             wp_send_json_error(['message'=>__('Multiple statements detected.','bmse')]);
         }
 
-        $is_select = (bool) preg_match('/^\s*SELECT/i', $stmt);
-        $write_pat = '/\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE|TRUNCATE|RENAME|GRANT|REVOKE|LOCK|UNLOCK|SET|CALL)\b/i';
+        $is_select    = (bool) preg_match('/^\s*SELECT\b/i', $stmt);
+        $is_resultset = $is_select || (bool) preg_match('/^\s*(DESCRIBE|DESC|SHOW|EXPLAIN)\b/i', $stmt);
+        $write_pat    = '/\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE|TRUNCATE|RENAME|GRANT|REVOKE|LOCK|UNLOCK|SET|CALL)\b/i';
 
         if (!$allow_write && preg_match($write_pat, $stmt)){
             wp_send_json_error(['message'=>__('Write/DDL blocked.','bmse')]);
         }
 
+        // Only auto-append LIMIT on pure SELECTs
         if ($is_select && $append_limit && stripos($stmt, 'limit') === false) {
             $stmt .= ' LIMIT '.intval($row_limit);
         }
@@ -222,7 +224,7 @@ class BMSE_Admin {
         $columns  = [];
         $affected = null;
 
-        if ($is_select){
+        if ($is_resultset){
             $results = $wpdb->get_results($stmt, ARRAY_A);
             if ($wpdb->last_error) { $error = $wpdb->last_error; }
             $affected = is_array($results) ? count($results) : 0;
@@ -239,7 +241,7 @@ class BMSE_Admin {
         $wpdb->insert($hist, [
             'user_id'       => get_current_user_id(),
             'query_text'    => $stmt,
-            'is_select'     => $is_select ? 1 : 0,
+            'is_select'     => $is_resultset ? 1 : 0,
             'affected_rows' => is_numeric($affected) ? intval($affected) : null,
             'runtime_ms'    => $ms,
             'error_message' => $error,
@@ -251,16 +253,16 @@ class BMSE_Admin {
             wp_send_json_error(['message'=>$error, 'runtime_ms'=>$ms]);
         }
 
-        if ($is_select){
+        if ($is_resultset){
             wp_send_json_success([
                 'type'        => 'select',
                 'columns'     => $columns,
                 'rows'        => $results,
                 'runtime_ms'  => $ms,
                 'edit_meta'   => [
-                    'eligible_single_table' => (count($tables) === 1),
+                    'eligible_single_table' => ($is_select && count($tables) === 1),
                     'base_table'            => $base_table,
-                    'pk_column'             => $pk_col,       // always set for single-table
+                    'pk_column'             => $pk_col,       // always set for single-table SELECT
                     'hidden_pk_alias'       => $hidden_pk,    // only when injected
                 ],
             ]);
@@ -341,6 +343,11 @@ class BMSE_Admin {
                 $t = preg_replace('/^[^\.]+\./','', $t); // strip db qualifier
                 $tables[] = $t;
             }
+        }
+        // DESCRIBE / DESC table_name
+        if (preg_match('/^\s*(?:DESCRIBE|DESC)\s+[`"]?([A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+)?)/i', $sql, $m)) {
+            $t = preg_replace('/^[^\.]+\./','', $m[1]);
+            $tables[] = $t;
         }
         return array_values(array_unique($tables));
     }

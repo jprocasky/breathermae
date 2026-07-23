@@ -30,6 +30,22 @@
         textarea.focus();
     }
 
+    // Smart table insert: blank editor → full exploratory SELECT, otherwise just the name
+    function insertTableName(tableName) {
+        var $ta = $('#bmse-sql');
+        var ta  = $ta[0];
+        if (!ta) return;
+
+        if ($ta.val().trim() === '') {
+            var sql = 'SELECT * FROM `' + tableName + '` ORDER BY ID DESC';
+            $ta.val(sql);
+            ta.selectionStart = ta.selectionEnd = sql.length;
+            $ta.focus();
+        } else {
+            insertAtCursor(ta, tableName);
+        }
+    }
+
     // ---------- Toasts ----------
     function ensureToastHost(){
         var $host = $('#bmse-toast-host');
@@ -139,7 +155,7 @@
             var $a = $('<a href="#" class="bmse-item"></a>').text(t).attr('data-name', t);
             $a.on('click', function(e){
                 e.preventDefault();
-                insertAtCursor($('#bmse-sql')[0], $(this).data('name'));
+                insertTableName($(this).data('name'));
             });
             $all.append($('<div class="bmse-row"></div>').append($a));
         });
@@ -219,7 +235,7 @@
                     var $a = $('<a href="#" class="bmse-item"></a>').text(t).attr('data-name', t);
                     $a.on('click', function(e){
                         e.preventDefault();
-                        insertAtCursor($('#bmse-sql')[0], $(this).data('name'));
+                        insertTableName($(this).data('name'));
                     });
                     $recent.append($('<div class="bmse-row"></div>').append($a));
                 });
