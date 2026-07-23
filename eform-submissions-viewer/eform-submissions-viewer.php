@@ -121,7 +121,7 @@ class EForm_Submissions_Viewer {
         }
 
         // ✅ Build WHERE for submission IDs (NOT join)
-        $where_ids = "WHERE form_name = '" . esc_sql($form_name) . "'";
+        $where_ids = "WHERE (form_name = '" . esc_sql($form_name) . "' OR element_id = '" . esc_sql($form_name) . "') AND status <> 'trash'";
 
         if (!empty($filters)) {
             foreach ($filters as $key => $value) {
@@ -264,14 +264,15 @@ class EForm_Submissions_Viewer {
         $offset = ($page - 1) * $rows;
         $form_name = esc_sql($atts['form_name']);
 
-        // Step 1: Get paginated submission IDs
+        // Step 1: Get paginated submission IDs, exclude trashed submissions
         $submission_ids = $wpdb->get_col($wpdb->prepare("
             SELECT id
             FROM uls_e_submissions
-            WHERE form_name = %s
+            WHERE (form_name = %s OR element_id = %s)
+            AND status <> 'trash'
             ORDER BY created_at DESC
             LIMIT %d OFFSET %d
-        ", $atts['form_name'], $rows, $offset));
+        ", $atts['form_name'], $atts['form_name'], $rows, $offset));
 
         if (empty($submission_ids)) {
             return '<p>No submissions found.</p>';
@@ -356,52 +357,61 @@ class EForm_Submissions_Viewer {
 
         $map_table = $wpdb->prefix . 'eform_field_map';
 
-        // Get form name first
-        $form_name = $wpdb->get_var($wpdb->prepare("
-            SELECT form_name 
+        // Get both form_name and element_id for this submission
+        $submission = $wpdb->get_row($wpdb->prepare("
+            SELECT form_name, element_id 
             FROM uls_e_submissions 
             WHERE id = %d
         ", $id));
 
-        // Get label map for this form
+        if (!$submission) {
+            wp_send_json_error('Submission not found');
+        }
+
+        // Look up labels using either form_name OR element_id
         $labels = $wpdb->get_results($wpdb->prepare("
             SELECT field_key, field_label 
             FROM $map_table 
-            WHERE form_name = %s
-        ", $form_name), OBJECT_K);
+            WHERE form_name = %s OR form_name = %s
+        ", $submission->form_name, $submission->element_id), OBJECT_K);
 
-        // Get submission values
+        // Get all values for this submission
         $results = $wpdb->get_results($wpdb->prepare("
             SELECT `key`, `value`
             FROM uls_e_submissions_values
             WHERE submission_id = %d
         ", $id));
 
-        // Attach labels
+        if (empty($results)) {
+            wp_send_json_error('No data found');
+        }
+
         $filtered_results = [];
 
         foreach ($results as $row) {
+            // Skip pure auto-generated field_* keys
+            if (preg_match('/^field_/i', $row->key)) {
+                continue;
+            }
 
             if (isset($labels[$row->key])) {
                 $label = $labels[$row->key]->field_label;
 
-                // ✅ Skip if label is same as key OR looks auto-generated
-                if ($label === $row->key || preg_match('/^field_/i', $row->key)) {
-                    continue;
-                }
-
-                $row->label = $label;
-                $filtered_results[] = $row;
+                // Prefer friendly label, but still show the field if label == key
+                $row->label = ($label && $label !== $row->key) ? $label : $row->key;
+            } else {
+                // Fallback – show the raw key so older records still display
+                $row->label = $row->key;
             }
+
+            $filtered_results[] = $row;
         }
 
-        $results = $filtered_results;
-
-        if (!$results) {
+        if (empty($filtered_results)) {
             wp_send_json_error('No data found');
         }
 
-        wp_send_json_success($results);
+        wp_send_json_success($filtered_results);
     }
 
     public function eform_sync_field_map($form_name) {
