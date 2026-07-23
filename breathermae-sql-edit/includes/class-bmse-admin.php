@@ -8,11 +8,12 @@ class BMSE_Admin {
         add_action('admin_menu',            [$this, 'menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue']);
 
-        add_action('wp_ajax_bmse_sql_run',     [$this, 'ajax_run']);
-        add_action('wp_ajax_bmse_tables',      [$this, 'ajax_tables']);
-        add_action('wp_ajax_bmse_history',     [$this, 'ajax_history']);
-        add_action('wp_ajax_bmse_update_cell', [$this, 'ajax_update_cell']);
-        add_action('wp_ajax_bmse_pk_info',     [$this, 'ajax_pk_info']);
+        add_action('wp_ajax_bmse_sql_run',      [$this, 'ajax_run']);
+        add_action('wp_ajax_bmse_tables',       [$this, 'ajax_tables']);
+        add_action('wp_ajax_bmse_history',      [$this, 'ajax_history']);
+        add_action('wp_ajax_bmse_update_cell',  [$this, 'ajax_update_cell']);
+        add_action('wp_ajax_bmse_pk_info',      [$this, 'ajax_pk_info']);
+        add_action('wp_ajax_bmse_clear_recent', [$this, 'ajax_clear_recent']);
     }
 
     public function menu(){
@@ -87,7 +88,12 @@ class BMSE_Admin {
 
             <div class="bmse-side">
                 <div class="bmse-panel">
-                    <div class="bmse-panel-title"><?php _e('Tables Used (recent)','bmse'); ?></div>
+                    <div class="bmse-panel-title">
+                        <?php _e('Tables Used (recent)','bmse'); ?>
+                        <button type="button" id="bmse-clear-recent" class="button-link bmse-clear-recent" title="<?php esc_attr_e('Clear the recent tables list (history is kept)','bmse'); ?>">
+                            <?php _e('Clear','bmse'); ?>
+                        </button>
+                    </div>
                     <div class="bmse-panel-body" id="bmse-recent"></div>
                 </div>
                 <div class="bmse-panel">
@@ -117,7 +123,17 @@ class BMSE_Admin {
         $recent = []; $seen = [];
 
         if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($hist)))){
-            $rows = $wpdb->get_results("SELECT tables_json FROM {$hist} ORDER BY created_at DESC, id DESC LIMIT 500");
+            $cleared_at = get_user_meta(get_current_user_id(), 'bmse_recent_cleared_at', true);
+
+            if ($cleared_at) {
+                $rows = $wpdb->get_results($wpdb->prepare(
+                    "SELECT tables_json FROM {$hist} WHERE created_at > %s ORDER BY created_at DESC, id DESC LIMIT 500",
+                    $cleared_at
+                ));
+            } else {
+                $rows = $wpdb->get_results("SELECT tables_json FROM {$hist} ORDER BY created_at DESC, id DESC LIMIT 500");
+            }
+
             foreach ((array)$rows as $r){
                 $arr = $r->tables_json ? json_decode($r->tables_json,true) : [];
                 if (is_array($arr)){
@@ -133,6 +149,16 @@ class BMSE_Admin {
         }
 
         wp_send_json_success(['tables'=>$tables,'recent'=>$recent]);
+    }
+
+    public function ajax_clear_recent(){
+        if (!current_user_can('manage_options')) { wp_send_json_error('forbidden',403); }
+        check_ajax_referer($this->nonce_action,'nonce');
+
+        // Per-user watermark — history itself is never deleted
+        update_user_meta(get_current_user_id(), 'bmse_recent_cleared_at', current_time('mysql'));
+
+        wp_send_json_success(['cleared' => true]);
     }
 
     public function ajax_history(){

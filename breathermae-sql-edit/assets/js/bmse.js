@@ -585,6 +585,22 @@
             showToast('CSV downloaded', 'ok');
         });
 
+        // Clear Recent tables list
+        $(document).on('click', '#bmse-clear-recent', function(e){
+            e.preventDefault();
+            $.post(BMSE.ajax, {
+                action: 'bmse_clear_recent',
+                nonce:  BMSE.nonce
+            }, function(resp){
+                if (resp && resp.success) {
+                    showToast('Recent tables cleared', 'ok');
+                    loadTables();
+                } else {
+                    showToast('Could not clear recent list', 'err');
+                }
+            });
+        });
+
         // Apply toolbar defaults (from BMSE.defaults)
         (function applyDefaults(){
             if (!window.BMSE || !BMSE.defaults) return;

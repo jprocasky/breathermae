@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Breathermae SQL Edit
  * Description: Developer-only SQL console with optional inline edit mode. Run queries, view results, history, and (optionally) edit cells to generate or run UPDATE statements.
- * Version: 1.1.6-beta
+ * Version: 1.1.7-beta
  * Author: Breathermae
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) { exit; }
 if (!defined('BMSE_ENABLED')) { define('BMSE_ENABLED', false); }
 
 // Constants
-define('BMSE_VERSION', '1.1.6-beta');
+define('BMSE_VERSION', '1.1.7-beta');
 define('BMSE_PATH', plugin_dir_path(__FILE__));
 define('BMSE_URL',  plugin_dir_url(__FILE__));
 
