@@ -2,17 +2,21 @@
 /**
  * Breathermae Forms – Q&A Viewer Shortcode
  *
- * [bmf_qa form="slug|id" user_id="" show_scores="0" self="0"]
+ * [bmf_qa form="slug|id" user_id="" show_scores="0" self="0"
+ *         highlight="0" direction="low_better" threshold="0.75"]
  *
  * Driven by two selections (both pure AJAX, no page reload):
  *   1. Member  – uls-members (`uls:selected-member` / uls_selected_user_id meta)
  *   2. Form    – click on [data-bmf-qa-form="slug"] or `bmf:selected-form` event
  *
- * form="" is optional. If omitted the panel waits until a form is selected.
+ * Highlighting (optional):
+ *   highlight="1" enables extreme row tinting
+ *   direction="low_better"  → high scores are concerning (BSI / RSI)
+ *   direction="high_better" → low scores are concerning (8-Pillars)
+ *   threshold="0.75"        → fraction of question scale_max (0–1)
  *
- * Helper:
- *   [bmf_qa_form_link form="biological-strain"]Biological Strain[/bmf_qa_form_link]
- *   Renders a clickable title that drives the Q&A panel.
+ * Form-link direction always overrides the panel default:
+ *   [bmf_qa_form_link form="slug" direction="high_better"]Label[/bmf_qa_form_link]
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -41,10 +45,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return function_exists( 'bmf_in_elementor_editor' ) && bmf_in_elementor_editor();
 		}
 
-		/**
-		 * Resolve target member user_id.
-		 * Priority: shortcode attr → uls_selected_user_id → 0 (wait for selection).
-		 */
 		private static function resolve_target_user_id( $atts_user_id = '', $fallback_to_self = false ): int {
 			$attr = absint( $atts_user_id );
 			if ( $attr > 0 ) {
@@ -61,9 +61,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return $fallback_to_self ? (int) get_current_user_id() : 0;
 		}
 
-		/**
-		 * Resolve form_id from slug or numeric id. Returns 0 if empty/unknown.
-		 */
 		private static function resolve_form_id( string $form_attr ): int {
 			$form_attr = trim( $form_attr );
 			if ( $form_attr === '' ) {
@@ -76,9 +73,21 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return $row ? (int) $row->id : 0;
 		}
 
-		/**
-		 * Shared capability check: may the current user view responses for $subject_user_id?
-		 */
+		/** Normalize direction attr. */
+		private static function normalize_direction( string $dir ): string {
+			$dir = strtolower( trim( $dir ) );
+			return in_array( $dir, [ 'low_better', 'high_better' ], true ) ? $dir : 'low_better';
+		}
+
+		/** Clamp threshold to 0.5–1.0 (meaningful extreme band). */
+		private static function normalize_threshold( $raw ): float {
+			$t = is_numeric( $raw ) ? (float) $raw : 0.75;
+			if ( $t > 1 && $t <= 100 ) {
+				$t = $t / 100; // allow "75" as percent
+			}
+			return max( 0.5, min( 1.0, $t ) );
+		}
+
 		private static function can_view_subject( int $subject_user_id ): bool {
 			if ( ! is_user_logged_in() || $subject_user_id <= 0 ) {
 				return false;
@@ -93,8 +102,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			$allowed = (bool) apply_filters( 'bmf_qa_can_view_subject', $allowed, $subject_user_id, $current_id );
 
-			// Practical default for provider pages: if logged in, allow.
-			// The members table already scopes who appears in the list.
 			if ( ! $allowed && is_user_logged_in() ) {
 				$allowed = (bool) apply_filters( 'bmf_qa_allow_any_logged_in', true, $subject_user_id, $current_id );
 			}
@@ -103,7 +110,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		public static function enqueue_assets() {
-			wp_register_style( 'bmf-qa', false, [], '1.2.0' );
+			wp_register_style( 'bmf-qa', false, [], '1.3.0' );
 
 			$css = '
 .bmf-qa-wrap { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; }
@@ -122,7 +129,35 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 .bmf-qa-loading { opacity:0.55; pointer-events:none; }
 .bmf-qa-score { white-space:nowrap; color:#475569; }
 
-/* Form title triggers (results cards / [bmf_qa_form_link]) */
+/* Extreme row tint (full row) */
+.bmf-qa-table tr.bmf-qa-extreme td {
+	background: #fef2f2;
+}
+.bmf-qa-table tr.bmf-qa-extreme td.bmf-qa-answer {
+	color: #991b1b;
+	font-weight: 600;
+}
+.bmf-qa-table tr.bmf-qa-extreme:hover td {
+	background: #fee2e2;
+}
+
+/* Export button */
+.bmf-qa-export {
+	margin-left: auto;
+	padding: 6px 12px;
+	border: 1px solid #001d50;
+	border-radius: 4px;
+	background: #fff;
+	color: #001d50;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	line-height: 1.2;
+}
+.bmf-qa-export:hover { background: #e0f2fe; }
+.bmf-qa-export:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Form title triggers */
 .bmf-qa-form-link,
 [data-bmf-qa-form] {
 	cursor: pointer;
@@ -150,8 +185,8 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		/**
-		 * [bmf_qa_form_link form="slug"]Label[/bmf_qa_form_link]
-		 * Clickable form title that drives the Q&A panel (no page reload).
+		 * [bmf_qa_form_link form="slug" direction="" class=""]Label[/bmf_qa_form_link]
+		 * direction (optional) overrides the panel default when this form is selected.
 		 */
 		public static function shortcode_form_link( $atts, $content = null ) {
 			if ( self::should_bail_for_editor() ) {
@@ -160,8 +195,9 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			$atts = shortcode_atts(
 				[
-					'form'  => '',
-					'class' => '',
+					'form'      => '',
+					'direction' => '',
+					'class'     => '',
 				],
 				$atts,
 				'bmf_qa_form_link'
@@ -172,7 +208,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				return is_string( $content ) ? $content : '';
 			}
 
-			// Prefer inner content; fall back to form title from DB
 			$label = is_string( $content ) ? trim( $content ) : '';
 			if ( $label === '' ) {
 				$form_id = self::resolve_form_id( $form );
@@ -185,22 +220,25 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				$class .= ' ' . sanitize_html_class( $atts['class'] );
 			}
 
+			$dir_attr = '';
+			if ( $atts['direction'] !== '' ) {
+				$dir_attr = ' data-bmf-qa-direction="' . esc_attr( self::normalize_direction( $atts['direction'] ) ) . '"';
+			}
+
 			wp_enqueue_style( 'bmf-qa' );
 
 			return sprintf(
-				'<a href="#" class="%s" data-bmf-qa-form="%s" role="button">%s</a>',
+				'<a href="#" class="%s" data-bmf-qa-form="%s"%s role="button">%s</a>',
 				esc_attr( $class ),
 				esc_attr( $form ),
+				$dir_attr,
 				esc_html( $label )
 			);
 		}
 
 		/**
-		 * [bmf_qa form="slug|id" user_id="" show_scores="0" self="0"]
-		 *
-		 * form is optional. When omitted the panel waits for a form click / event.
-		 * self="1" falls back to the current user when nothing is selected
-		 * (useful on member-facing results pages).
+		 * [bmf_qa form="" user_id="" show_scores="0" self="0"
+		 *         highlight="0" direction="low_better" threshold="0.75"]
 		 */
 		public static function shortcode_qa( $atts ) {
 			if ( self::should_bail_for_editor() ) {
@@ -217,6 +255,9 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 					'user_id'     => '',
 					'show_scores' => '0',
 					'self'        => '0',
+					'highlight'   => '0',
+					'direction'   => 'low_better',
+					'threshold'   => '0.75',
 				],
 				$atts,
 				'bmf_qa'
@@ -225,8 +266,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$form_attr = trim( (string) $atts['form'] );
 			$form_id   = self::resolve_form_id( $form_attr );
 
-			// If a form was explicitly provided but not found, show error.
-			// If form attr is empty, we wait for selection — not an error.
 			if ( $form_attr !== '' && ! $form_id ) {
 				return '<div class="bmf-qa-empty">Form not found. Provide a valid form slug or id.</div>';
 			}
@@ -236,6 +275,9 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$fallback_self  = ( (int) $atts['self'] === 1 );
 			$target_user_id = self::resolve_target_user_id( $atts['user_id'], $fallback_self );
 			$show_scores    = ( (int) $atts['show_scores'] === 1 );
+			$highlight      = ( (int) $atts['highlight'] === 1 );
+			$direction      = self::normalize_direction( (string) $atts['direction'] );
+			$threshold      = self::normalize_threshold( $atts['threshold'] );
 
 			$target_user  = $target_user_id ? get_userdata( $target_user_id ) : null;
 			$member_label = $target_user
@@ -254,7 +296,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			$uid = 'bmf_qa_' . ( $form_id ?: 'any' ) . '_' . wp_unique_id();
 
-			// Empty-state message for first paint
 			if ( ! $form_id && ! $target_user_id ) {
 				$empty_msg = 'Select a member, then click a form name to view answers.';
 			} elseif ( ! $form_id ) {
@@ -276,6 +317,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	 data-user-id="<?php echo esc_attr( $target_user_id ); ?>"
 	 data-email="<?php echo esc_attr( $member_email ); ?>"
 	 data-show-scores="<?php echo $show_scores ? '1' : '0'; ?>"
+	 data-highlight="<?php echo $highlight ? '1' : '0'; ?>"
+	 data-direction="<?php echo esc_attr( $direction ); ?>"
+	 data-direction-default="<?php echo esc_attr( $direction ); ?>"
+	 data-threshold="<?php echo esc_attr( (string) $threshold ); ?>"
 	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'bmf_qa_nonce' ) ); ?>"
 	 data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>">
 
@@ -297,6 +342,8 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				<?php endforeach; ?>
 			</select>
 		</label>
+
+		<button type="button" class="bmf-qa-export" disabled title="Export current Q&A to CSV">Export CSV</button>
 	</div>
 
 	<div class="bmf-qa-body">
@@ -314,18 +361,25 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	var ajaxUrl    = root.dataset.ajax;
 	var nonce      = root.dataset.nonce;
 	var showScores = root.dataset.showScores === '1';
+	var highlight  = root.dataset.highlight === '1';
 	var selectWrap = root.querySelector('.bmf-qa-select-wrap');
 	var selectEl   = root.querySelector('.bmf-qa-response-select');
 	var bodyEl     = root.querySelector('.bmf-qa-table-wrap');
 	var memberEl   = root.querySelector('.bmf-qa-member-label');
 	var titleEl    = root.querySelector('.bmf-qa-title');
+	var exportBtn  = root.querySelector('.bmf-qa-export');
 
-	// Mutable selection state
 	var state = {
-		formId:   root.dataset.formId || '',
-		formSlug: root.dataset.formSlug || '',
-		userId:   root.dataset.userId || '',
-		email:    root.dataset.email || ''
+		formId:            root.dataset.formId || '',
+		formSlug:          root.dataset.formSlug || '',
+		userId:            root.dataset.userId || '',
+		email:             root.dataset.email || '',
+		direction:         root.dataset.direction || 'low_better',
+		directionDefault:  root.dataset.directionDefault || 'low_better',
+		threshold:         parseFloat(root.dataset.threshold || '0.75') || 0.75,
+		lastData:          null,
+		lastMemberLabel:   '',
+		lastFormTitle:     ''
 	};
 
 	function esc(s) {
@@ -338,6 +392,26 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		bodyEl.innerHTML = '<div class="bmf-qa-empty">' + esc(msg) + '</div>';
 		if (selectWrap) selectWrap.style.display = 'none';
 		if (selectEl) selectEl.innerHTML = '';
+		state.lastData = null;
+		if (exportBtn) exportBtn.disabled = true;
+	}
+
+	/**
+	 * Extreme = score is on the concerning end of the scale past threshold.
+	 * low_better  → high scores bad  → score/max >= threshold
+	 * high_better → low scores bad   → score/max <= (1 - threshold)
+	 */
+	function isExtreme(q) {
+		if (!highlight) return false;
+		if (q.score === null || q.score === undefined) return false;
+		var max = (q.scale_max !== null && q.scale_max !== undefined) ? Number(q.scale_max) : null;
+		if (!max || max <= 0) return false;
+		var ratio = Number(q.score) / max;
+		if (state.direction === 'high_better') {
+			return ratio <= (1 - state.threshold);
+		}
+		// low_better (default)
+		return ratio >= state.threshold;
 	}
 
 	function renderTable(data) {
@@ -345,6 +419,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			setEmpty('No answers recorded for this response.');
 			return;
 		}
+
+		state.lastData = data;
+		state.lastFormTitle = (data.form && data.form.title) ? data.form.title : (titleEl ? titleEl.textContent : '');
+		if (exportBtn) exportBtn.disabled = false;
 
 		var html = '<table class="bmf-qa-table"><thead><tr>';
 		html += '<th class="bmf-qa-q-num">#</th>';
@@ -361,13 +439,14 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			sec.questions.forEach(function(q, idx) {
 				var num = q.order_index || (idx + 1);
+				var extreme = isExtreme(q);
 				var scoreCell = '';
 				if (showScores) {
 					scoreCell = '<td class="bmf-qa-score">' +
 						(q.score !== null && q.score !== undefined ? esc(q.score) : '—') +
 						'</td>';
 				}
-				html += '<tr>' +
+				html += '<tr' + (extreme ? ' class="bmf-qa-extreme"' : '') + '>' +
 					'<td class="bmf-qa-q-num">' + esc(num) + '</td>' +
 					'<td>' + esc(q.prompt) + '</td>' +
 					'<td class="bmf-qa-answer">' + esc(q.answer_label || '—') + '</td>' +
@@ -378,6 +457,59 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 		html += '</tbody></table>';
 		bodyEl.innerHTML = html;
+	}
+
+	function csvEscape(v) {
+		var s = (v == null) ? '' : String(v);
+		if (/[",\n\r]/.test(s)) {
+			return '"' + s.replace(/"/g, '""') + '"';
+		}
+		return s;
+	}
+
+	function exportCsv() {
+		var data = state.lastData;
+		if (!data || !data.sections) return;
+
+		var rows = [];
+		rows.push(['Form', 'Section', '#', 'Question', 'Answer', 'Score', 'Extreme'].map(csvEscape).join(','));
+
+		var formTitle = state.lastFormTitle || (data.form && data.form.title) || '';
+
+		data.sections.forEach(function(sec) {
+			if (!sec.questions) return;
+			sec.questions.forEach(function(q, idx) {
+				var num = q.order_index || (idx + 1);
+				var extreme = isExtreme(q) ? 'Yes' : 'No';
+				var score = (q.score !== null && q.score !== undefined) ? q.score : '';
+				rows.push([
+					formTitle,
+					sec.title || '',
+					num,
+					q.prompt || '',
+					q.answer_label || '',
+					score,
+					extreme
+				].map(csvEscape).join(','));
+			});
+		});
+
+		var blob = new Blob([rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+		var url  = URL.createObjectURL(blob);
+		var a    = document.createElement('a');
+		var member = (state.lastMemberLabel || state.email || 'member').replace(/[^a-z0-9._-]+/gi, '_');
+		var form  = (state.formSlug || formTitle || 'form').replace(/[^a-z0-9._-]+/gi, '_');
+		var stamp = new Date().toISOString().slice(0, 10);
+		a.href = url;
+		a.download = 'qa-' + member + '-' + form + '-' + stamp + '.csv';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}
+
+	if (exportBtn) {
+		exportBtn.addEventListener('click', exportCsv);
 	}
 
 	function loadResponse(responseId) {
@@ -429,10 +561,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		if (selectWrap) selectWrap.style.display = 'inline-flex';
 	}
 
-	/**
-	 * Load responses for current state.formId + state.userId/email.
-	 * Safe to call whenever either selection changes.
-	 */
 	function refresh() {
 		var hasForm   = !!(state.formId || state.formSlug);
 		var hasMember = !!(state.userId || state.email);
@@ -475,6 +603,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 				if (data.member_label && memberEl) {
 					memberEl.textContent = data.member_label;
+					state.lastMemberLabel = data.member_label;
 				}
 				if (data.user_id) {
 					state.userId = String(data.user_id);
@@ -490,6 +619,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				}
 				if (data.form_title && titleEl) {
 					titleEl.textContent = data.form_title;
+					state.lastFormTitle = data.form_title;
 				}
 
 				var list = data.responses || [];
@@ -511,6 +641,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		if (memberEl) {
 			memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : '— select a member —');
 		}
+		state.lastMemberLabel = displayName || email || '';
 		state.userId = userId ? String(userId) : '';
 		state.email  = email || '';
 		root.dataset.userId = state.userId;
@@ -518,11 +649,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		refresh();
 	}
 
-	function setForm(formKey, label) {
+	function setForm(formKey, label, directionOverride) {
 		formKey = (formKey || '').toString().trim();
 		if (!formKey) return;
 
-		// Accept either numeric id or slug
 		if (/^\d+$/.test(formKey)) {
 			state.formId   = formKey;
 			state.formSlug = '';
@@ -533,8 +663,17 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		root.dataset.formId   = state.formId;
 		root.dataset.formSlug = state.formSlug;
 
+		// Link direction always overrides panel default; clear override → restore default
+		if (directionOverride) {
+			state.direction = directionOverride;
+		} else {
+			state.direction = state.directionDefault;
+		}
+		root.dataset.direction = state.direction;
+
 		if (label && titleEl) {
 			titleEl.textContent = label;
+			state.lastFormTitle = label;
 		} else if (titleEl && state.formSlug) {
 			titleEl.textContent = state.formSlug;
 		}
@@ -542,21 +681,18 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		refresh();
 	}
 
-	// Date dropdown change
 	if (selectEl) {
 		selectEl.addEventListener('change', function(){
 			loadResponse(this.value);
 		});
 	}
 
-	// Initial load if both already known
 	if ((state.formId || state.formSlug) && (state.userId || state.email)) {
 		refresh();
 	} else if (selectEl && selectEl.value) {
 		loadResponse(selectEl.value);
 	}
 
-	// Member selection (uls-members) — no page reload
 	document.addEventListener('uls:selected-member', function(e) {
 		if (!document.body.contains(root)) return;
 		var email = (e && e.detail && e.detail.email) ? String(e.detail.email).trim() : '';
@@ -564,13 +700,13 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		setMember(0, email, email);
 	});
 
-	// Form selection event — no page reload
 	document.addEventListener('bmf:selected-form', function(e) {
 		if (!document.body.contains(root)) return;
 		var form  = (e && e.detail && e.detail.form) ? String(e.detail.form).trim() : '';
 		var label = (e && e.detail && e.detail.label) ? String(e.detail.label).trim() : '';
+		var dir   = (e && e.detail && e.detail.direction) ? String(e.detail.direction).trim() : '';
 		if (!form) return;
-		setForm(form, label);
+		setForm(form, label, dir || null);
 	});
 
 	// Delegated click on [data-bmf-qa-form] — once per page
@@ -583,16 +719,18 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			if (!form) return;
 			e.preventDefault();
 
-			// Highlight active trigger
 			document.querySelectorAll('[data-bmf-qa-form].is-active').forEach(function(n) {
 				n.classList.remove('is-active');
 			});
 			el.classList.add('is-active');
 
+			var dir = (el.getAttribute('data-bmf-qa-direction') || '').trim();
+
 			document.dispatchEvent(new CustomEvent('bmf:selected-form', {
 				detail: {
 					form: form,
-					label: (el.textContent || '').trim()
+					label: (el.textContent || '').trim(),
+					direction: dir || null
 				}
 			}));
 		});
@@ -603,10 +741,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return ob_get_clean();
 		}
 
-		/**
-		 * AJAX: list submitted responses for a user + form.
-		 * Accepts form_id and/or form (slug), plus user_id and/or email.
-		 */
 		public static function ajax_list_responses() {
 			check_ajax_referer( 'bmf_qa_nonce', 'nonce' );
 
@@ -619,7 +753,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$user_id   = absint( $_POST['user_id'] ?? 0 );
 			$email     = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 
-			// Resolve form from slug if needed
 			if ( ! $form_id && $form_attr !== '' ) {
 				$form_id = self::resolve_form_id( $form_attr );
 			}
@@ -633,7 +766,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 				wp_send_json_error( [ 'message' => 'Form not found.' ], 404 );
 			}
 
-			// Resolve user from email if needed
 			if ( ! $user_id && $email && is_email( $email ) ) {
 				$u = get_user_by( 'email', $email );
 				if ( $u ) {
@@ -674,9 +806,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			] );
 		}
 
-		/**
-		 * AJAX: return full Q&A for a response_id.
-		 */
 		public static function ajax_get_response_qa() {
 			check_ajax_referer( 'bmf_qa_nonce', 'nonce' );
 
