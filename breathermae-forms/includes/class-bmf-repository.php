@@ -479,6 +479,56 @@ class BMF_Repository {
     }
 
     /**
+     * Max numeric scale value for a question from choices_json / options_string.
+     * Used to normalize scores for extreme highlighting (percentage of scale).
+     */
+    public static function resolve_scale_max( $choices_json = null, $options_string = null ): ?float {
+        $nums = [];
+
+        if ( ! empty( $choices_json ) ) {
+            $choices = is_string( $choices_json ) ? json_decode( $choices_json, true ) : $choices_json;
+            if ( is_array( $choices ) ) {
+                foreach ( $choices as $c ) {
+                    if ( ! is_array( $c ) ) {
+                        continue;
+                    }
+                    if ( isset( $c['value'] ) && is_numeric( $c['value'] ) ) {
+                        $nums[] = (float) $c['value'];
+                    }
+                    // Some payloads put the numeric weight on score/weight
+                    if ( isset( $c['score'] ) && is_numeric( $c['score'] ) ) {
+                        $nums[] = (float) $c['score'];
+                    }
+                    if ( isset( $c['weight'] ) && is_numeric( $c['weight'] ) ) {
+                        $nums[] = (float) $c['weight'];
+                    }
+                }
+            }
+        }
+
+        if ( ! empty( $options_string ) && is_string( $options_string ) ) {
+            $pairs = preg_split( '/\s*[|,]\s*/', $options_string );
+            foreach ( $pairs as $pair ) {
+                if ( strpos( $pair, '=' ) !== false ) {
+                    $k = trim( explode( '=', $pair, 2 )[0] );
+                    if ( is_numeric( $k ) ) {
+                        $nums[] = (float) $k;
+                    }
+                } elseif ( is_numeric( trim( $pair ) ) ) {
+                    $nums[] = (float) trim( $pair );
+                }
+            }
+        }
+
+        if ( empty( $nums ) ) {
+            return null;
+        }
+
+        $max = max( $nums );
+        return $max > 0 ? $max : null;
+    }
+
+    /**
      * Submitted responses for a user + form (newest first).
      * Returns array of objects: id, submitted_at, status, version.
      */
@@ -509,20 +559,7 @@ class BMF_Repository {
     /**
      * Full Q&A payload for one response, grouped by section (order_index).
      *
-     * Returns:
-     * [
-     *   'response' => {id, submitted_at, ...},
-     *   'form'     => {id, title, slug},
-     *   'sections' => [
-     *     [
-     *       'id', 'title', 'order_index',
-     *       'questions' => [
-     *         ['id','code','prompt','type','order_index',
-     *          'choice_value','answer_label','free_text','score']
-     *       ]
-     *     ], ...
-     *   ]
-     * ]
+     * Each question includes scale_max (max numeric option value) for extreme highlighting.
      */
     public static function get_response_qa( int $response_id ): ?array {
         if ( $response_id <= 0 ) {
@@ -599,7 +636,8 @@ class BMF_Repository {
                 $choices_src = ! empty( $q->choices_json ) ? $q->choices_json : $sec->choices_json;
                 $options_src = ! empty( $q->options_string ) ? $q->options_string : $sec->options_string;
 
-                $label = self::resolve_choice_label( $choice_value, $choices_src, $options_src );
+                $label     = self::resolve_choice_label( $choice_value, $choices_src, $options_src );
+                $scale_max = self::resolve_scale_max( $choices_src, $options_src );
 
                 // For rank / multi-value answers, try to expand each token
                 if ( $q->type === 'rank' || strpos( $choice_value, ',' ) !== false ) {
@@ -631,6 +669,7 @@ class BMF_Repository {
                     'answer_label'  => $label,
                     'free_text'     => $free_text,
                     'score'         => $score,
+                    'scale_max'     => $scale_max,
                 ];
             }
 
