@@ -479,6 +479,21 @@ class BMF_Repository {
     }
 
     /**
+     * Numeric portion of a stored choice_value (strips "value|{json-meta}").
+     */
+    public static function resolve_numeric_choice( $choice_value ): ?float {
+        $raw = (string) $choice_value;
+        if ( $raw === '' ) {
+            return null;
+        }
+        if ( strpos( $raw, '|' ) !== false ) {
+            $raw = explode( '|', $raw, 2 )[0];
+        }
+        $raw = trim( $raw );
+        return is_numeric( $raw ) ? (float) $raw : null;
+    }
+
+    /**
      * Max numeric scale value for a question from choices_json / options_string.
      * Used to normalize scores for extreme highlighting (percentage of scale).
      */
@@ -560,6 +575,8 @@ class BMF_Repository {
      * Full Q&A payload for one response, grouped by section (order_index).
      *
      * Each question includes scale_max (max numeric option value) for extreme highlighting.
+     * Score is taken from bm_response_items.score when present; otherwise derived from
+     * numeric choice_value (ajax_save_answer never writes the score column).
      */
     public static function get_response_qa( int $response_id ): ?array {
         if ( $response_id <= 0 ) {
@@ -630,7 +647,15 @@ class BMF_Repository {
 
                 $choice_value = $ans ? (string) $ans->choice_value : '';
                 $free_text    = $ans ? (string) $ans->free_text : '';
-                $score        = ( $ans && $ans->score !== null ) ? (float) $ans->score : null;
+
+                // Prefer stored score column; else derive from numeric choice_value
+                // (ajax_save_answer never populates bm_response_items.score)
+                $score = null;
+                if ( $ans && $ans->score !== null && $ans->score !== '' ) {
+                    $score = (float) $ans->score;
+                } else {
+                    $score = self::resolve_numeric_choice( $choice_value );
+                }
 
                 // Prefer question-level choices, fall back to section-level
                 $choices_src = ! empty( $q->choices_json ) ? $q->choices_json : $sec->choices_json;
@@ -638,6 +663,15 @@ class BMF_Repository {
 
                 $label     = self::resolve_choice_label( $choice_value, $choices_src, $options_src );
                 $scale_max = self::resolve_scale_max( $choices_src, $options_src );
+
+                // BSI/RSI convention: 0–4 Likert when choices don't expose a max
+                if ( $scale_max === null && $score !== null ) {
+                    $scale_max = (float) apply_filters( 'bmf_qa_default_scale_max', 4.0, $q, $score );
+                    // If this answer is already above default (e.g. 0–10 scale), stretch
+                    if ( $score > $scale_max ) {
+                        $scale_max = $score;
+                    }
+                }
 
                 // For rank / multi-value answers, try to expand each token
                 if ( $q->type === 'rank' || strpos( $choice_value, ',' ) !== false ) {
