@@ -6,7 +6,7 @@
  *         highlight="0" direction="low_better" threshold="0.75"]
  *
  * Driven by two selections (both pure AJAX, no page reload):
- *   1. Member  – uls-members (`uls:selected-member` / uls_selected_user_id meta)
+ *   1. Member  – uls-members (`uls:selected-member` event only; not meta on load)
  *   2. Form    – click on [data-bmf-qa-form="slug"] or `bmf:selected-form` event
  *
  * Highlighting (optional):
@@ -45,19 +45,16 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return function_exists( 'bmf_in_elementor_editor' ) && bmf_in_elementor_editor();
 		}
 
+		/**
+		 * Initial panel user only — explicit user_id attr or self="1".
+		 * Does NOT read uls_selected_user_id (avoids stale member on reload).
+		 * Live selection comes from uls:selected-member.
+		 */
 		private static function resolve_target_user_id( $atts_user_id = '', $fallback_to_self = false ): int {
 			$attr = absint( $atts_user_id );
 			if ( $attr > 0 ) {
 				return $attr;
 			}
-
-			if ( is_user_logged_in() ) {
-				$selected = (int) get_user_meta( get_current_user_id(), 'uls_selected_user_id', true );
-				if ( $selected > 0 ) {
-					return $selected;
-				}
-			}
-
 			return $fallback_to_self ? (int) get_current_user_id() : 0;
 		}
 
@@ -73,17 +70,15 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return $row ? (int) $row->id : 0;
 		}
 
-		/** Normalize direction attr. */
 		private static function normalize_direction( string $dir ): string {
 			$dir = strtolower( trim( $dir ) );
 			return in_array( $dir, [ 'low_better', 'high_better' ], true ) ? $dir : 'low_better';
 		}
 
-		/** Clamp threshold to 0.5–1.0 (meaningful extreme band). */
 		private static function normalize_threshold( $raw ): float {
 			$t = is_numeric( $raw ) ? (float) $raw : 0.75;
 			if ( $t > 1 && $t <= 100 ) {
-				$t = $t / 100; // allow "75" as percent
+				$t = $t / 100;
 			}
 			return max( 0.5, min( 1.0, $t ) );
 		}
@@ -110,7 +105,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		public static function enqueue_assets() {
-			wp_register_style( 'bmf-qa', false, [], '1.3.0' );
+			wp_register_style( 'bmf-qa', false, [], '1.3.1' );
 
 			$css = '
 .bmf-qa-wrap { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; }
@@ -128,66 +123,19 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 .bmf-qa-answer { font-weight:500; color:#0f172a; }
 .bmf-qa-loading { opacity:0.55; pointer-events:none; }
 .bmf-qa-score { white-space:nowrap; color:#475569; }
-
-/* Extreme row tint (full row) */
-.bmf-qa-table tr.bmf-qa-extreme td {
-	background: #fef2f2;
-}
-.bmf-qa-table tr.bmf-qa-extreme td.bmf-qa-answer {
-	color: #991b1b;
-	font-weight: 600;
-}
-.bmf-qa-table tr.bmf-qa-extreme:hover td {
-	background: #fee2e2;
-}
-
-/* Export button */
-.bmf-qa-export {
-	margin-left: auto;
-	padding: 6px 12px;
-	border: 1px solid #001d50;
-	border-radius: 4px;
-	background: #fff;
-	color: #001d50;
-	font-size: 0.85rem;
-	font-weight: 600;
-	cursor: pointer;
-	line-height: 1.2;
-}
+.bmf-qa-table tr.bmf-qa-extreme td { background: #fef2f2; }
+.bmf-qa-table tr.bmf-qa-extreme td.bmf-qa-answer { color: #991b1b; font-weight: 600; }
+.bmf-qa-table tr.bmf-qa-extreme:hover td { background: #fee2e2; }
+.bmf-qa-export { margin-left: auto; padding: 6px 12px; border: 1px solid #001d50; border-radius: 4px; background: #fff; color: #001d50; font-size: 0.85rem; font-weight: 600; cursor: pointer; line-height: 1.2; }
 .bmf-qa-export:hover { background: #e0f2fe; }
 .bmf-qa-export:disabled { opacity: 0.45; cursor: not-allowed; }
-
-/* Form title triggers */
-.bmf-qa-form-link,
-[data-bmf-qa-form] {
-	cursor: pointer;
-	text-decoration: none;
-	color: #001d50;
-	border-bottom: 1px dashed transparent;
-	transition: color .15s ease, border-color .15s ease, background .15s ease;
-}
-.bmf-qa-form-link:hover,
-[data-bmf-qa-form]:hover {
-	color: #0b3a8a;
-	border-bottom-color: #6ec1e4;
-}
-.bmf-qa-form-link.is-active,
-[data-bmf-qa-form].is-active {
-	color: #0b3a8a;
-	font-weight: 600;
-	border-bottom-color: #6ec1e4;
-	background: rgba(110, 193, 228, 0.15);
-	padding: 0 4px;
-	border-radius: 3px;
-}
+.bmf-qa-form-link, [data-bmf-qa-form] { cursor: pointer; text-decoration: none; color: #001d50; border-bottom: 1px dashed transparent; transition: color .15s ease, border-color .15s ease, background .15s ease; }
+.bmf-qa-form-link:hover, [data-bmf-qa-form]:hover { color: #0b3a8a; border-bottom-color: #6ec1e4; }
+.bmf-qa-form-link.is-active, [data-bmf-qa-form].is-active { color: #0b3a8a; font-weight: 600; border-bottom-color: #6ec1e4; background: rgba(110, 193, 228, 0.15); padding: 0 4px; border-radius: 3px; }
 ';
 			wp_add_inline_style( 'bmf-qa', $css );
 		}
 
-		/**
-		 * [bmf_qa_form_link form="slug" direction="" class=""]Label[/bmf_qa_form_link]
-		 * direction (optional) overrides the panel default when this form is selected.
-		 */
 		public static function shortcode_form_link( $atts, $content = null ) {
 			if ( self::should_bail_for_editor() ) {
 				return is_string( $content ) ? $content : '';
@@ -236,10 +184,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			);
 		}
 
-		/**
-		 * [bmf_qa form="" user_id="" show_scores="0" self="0"
-		 *         highlight="0" direction="low_better" threshold="0.75"]
-		 */
 		public static function shortcode_qa( $atts ) {
 			if ( self::should_bail_for_editor() ) {
 				return '';
@@ -282,7 +226,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$target_user  = $target_user_id ? get_userdata( $target_user_id ) : null;
 			$member_label = $target_user
 				? ( $target_user->display_name ?: $target_user->user_email )
-				: '— select a member —';
+				: 'Select a User';
 			$member_email = $target_user ? (string) $target_user->user_email : '';
 
 			$form_title = $form ? (string) $form->title : '— select a form —';
@@ -297,11 +241,11 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$uid = 'bmf_qa_' . ( $form_id ?: 'any' ) . '_' . wp_unique_id();
 
 			if ( ! $form_id && ! $target_user_id ) {
-				$empty_msg = 'Select a member, then click a form name to view answers.';
+				$empty_msg = 'Select a User, then click a form name to view answers.';
 			} elseif ( ! $form_id ) {
 				$empty_msg = 'Click a form name to view this member’s answers.';
 			} elseif ( ! $target_user_id ) {
-				$empty_msg = 'Select a member to view their answers.';
+				$empty_msg = 'Select a User to view their answers.';
 			} elseif ( empty( $responses ) ) {
 				$empty_msg = 'No submitted responses found for this member and form.';
 			} else {
@@ -396,11 +340,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		if (exportBtn) exportBtn.disabled = true;
 	}
 
-	/**
-	 * Extreme = score is on the concerning end of the scale past threshold.
-	 * low_better  → high scores bad  → score/max >= threshold
-	 * high_better → low scores bad   → score/max <= (1 - threshold)
-	 */
 	function isExtreme(q) {
 		if (!highlight) return false;
 		if (q.score === null || q.score === undefined) return false;
@@ -410,7 +349,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		if (state.direction === 'high_better') {
 			return ratio <= (1 - state.threshold);
 		}
-		// low_better (default)
 		return ratio >= state.threshold;
 	}
 
@@ -433,10 +371,8 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 		data.sections.forEach(function(sec) {
 			if (!sec.questions || !sec.questions.length) return;
-
 			html += '<tr class="bmf-qa-section-row"><td colspan="' + (showScores ? 4 : 3) + '">' +
 				esc(sec.title || ('Section ' + sec.order_index)) + '</td></tr>';
-
 			sec.questions.forEach(function(q, idx) {
 				var num = q.order_index || (idx + 1);
 				var extreme = isExtreme(q);
@@ -470,30 +406,18 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	function exportCsv() {
 		var data = state.lastData;
 		if (!data || !data.sections) return;
-
 		var rows = [];
 		rows.push(['Form', 'Section', '#', 'Question', 'Answer', 'Score', 'Extreme'].map(csvEscape).join(','));
-
 		var formTitle = state.lastFormTitle || (data.form && data.form.title) || '';
-
 		data.sections.forEach(function(sec) {
 			if (!sec.questions) return;
 			sec.questions.forEach(function(q, idx) {
 				var num = q.order_index || (idx + 1);
 				var extreme = isExtreme(q) ? 'Yes' : 'No';
 				var score = (q.score !== null && q.score !== undefined) ? q.score : '';
-				rows.push([
-					formTitle,
-					sec.title || '',
-					num,
-					q.prompt || '',
-					q.answer_label || '',
-					score,
-					extreme
-				].map(csvEscape).join(','));
+				rows.push([formTitle, sec.title || '', num, q.prompt || '', q.answer_label || '', score, extreme].map(csvEscape).join(','));
 			});
 		});
-
 		var blob = new Blob([rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
 		var url  = URL.createObjectURL(blob);
 		var a    = document.createElement('a');
@@ -518,12 +442,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return;
 		}
 		root.classList.add('bmf-qa-loading');
-
 		var fd = new FormData();
 		fd.append('action', 'bmf_get_response_qa');
 		fd.append('nonce', nonce);
 		fd.append('response_id', responseId);
-
 		fetch(ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
 			.then(function(r){ return r.json(); })
 			.then(function(resp){
@@ -544,12 +466,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	function rebuildSelect(list) {
 		if (!selectEl) return;
 		selectEl.innerHTML = '';
-
 		if (!list || !list.length) {
 			if (selectWrap) selectWrap.style.display = 'none';
 			return;
 		}
-
 		list.forEach(function(r, i) {
 			var opt = document.createElement('option');
 			opt.value = r.id;
@@ -557,16 +477,14 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			if (i === 0) opt.selected = true;
 			selectEl.appendChild(opt);
 		});
-
 		if (selectWrap) selectWrap.style.display = 'inline-flex';
 	}
 
 	function refresh() {
 		var hasForm   = !!(state.formId || state.formSlug);
 		var hasMember = !!(state.userId || state.email);
-
 		if (!hasForm && !hasMember) {
-			setEmpty('Select a member, then click a form name to view answers.');
+			setEmpty('Select a User, then click a form name to view answers.');
 			return;
 		}
 		if (!hasForm) {
@@ -574,13 +492,11 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return;
 		}
 		if (!hasMember) {
-			setEmpty('Select a member to view their answers.');
+			setEmpty('Select a User to view their answers.');
 			return;
 		}
-
 		root.classList.add('bmf-qa-loading');
 		bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading responses…</div>';
-
 		var fd = new FormData();
 		fd.append('action', 'bmf_list_responses');
 		fd.append('nonce', nonce);
@@ -588,7 +504,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		if (state.formSlug) fd.append('form', state.formSlug);
 		if (state.userId)   fd.append('user_id', state.userId);
 		if (state.email)    fd.append('email', state.email);
-
 		fetch(ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
 			.then(function(r){ return r.json(); })
 			.then(function(resp){
@@ -598,9 +513,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 					setEmpty(msg);
 					return;
 				}
-
 				var data = resp.data || {};
-
 				if (data.member_label && memberEl) {
 					memberEl.textContent = data.member_label;
 					state.lastMemberLabel = data.member_label;
@@ -621,10 +534,8 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 					titleEl.textContent = data.form_title;
 					state.lastFormTitle = data.form_title;
 				}
-
 				var list = data.responses || [];
 				rebuildSelect(list);
-
 				if (list.length) {
 					loadResponse(list[0].id);
 				} else {
@@ -639,7 +550,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 	function setMember(userId, email, displayName) {
 		if (memberEl) {
-			memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : '— select a member —');
+			memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : 'Select a User');
 		}
 		state.lastMemberLabel = displayName || email || '';
 		state.userId = userId ? String(userId) : '';
@@ -652,7 +563,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	function setForm(formKey, label, directionOverride) {
 		formKey = (formKey || '').toString().trim();
 		if (!formKey) return;
-
 		if (/^\d+$/.test(formKey)) {
 			state.formId   = formKey;
 			state.formSlug = '';
@@ -662,22 +572,18 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 		root.dataset.formId   = state.formId;
 		root.dataset.formSlug = state.formSlug;
-
-		// Link direction always overrides panel default; clear override → restore default
 		if (directionOverride) {
 			state.direction = directionOverride;
 		} else {
 			state.direction = state.directionDefault;
 		}
 		root.dataset.direction = state.direction;
-
 		if (label && titleEl) {
 			titleEl.textContent = label;
 			state.lastFormTitle = label;
 		} else if (titleEl && state.formSlug) {
 			titleEl.textContent = state.formSlug;
 		}
-
 		refresh();
 	}
 
@@ -709,7 +615,6 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		setForm(form, label, dir || null);
 	});
 
-	// Delegated click on [data-bmf-qa-form] — once per page
 	if (!window.__bmfQaFormClickBound) {
 		window.__bmfQaFormClickBound = true;
 		document.addEventListener('click', function(e) {
@@ -718,14 +623,11 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			var form = (el.getAttribute('data-bmf-qa-form') || '').trim();
 			if (!form) return;
 			e.preventDefault();
-
 			document.querySelectorAll('[data-bmf-qa-form].is-active').forEach(function(n) {
 				n.classList.remove('is-active');
 			});
 			el.classList.add('is-active');
-
 			var dir = (el.getAttribute('data-bmf-qa-direction') || '').trim();
-
 			document.dispatchEvent(new CustomEvent('bmf:selected-form', {
 				detail: {
 					form: form,
