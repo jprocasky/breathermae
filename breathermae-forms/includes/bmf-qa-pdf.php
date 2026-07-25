@@ -156,3 +156,38 @@ JS;
 		return '<script>' . "\n" . $js . "\n" . '</script>';
 	}
 }
+
+/**
+ * Enqueue DOM-based PDF export for the full Q&A panel ([bmf_qa]).
+ * Injects Export PDF button beside CSV and prints the visible table.
+ */
+add_action( 'wp_enqueue_scripts', function () {
+	if ( is_admin() ) {
+		return;
+	}
+	$plugin_file = dirname( __DIR__ ) . '/breathermae-forms.php';
+	$js_path     = dirname( __DIR__ ) . '/assets/js/bmf-qa-pdf-panel.js';
+	if ( ! file_exists( $js_path ) ) {
+		return;
+	}
+	$ver = (string) filemtime( $js_path );
+	$src = plugins_url( 'assets/js/bmf-qa-pdf-panel.js', $plugin_file );
+	wp_register_script( 'bmf-qa-pdf-panel', $src, [], $ver, true );
+}, 20 );
+
+add_filter( 'do_shortcode_tag', function ( $output, $tag ) {
+	if ( $tag !== 'bmf_qa' ) {
+		return $output;
+	}
+	if ( ! wp_script_is( 'bmf-qa-pdf-panel', 'registered' ) ) {
+		return $output;
+	}
+	wp_enqueue_script( 'bmf-qa-pdf-panel' );
+	$logo = bmf_qa_pdf_logo_url();
+	wp_add_inline_script(
+		'bmf-qa-pdf-panel',
+		'window.bmfQaCfg = window.bmfQaCfg || {}; if (!window.bmfQaCfg.logo) window.bmfQaCfg.logo = ' . wp_json_encode( $logo ) . ';',
+		'before'
+	);
+	return $output;
+}, 10, 2 );
