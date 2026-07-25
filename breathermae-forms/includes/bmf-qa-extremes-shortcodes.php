@@ -4,6 +4,8 @@
  *
  * [bmf_qa_extremes threshold="0.75" show_scores="0"]
  * [bmf_qa_extremes_link assessment="bsi"]BSI extremes[/bmf_qa_extremes_link]
+ *
+ * JS: assets/js/bmf-qa-extremes.js (enqueued, not inlined)
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -215,10 +217,14 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			}
 
 			$pillars = [
-				'physical' => (float) ( $row['physical'] ?? 0 ), 'mental' => (float) ( $row['mental'] ?? 0 ),
-				'emotional' => (float) ( $row['emotional'] ?? 0 ), 'financial' => (float) ( $row['financial'] ?? 0 ),
-				'occupational' => (float) ( $row['occupational'] ?? 0 ), 'environmental' => (float) ( $row['environmental'] ?? 0 ),
-				'spiritual' => (float) ( $row['spiritual'] ?? 0 ), 'social' => (float) ( $row['social'] ?? 0 ),
+				'physical'      => (float) ( $row['physical'] ?? 0 ),
+				'mental'        => (float) ( $row['mental'] ?? 0 ),
+				'emotional'     => (float) ( $row['emotional'] ?? 0 ),
+				'financial'     => (float) ( $row['financial'] ?? 0 ),
+				'occupational'  => (float) ( $row['occupational'] ?? 0 ),
+				'environmental' => (float) ( $row['environmental'] ?? 0 ),
+				'spiritual'     => (float) ( $row['spiritual'] ?? 0 ),
+				'social'        => (float) ( $row['social'] ?? 0 ),
 			];
 			foreach ( $pillars as $k => $v ) {
 				$pillars[ $k ] = ( $v <= 1.0 ) ? round( $v * 100, 1 ) : round( $v, 1 );
@@ -226,8 +232,8 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			arsort( $pillars );
 			$actual_labels = array_keys( $pillars );
 			$actual_scores = array_values( $pillars );
-			$rank_str  = $row['rank'] ?? '';
-			$perceived = [];
+			$rank_str      = $row['rank'] ?? '';
+			$perceived     = [];
 			if ( $rank_str ) {
 				$decoded   = urldecode( (string) $rank_str );
 				$perceived = array_map( 'ucfirst', array_map( 'trim', explode( ',', $decoded ) ) );
@@ -270,8 +276,23 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			wp_enqueue_style( 'bmf-qa' );
 			return sprintf(
 				'<a href="#extremes" class="%s" data-bmf-qa-assessment="%s"%s role="button">%s</a>',
-				esc_attr( $class ), esc_attr( $key ), $dir_attr, esc_html( $label )
+				esc_attr( $class ),
+				esc_attr( $key ),
+				$dir_attr,
+				esc_html( $label )
 			);
+		}
+
+		private static function enqueue_panel_js( array $cfg ): void {
+			$plugin_file = dirname( __DIR__ ) . '/breathermae-forms.php';
+			$js_path     = dirname( __DIR__ ) . '/assets/js/bmf-qa-extremes.js';
+			$ver         = file_exists( $js_path ) ? (string) filemtime( $js_path ) : '1.0.0';
+			$src         = plugins_url( 'assets/js/bmf-qa-extremes.js', $plugin_file );
+
+			wp_enqueue_style( 'bmf-qa' );
+			wp_register_script( 'bmf-qa-extremes', $src, [], $ver, true );
+			wp_localize_script( 'bmf-qa-extremes', 'bmfQaExtremesCfg', $cfg );
+			wp_enqueue_script( 'bmf-qa-extremes' );
 		}
 
 		public static function shortcode_panel( $atts ) {
@@ -294,9 +315,15 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			$direction   = $atts['direction'] !== '' ? self::normalize_direction( (string) $atts['direction'] ) : '';
 			$nonce       = wp_create_nonce( 'bmf_qa_nonce' );
 			$ajax_url    = admin_url( 'admin-ajax.php' );
-			$logo_url    = function_exists( 'bmf_qa_pdf_logo_url' ) ? bmf_qa_pdf_logo_url() : 'https://breathermae.com/wp-content/uploads/2025/11/Article-1-Image-1-e1764384968248.jpeg';
+			$logo_url    = function_exists( 'bmf_qa_pdf_logo_url' )
+				? bmf_qa_pdf_logo_url()
+				: 'https://breathermae.com/wp-content/uploads/2025/11/Article-1-Image-1-e1764384968248.jpeg';
 
-			wp_enqueue_style( 'bmf-qa' );
+			self::enqueue_panel_js( [
+				'ajax'  => $ajax_url,
+				'nonce' => $nonce,
+				'logo'  => $logo_url,
+			] );
 
 			ob_start();
 			?>
@@ -331,421 +358,6 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 .bmf-qa-cmp-ind{text-align:center;font-weight:600;min-width:48px}
 .bmf-qa-extremes-wrap{scroll-margin-top:80px}
 </style>
-<script>
-window.bmfQaExtremesCfg = {
-  ajax: <?php echo wp_json_encode( $ajax_url ); ?>,
-  nonce: <?php echo wp_json_encode( $nonce ); ?>,
-  logo: <?php echo wp_json_encode( $logo_url ); ?>
-};
-(function(){
-  var CFG = window.bmfQaExtremesCfg || {};
-  var state = {assessment:'',userId:'',email:'',direction:'',threshold:0.75,date:'',lastRows:null,lastLabel:'',lastMember:'',lastComparison:null};
-
-  function panel(){ return document.querySelector('.bmf-qa-extremes-wrap'); }
-  function els(){
-    var root = panel(); if (!root) return null;
-    return {
-      root: root,
-      bodyEl: root.querySelector('.bmf-qa-table-wrap'),
-      memberEl: root.querySelector('.bmf-qa-member-label'),
-      titleEl: root.querySelector('.bmf-qa-ext-title'),
-      exportBtn: root.querySelector('.bmf-qa-export-csv'),
-      pdfBtn: root.querySelector('.bmf-qa-export-pdf'),
-      cmpEl: root.querySelector('.bmf-qa-comparison'),
-      selectWrap: root.querySelector('.bmf-qa-select-wrap'),
-      selectEl: root.querySelector('.bmf-qa-date-select'),
-      showScores: root.getAttribute('data-show-scores') === '1'
-    };
-  }
-  function setExportButtons(enabled){
-    var root = panel(); if (!root) return;
-    root.querySelectorAll('.bmf-qa-export-csv,.bmf-qa-export-pdf').forEach(function(btn){ btn.disabled = !enabled; });
-  }
-  function initFromPanel(){
-    var root = panel(); if (!root) return;
-    var a = root.getAttribute('data-assessment') || '';
-    var d = root.getAttribute('data-direction') || '';
-    var t = root.getAttribute('data-threshold') || '0.75';
-    if (a) state.assessment = a;
-    if (d) state.direction = d;
-    state.threshold = parseFloat(t) || 0.75;
-  }
-  function esc(s){
-    var d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-  }
-  function normalizeDate(v){
-    var s = (v == null ? '' : String(v)).trim();
-    if (!s) return '';
-    var m = s.match(/^(\d{4}-\d{2}-\d{2})/);
-    return m ? m[1] : '';
-  }
-  function buildPdfPayload(){
-    if (!state.lastRows || !state.lastRows.length) return null;
-    var showScores = !!(els() && els().showScores);
-    var headers = ['Form','Section','#','Question','Answer'];
-    if (showScores) headers.push('Score');
-    var rows = [];
-    if (state.lastComparison && state.lastComparison.items && state.lastComparison.items.length) {
-      rows.push({_section:true, label:'Perceived rank vs actual scores' + (state.lastComparison.master != null ? (' (avg ' + state.lastComparison.master + '%)') : '')});
-      state.lastComparison.items.forEach(function(it){
-        rows.push({cells:[it.perceived || '', '', '', 'vs', (it.actual || '') + (it.score != null ? (' (' + it.score + '%)') : '')]});
-      });
-      rows.push({_section:true, label:'Extreme answers'});
-    }
-    state.lastRows.forEach(function(r){
-      var cells = [r.form, r.section, r.order_index, r.prompt, r.answer_label || '-'];
-      if (showScores) cells.push(r.score != null ? r.score : '-');
-      rows.push({_extreme:true, cells:cells});
-    });
-    return {
-      title: (state.lastLabel || state.assessment || 'Assessment') + ' - Extremes',
-      member: state.lastMember || state.email || '',
-      metaLines: ['Cycle: ' + (state.date || '')],
-      headers: headers,
-      rows: rows,
-      filename: 'extremes-' + (state.assessment || 'x') + '-' + (state.date || '')
-    };
-  }
-  function setPdfPayload(){
-    var root = panel();
-    if (!root) return;
-    var payload = buildPdfPayload();
-    root._bmfPdfPayload = payload;
-    setExportButtons(!!(payload && payload.rows && payload.rows.length));
-  }
-  function setEmpty(msg){
-    var e = els(); if (!e || !e.bodyEl) return;
-    e.bodyEl.innerHTML = '<div class="bmf-qa-empty">' + esc(msg) + '</div>';
-    if (e.selectWrap) e.selectWrap.style.display = 'none';
-    if (e.cmpEl) { e.cmpEl.style.display = 'none'; e.cmpEl.innerHTML = ''; }
-    state.lastRows = null;
-    state.lastComparison = null;
-    var root = panel();
-    if (root) root._bmfPdfPayload = null;
-    setExportButtons(false);
-  }
-  function discoverMemberEmail(){
-    if (state.email) return state.email;
-    var row = document.querySelector('.uls-members__row.is-selected[data-email],tr.is-selected[data-email],.is-selected[data-email]');
-    if (row) {
-      var em = (row.getAttribute('data-email') || '').trim();
-      if (em) return em;
-    }
-    var qa = document.querySelector('.bmf-qa-wrap:not(.bmf-qa-extremes-wrap)[data-email]');
-    if (qa) {
-      var em2 = (qa.getAttribute('data-email') || '').trim();
-      if (em2) return em2;
-    }
-    return '';
-  }
-  function ensureMember(){
-    var email = discoverMemberEmail();
-    if (email && email !== state.email) {
-      applyMember(0, email, email);
-      return true;
-    }
-    return !!(state.userId || state.email);
-  }
-  function applyMember(userId, email, displayName){
-    var e = els();
-    state.userId = userId ? String(userId) : '';
-    state.email = email || '';
-    state.lastMember = displayName || email || '';
-    if (e && e.memberEl) e.memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : 'Select a User');
-  }
-  function renderComparison(cmp){
-    var e = els(); if (!e || !e.cmpEl) return;
-    state.lastComparison = cmp || null;
-    if (!cmp || !cmp.items || !cmp.items.length) {
-      e.cmpEl.style.display = 'none';
-      e.cmpEl.innerHTML = '';
-      return;
-    }
-    var html = '<h5>Perceived rank vs actual scores</h5>';
-    if (cmp.master != null) html += '<p class="bmf-qa-meta" style="margin:0 0 8px">Overall average: <strong>' + esc(cmp.master) + '%</strong></p>';
-    html += '<div class="bmf-qa-cmp-grid">';
-    html += '<div class="bmf-qa-meta" style="font-weight:600">Perceived</div><div></div><div class="bmf-qa-meta" style="font-weight:600;text-align:right">Actual</div>';
-    cmp.items.forEach(function(it){
-      var icon = '';
-      var color = '#999';
-      if (it.diff === 0) { icon = 'OK'; color = '#22c55e'; }
-      else if (it.diff > 0) { icon = 'UP ' + Math.abs(it.diff); color = '#3b82f6'; }
-      else if (it.diff < 0) { icon = 'DN ' + Math.abs(it.diff); color = '#f97316'; }
-      html += '<div class="bmf-qa-cmp-cell">' + esc(it.perceived) + '</div>';
-      html += '<div class="bmf-qa-cmp-ind" style="color:' + color + '">' + esc(icon) + '</div>';
-      html += '<div class="bmf-qa-cmp-cell right">' + esc(it.actual) + (it.score != null ? (' <span style="color:#666">(' + esc(it.score) + '%)</span>') : '') + '</div>';
-    });
-    html += '</div>';
-    e.cmpEl.innerHTML = html;
-    e.cmpEl.style.display = 'block';
-  }
-  function renderRows(data){
-    var e = els(); if (!e || !e.bodyEl) return;
-    var rows = (data && data.rows) ? data.rows : [];
-    state.lastRows = rows;
-    state.lastLabel = (data && data.label) ? data.label : state.assessment;
-    if (e.titleEl) e.titleEl.textContent = state.lastLabel + ' - Extremes';
-    renderComparison(data && data.comparison ? data.comparison : null);
-    if (!rows.length) {
-      setEmpty('No extreme answers found for this cycle.');
-      if (data && data.comparison) renderComparison(data.comparison);
-      return;
-    }
-    var html = '<table class="bmf-qa-table"><thead><tr><th>Form</th><th>Section</th><th class="bmf-qa-q-num">#</th><th>Question</th><th>Answer</th>';
-    if (e.showScores) html += '<th class="bmf-qa-score">Score</th>';
-    html += '</tr></thead><tbody>';
-    rows.forEach(function(r){
-      html += '<tr class="bmf-qa-extreme"><td>' + esc(r.form) + '</td><td>' + esc(r.section) + '</td><td class="bmf-qa-q-num">' + esc(r.order_index) + '</td><td>' + esc(r.prompt) + '</td><td class="bmf-qa-answer">' + esc(r.answer_label || '-') + '</td>';
-      if (e.showScores) html += '<td class="bmf-qa-score">' + (r.score != null ? esc(r.score) : '-') + '</td>';
-      html += '</tr>';
-    });
-    html += '</tbody></table>';
-    e.bodyEl.innerHTML = html;
-    setPdfPayload();
-  }
-  function csvEscape(v){
-    var s = v == null ? '' : String(v);
-    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
-  function exportCsv(){
-    if (!state.lastRows) return;
-    var lines = [['Assessment','Date','Form','Section','#','Question','Answer','Score','Extreme'].map(csvEscape).join(',')];
-    state.lastRows.forEach(function(r){
-      lines.push([state.lastLabel, state.date, r.form, r.section, r.order_index, r.prompt, r.answer_label, r.score != null ? r.score : '', 'Yes'].map(csvEscape).join(','));
-    });
-    var blob = new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    var member = (state.lastMember || state.email || 'member').replace(/[^a-z0-9._-]+/gi, '_');
-    var assess = (state.assessment || 'assessment').replace(/[^a-z0-9._-]+/gi, '_');
-    a.href = url;
-    a.download = 'extremes-' + member + '-' + assess + '-' + (state.date || '') + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  // Self-contained PDF export (does not depend on shared helper)
-  function exportPdf(){
-    var root = panel();
-    var payload = (root && root._bmfPdfPayload) || buildPdfPayload();
-    if (!payload || !payload.rows || !payload.rows.length) {
-      alert('Nothing to export yet.');
-      return;
-    }
-    var LOGO = CFG.logo || '';
-    var title = payload.title || 'BreatherMae Report';
-    var member = payload.member || '';
-    var meta = payload.metaLines || [];
-    var headers = payload.headers || [];
-    var rows = payload.rows || [];
-    var filename = payload.filename || 'breathermae-report';
-
-    var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-    html += '<title>' + esc(filename) + '</title>';
-    html += '<style>';
-    html += 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1e293b;margin:24px;font-size:11px;}';
-    html += '.brand{display:flex;align-items:center;gap:14px;margin-bottom:16px;border-bottom:2px solid #001d50;padding-bottom:12px;}';
-    html += '.brand img{max-height:48px;max-width:160px;object-fit:contain;}';
-    html += '.brand h1{margin:0;font-size:16px;color:#001d50;}';
-    html += '.brand .sub{margin:2px 0 0;color:#64748b;font-size:11px;}';
-    html += '.meta{margin:0 0 14px;color:#475569;line-height:1.45;}';
-    html += 'table{width:100%;border-collapse:collapse;margin-top:6px;}';
-    html += 'th,td{border:1px solid #cbd5e1;padding:5px 7px;text-align:left;vertical-align:top;}';
-    html += 'th{background:#6ec1e4;color:#001d50;font-weight:600;}';
-    html += 'tr.section td{background:#f1f5f9;font-weight:600;color:#001d50;}';
-    html += 'tr.extreme td{background:#fef2f2;}';
-    html += 'tr.extreme td.answer{color:#991b1b;font-weight:600;}';
-    html += '.note{margin-top:14px;font-size:10px;color:#64748b;}';
-    html += '@media print{body{margin:12px;} .no-print{display:none!important;}}';
-    html += '</style></head><body>';
-    html += '<div class="brand">';
-    if (LOGO) html += '<img src="' + esc(LOGO) + '" alt="BreatherMae">';
-    html += '<div><h1>' + esc(title) + '</h1>';
-    if (member) html += '<div class="sub">Member: ' + esc(member) + '</div>';
-    html += '</div></div>';
-    if (meta.length) {
-      html += '<div class="meta">';
-      meta.forEach(function(line){ html += '<div>' + esc(line) + '</div>'; });
-      html += '</div>';
-    }
-    html += '<table><thead><tr>';
-    headers.forEach(function(h){ html += '<th>' + esc(h) + '</th>'; });
-    html += '</tr></thead><tbody>';
-    rows.forEach(function(r){
-      if (r && r._section) {
-        html += '<tr class="section"><td colspan="' + headers.length + '">' + esc(r.label || '') + '</td></tr>';
-        return;
-      }
-      var extreme = !!(r && r._extreme);
-      var cells = (r && r.cells) ? r.cells : (Array.isArray(r) ? r : []);
-      html += '<tr' + (extreme ? ' class="extreme"' : '') + '>';
-      cells.forEach(function(c, i){
-        var cls = (extreme && headers[i] && /answer/i.test(String(headers[i]))) ? ' class="answer"' : '';
-        html += '<td' + cls + '>' + esc(c == null ? '' : c) + '</td>';
-      });
-      html += '</tr>';
-    });
-    html += '</tbody></table>';
-    html += '<p class="note no-print">Use your browser print dialog and choose Save as PDF.</p>';
-    html += '</body></html>';
-
-    var w = window.open('', '_blank');
-    if (!w) {
-      alert('Pop-up blocked. Allow pop-ups for this site to export PDF.');
-      return;
-    }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    setTimeout(function(){
-      try { w.focus(); w.print(); } catch (err) {}
-    }, 450);
-  }
-
-  function loadExtremes(){
-    var e = els(); if (!e) return;
-    if (!CFG.nonce || !CFG.ajax) { setEmpty('Extremes config missing. Hard-refresh the page.'); return; }
-    if (!state.assessment) { setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
-    if (!(state.userId || state.email)) { setEmpty('Select a User to view extremes.'); return; }
-    state.date = normalizeDate(state.date);
-    if (!state.date) { setEmpty('No finalized cycles found for this assessment.'); return; }
-    e.root.classList.add('bmf-qa-loading');
-    if (e.bodyEl) e.bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading extremes...</div>';
-    var fd = new FormData();
-    fd.append('action', 'bmf_get_assessment_extremes');
-    fd.append('nonce', CFG.nonce);
-    fd.append('assessment', state.assessment);
-    fd.append('date', state.date);
-    fd.append('threshold', String(state.threshold));
-    if (state.direction) fd.append('direction', state.direction);
-    if (state.userId) fd.append('user_id', state.userId);
-    if (state.email) fd.append('email', state.email);
-    fetch(CFG.ajax, {method:'POST', body:fd, credentials:'same-origin'})
-      .then(function(r){ return r.json(); })
-      .then(function(resp){
-        var e2 = els(); if (e2) e2.root.classList.remove('bmf-qa-loading');
-        if (!resp || !resp.success) { setEmpty((resp && resp.data && resp.data.message) || 'Could not load extremes.'); return; }
-        renderRows(resp.data || {});
-      })
-      .catch(function(){ var e2 = els(); if (e2) e2.root.classList.remove('bmf-qa-loading'); setEmpty('Error loading extremes.'); });
-  }
-  function loadDates(thenLoad){
-    var e = els(); if (!e) return;
-    if (!CFG.nonce || !CFG.ajax) { setEmpty('Extremes config missing. Hard-refresh the page.'); return; }
-    if (!state.assessment) { setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
-    if (!(state.userId || state.email)) {
-      if (!ensureMember()) { setEmpty('Select a User to view extremes.'); return; }
-    }
-    e.root.classList.add('bmf-qa-loading');
-    var fd = new FormData();
-    fd.append('action', 'bmf_list_assessment_dates');
-    fd.append('nonce', CFG.nonce);
-    fd.append('assessment', state.assessment);
-    if (state.userId) fd.append('user_id', state.userId);
-    if (state.email) fd.append('email', state.email);
-    fetch(CFG.ajax, {method:'POST', body:fd, credentials:'same-origin'})
-      .then(function(r){ return r.json(); })
-      .then(function(resp){
-        var e2 = els();
-        if (e2) e2.root.classList.remove('bmf-qa-loading');
-        if (!resp || !resp.success) { setEmpty((resp && resp.data && resp.data.message) || 'Could not load dates.'); return; }
-        var data = resp.data || {};
-        if (data.member_label) {
-          state.lastMember = data.member_label;
-          if (e2 && e2.memberEl) e2.memberEl.textContent = data.member_label;
-        }
-        if (data.user_id) state.userId = String(data.user_id);
-        if (data.label && e2 && e2.titleEl) e2.titleEl.textContent = data.label + ' - Extremes';
-        var dates = (data.dates || []).map(normalizeDate).filter(Boolean);
-        if (!e2 || !e2.selectEl) return;
-        e2.selectEl.innerHTML = '';
-        if (!dates.length) {
-          state.date = '';
-          if (e2.selectWrap) e2.selectWrap.style.display = 'none';
-          setEmpty('No finalized cycles found for this member and assessment.');
-          return;
-        }
-        dates.forEach(function(d, i){
-          var opt = document.createElement('option');
-          opt.value = d;
-          opt.textContent = d;
-          if (i === 0) opt.selected = true;
-          e2.selectEl.appendChild(opt);
-        });
-        if (e2.selectWrap) e2.selectWrap.style.display = 'inline-flex';
-        state.date = dates[0];
-        if (thenLoad !== false) loadExtremes();
-      })
-      .catch(function(){ var e2 = els(); if (e2) e2.root.classList.remove('bmf-qa-loading'); setEmpty('Error loading dates.'); });
-  }
-  function setAssessment(key, label, direction){
-    key = (key || '').toString().trim().toLowerCase();
-    if (!key) return;
-    state.assessment = key;
-    if (direction) state.direction = direction;
-    var e = els();
-    if (e && e.titleEl) {
-      var title = (label && label.trim()) ? label.trim() : key.toUpperCase();
-      if (!/extremes$/i.test(title)) title = title + ' - Extremes';
-      e.titleEl.textContent = title;
-    }
-    ensureMember();
-    loadDates(true);
-  }
-  function scrollToExtremes(){
-    var el = panel();
-    if (!el) return;
-    if (history.replaceState) history.replaceState(null, '', '#extremes');
-    else location.hash = 'extremes';
-    el.scrollIntoView({behavior:'smooth', block:'start'});
-  }
-
-  if (!window.__bmfQaExtremesBound) {
-    window.__bmfQaExtremesBound = true;
-    document.addEventListener('uls:selected-member', function(ev){
-      var email = (ev && ev.detail && ev.detail.email) ? String(ev.detail.email).trim() : '';
-      if (!email) return;
-      applyMember(0, email, email);
-      if (state.assessment) loadDates(true);
-      else setEmpty('Select a User, then click an assessment extremes link.');
-    });
-    document.addEventListener('click', function(ev){
-      var el = ev.target.closest('[data-bmf-qa-assessment]');
-      if (!el) return;
-      var a = (el.getAttribute('data-bmf-qa-assessment') || '').trim();
-      if (!a) return;
-      ev.preventDefault();
-      document.querySelectorAll('[data-bmf-qa-assessment].is-active').forEach(function(n){ n.classList.remove('is-active'); });
-      el.classList.add('is-active');
-      scrollToExtremes();
-      var dir = (el.getAttribute('data-bmf-qa-direction') || '').trim();
-      setAssessment(a, (el.textContent || '').trim(), dir || null);
-    });
-    document.addEventListener('change', function(ev){
-      var root = panel();
-      if (!root || !ev.target) return;
-      if (ev.target.classList && ev.target.classList.contains('bmf-qa-date-select') && root.contains(ev.target)) {
-        state.date = normalizeDate(ev.target.value);
-        loadExtremes();
-      }
-    });
-    document.addEventListener('click', function(ev){
-      var root = panel();
-      if (!root) return;
-      var csv = ev.target.closest('.bmf-qa-export-csv');
-      if (csv && root.contains(csv)) { exportCsv(); return; }
-      var pdf = ev.target.closest('.bmf-qa-export-pdf');
-      if (pdf && root.contains(pdf) && !pdf.disabled) { ev.preventDefault(); exportPdf(); }
-    });
-  }
-  initFromPanel();
-})();
-</script>
 			<?php
 			return ob_get_clean();
 		}
@@ -768,8 +380,11 @@ window.bmfQaExtremesCfg = {
 				wp_send_json_error( [ 'message' => 'Forbidden' ], 403 );
 			}
 			wp_send_json_success( [
-				'user_id' => $user_id, 'member_label' => $label, 'assessment' => $assessment,
-				'label' => $map[ $assessment ]['label'] ?? $assessment, 'dates' => self::get_final_dates( $assessment, $email ),
+				'user_id'      => $user_id,
+				'member_label' => $label,
+				'assessment'   => $assessment,
+				'label'        => $map[ $assessment ]['label'] ?? $assessment,
+				'dates'        => self::get_final_dates( $assessment, $email ),
 			] );
 		}
 
