@@ -3,10 +3,11 @@
  * Breathermae Forms – Assessment Extremes Rollup
  *
  * [bmf_qa_extremes threshold="0.75" show_scores="0"]
- * [bmf_qa_extremes_link assessment="bsi" direction="low_better"]BSI extremes[/bmf_qa_extremes_link]
+ * [bmf_qa_extremes_link assessment="bsi"]BSI extremes[/bmf_qa_extremes_link]
  *
  * Panel id="extremes" — links use href="#extremes" and smooth-scroll on click.
- * Member is NOT seeded from uls_selected_user_id on page load (shows Select a User).
+ * Member is NOT seeded from uls meta on page load (shows Select a User).
+ * Live selection via uls:selected-member, selected row, or sibling Q&A panel.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -85,7 +86,6 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			return $allowed;
 		}
 
-		/** Resolve user from AJAX POST only (user_id / email) — not meta. */
 		private static function resolve_user_from_request(): array {
 			$user_id = absint( $_POST['user_id'] ?? 0 );
 			$email   = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
@@ -345,18 +345,12 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 				? self::normalize_direction( (string) $atts['direction'] )
 				: '';
 
-			// Do not seed last selected member from meta on page load
-			$member = 'Select a User';
-			$email  = '';
-
 			wp_enqueue_style( 'bmf-qa' );
-			$uid = 'bmf_qa_ext_' . wp_unique_id();
 
 			ob_start();
 			?>
 <div class="bmf-qa-wrap bmf-qa-extremes-wrap"
 	 id="extremes"
-	 data-panel-uid="<?php echo esc_attr( $uid ); ?>"
 	 data-assessment="<?php echo esc_attr( $assessment ); ?>"
 	 data-user-id=""
 	 data-email=""
@@ -368,7 +362,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 	<div class="bmf-qa-header">
 		<h4 class="bmf-qa-title bmf-qa-ext-title">— select an assessment —</h4>
-		<span class="bmf-qa-meta">Member: <strong class="bmf-qa-member-label"><?php echo esc_html( $member ); ?></strong></span>
+		<span class="bmf-qa-meta">Member: <strong class="bmf-qa-member-label">Select a User</strong></span>
 		<label class="bmf-qa-meta bmf-qa-select-wrap" style="display:none">
 			<span>Cycle:</span>
 			<select class="bmf-qa-select bmf-qa-date-select"></select>
@@ -410,44 +404,101 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 </style>
 <script>
 (function(){
-	var root = document.getElementById('extremes');
-	if (!root) return;
-
-	var ajaxUrl = root.dataset.ajax, nonce = root.dataset.nonce;
-	var showScores = root.dataset.showScores === '1';
-	var selectWrap = root.querySelector('.bmf-qa-select-wrap');
-	var selectEl = root.querySelector('.bmf-qa-date-select');
-	var bodyEl = root.querySelector('.bmf-qa-table-wrap');
-	var memberEl = root.querySelector('.bmf-qa-member-label');
-	var titleEl = root.querySelector('.bmf-qa-ext-title');
-	var exportBtn = root.querySelector('.bmf-qa-export');
-	var cmpEl = root.querySelector('.bmf-qa-comparison');
-
+	// Single shared controller — re-binds safely on every panel render
 	var state = {
-		assessment: root.dataset.assessment || '',
+		assessment: '',
 		userId: '',
 		email: '',
-		direction: root.dataset.direction || '',
-		threshold: parseFloat(root.dataset.threshold || '0.75') || 0.75,
+		direction: '',
+		threshold: 0.75,
 		date: '',
 		lastRows: null,
 		lastLabel: '',
 		lastMember: ''
 	};
 
+	function panel() {
+		return document.getElementById('extremes');
+	}
+
+	function els() {
+		var root = panel();
+		if (!root) return null;
+		return {
+			root: root,
+			bodyEl: root.querySelector('.bmf-qa-table-wrap'),
+			memberEl: root.querySelector('.bmf-qa-member-label'),
+			titleEl: root.querySelector('.bmf-qa-ext-title'),
+			exportBtn: root.querySelector('.bmf-qa-export'),
+			cmpEl: root.querySelector('.bmf-qa-comparison'),
+			selectWrap: root.querySelector('.bmf-qa-select-wrap'),
+			selectEl: root.querySelector('.bmf-qa-date-select'),
+			ajaxUrl: root.dataset.ajax,
+			nonce: root.dataset.nonce,
+			showScores: root.dataset.showScores === '1'
+		};
+	}
+
+	function initFromPanel() {
+		var root = panel();
+		if (!root) return;
+		if (root.dataset.assessment) state.assessment = root.dataset.assessment;
+		if (root.dataset.direction) state.direction = root.dataset.direction;
+		state.threshold = parseFloat(root.dataset.threshold || '0.75') || 0.75;
+	}
+
 	function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+
 	function setEmpty(msg){
-		bodyEl.innerHTML = '<div class="bmf-qa-empty">'+esc(msg)+'</div>';
-		if (selectWrap) selectWrap.style.display='none';
-		if (cmpEl){ cmpEl.style.display='none'; cmpEl.innerHTML=''; }
+		var e = els(); if (!e) return;
+		e.bodyEl.innerHTML = '<div class="bmf-qa-empty">'+esc(msg)+'</div>';
+		if (e.selectWrap) e.selectWrap.style.display='none';
+		if (e.cmpEl){ e.cmpEl.style.display='none'; e.cmpEl.innerHTML=''; }
 		state.lastRows=null;
-		if (exportBtn) exportBtn.disabled=true;
+		if (e.exportBtn) e.exportBtn.disabled=true;
+	}
+
+	/** Pick up currently selected member from list row or sibling Q&A panel. */
+	function discoverMemberEmail() {
+		if (state.email) return state.email;
+		var row = document.querySelector('.uls-members__row.is-selected[data-email], tr.is-selected[data-email], .is-selected[data-email]');
+		if (row) {
+			var em = (row.getAttribute('data-email') || '').trim();
+			if (em) return em;
+		}
+		var qa = document.querySelector('.bmf-qa-wrap:not(#extremes)[data-email]');
+		if (qa) {
+			var em2 = (qa.getAttribute('data-email') || '').trim();
+			if (em2) return em2;
+		}
+		return '';
+	}
+
+	function ensureMember() {
+		var email = discoverMemberEmail();
+		if (email && email !== state.email) {
+			applyMember(0, email, email);
+			return true;
+		}
+		return !!(state.userId || state.email);
+	}
+
+	function applyMember(userId, email, displayName) {
+		var e = els();
+		state.userId = userId ? String(userId) : '';
+		state.email = email || '';
+		state.lastMember = displayName || email || '';
+		if (e) {
+			if (e.memberEl) e.memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : 'Select a User');
+			e.root.dataset.userId = state.userId;
+			e.root.dataset.email = state.email;
+		}
 	}
 
 	function renderComparison(cmp){
-		if (!cmpEl) return;
+		var e = els(); if (!e || !e.cmpEl) return;
 		if (!cmp || !cmp.items || !cmp.items.length){
-			cmpEl.style.display='none'; cmpEl.innerHTML=''; return;
+			e.cmpEl.style.display='none'; e.cmpEl.innerHTML=''; return;
 		}
 		var html = '<h5>Perceived rank vs actual scores</h5>';
 		if (cmp.master != null) html += '<p class="bmf-qa-meta" style="margin:0 0 8px">Overall average: <strong>'+esc(cmp.master)+'%</strong></p>';
@@ -463,38 +514,38 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			html += '<div class="bmf-qa-cmp-cell right">'+esc(it.actual)+(it.score!=null?' <span style="color:#666">('+esc(it.score)+'%)</span>':'')+'</div>';
 		});
 		html += '</div>';
-		cmpEl.innerHTML = html;
-		cmpEl.style.display = 'block';
+		e.cmpEl.innerHTML = html;
+		e.cmpEl.style.display = 'block';
 	}
 
 	function renderRows(data){
+		var e = els(); if (!e) return;
 		var rows = (data && data.rows) ? data.rows : [];
 		state.lastRows = rows;
 		state.lastLabel = (data && data.label) ? data.label : state.assessment;
-		if (titleEl) titleEl.textContent = state.lastLabel + ' — extremes';
+		if (e.titleEl) e.titleEl.textContent = state.lastLabel + ' — extremes';
 		renderComparison(data && data.comparison ? data.comparison : null);
 		if (!rows.length){
 			setEmpty('No extreme answers found for this cycle.');
 			if (data && data.comparison) renderComparison(data.comparison);
 			return;
 		}
-		if (exportBtn) exportBtn.disabled = false;
+		if (e.exportBtn) e.exportBtn.disabled = false;
 		var html = '<table class="bmf-qa-table"><thead><tr>';
 		html += '<th>Form</th><th>Section</th><th class="bmf-qa-q-num">#</th><th>Question</th><th>Answer</th>';
-		if (showScores) html += '<th class="bmf-qa-score">Score</th>';
+		if (e.showScores) html += '<th class="bmf-qa-score">Score</th>';
 		html += '</tr></thead><tbody>';
 		rows.forEach(function(r){
 			html += '<tr class="bmf-qa-extreme">';
-			html += '<td>'+esc(r.form)+'</td>';
-			html += '<td>'+esc(r.section)+'</td>';
+			html += '<td>'+esc(r.form)+'</td><td>'+esc(r.section)+'</td>';
 			html += '<td class="bmf-qa-q-num">'+esc(r.order_index)+'</td>';
 			html += '<td>'+esc(r.prompt)+'</td>';
 			html += '<td class="bmf-qa-answer">'+esc(r.answer_label||'—')+'</td>';
-			if (showScores) html += '<td class="bmf-qa-score">'+(r.score!=null?esc(r.score):'—')+'</td>';
+			if (e.showScores) html += '<td class="bmf-qa-score">'+(r.score!=null?esc(r.score):'—')+'</td>';
 			html += '</tr>';
 		});
 		html += '</tbody></table>';
-		bodyEl.innerHTML = html;
+		e.bodyEl.innerHTML = html;
 	}
 
 	function csvEscape(v){
@@ -517,66 +568,74 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		document.body.appendChild(a); a.click(); document.body.removeChild(a);
 		URL.revokeObjectURL(url);
 	}
-	if (exportBtn) exportBtn.addEventListener('click', exportCsv);
 
 	function loadExtremes(){
+		var e = els(); if (!e) return;
 		if (!state.assessment){ setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
 		if (!(state.userId || state.email)){ setEmpty('Select a User to view extremes.'); return; }
 		if (!state.date){ setEmpty('No finalized cycles found for this assessment.'); return; }
-		root.classList.add('bmf-qa-loading');
-		bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading extremes…</div>';
+		e.root.classList.add('bmf-qa-loading');
+		e.bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading extremes…</div>';
 		var fd = new FormData();
 		fd.append('action','bmf_get_assessment_extremes');
-		fd.append('nonce', nonce);
+		fd.append('nonce', e.nonce);
 		fd.append('assessment', state.assessment);
 		fd.append('date', state.date);
 		fd.append('threshold', state.threshold);
 		if (state.direction) fd.append('direction', state.direction);
 		if (state.userId) fd.append('user_id', state.userId);
 		if (state.email) fd.append('email', state.email);
-		fetch(ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'})
+		fetch(e.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'})
 			.then(function(r){return r.json();})
 			.then(function(resp){
-				root.classList.remove('bmf-qa-loading');
+				var e2 = els(); if (e2) e2.root.classList.remove('bmf-qa-loading');
 				if (!resp || !resp.success){
 					setEmpty((resp&&resp.data&&resp.data.message)||'Could not load extremes.');
 					return;
 				}
 				renderRows(resp.data||{});
 			})
-			.catch(function(){ root.classList.remove('bmf-qa-loading'); setEmpty('Error loading extremes.'); });
+			.catch(function(){ var e2=els(); if(e2) e2.root.classList.remove('bmf-qa-loading'); setEmpty('Error loading extremes.'); });
 	}
 
 	function loadDates(thenLoad){
+		var e = els(); if (!e) return;
 		if (!state.assessment){ setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
-		if (!(state.userId || state.email)){ setEmpty('Select a User to view extremes.'); return; }
-		root.classList.add('bmf-qa-loading');
+		if (!(state.userId || state.email)){
+			if (!ensureMember()) {
+				setEmpty('Select a User to view extremes.');
+				return;
+			}
+		}
+		e.root.classList.add('bmf-qa-loading');
 		var fd = new FormData();
 		fd.append('action','bmf_list_assessment_dates');
-		fd.append('nonce', nonce);
+		fd.append('nonce', e.nonce);
 		fd.append('assessment', state.assessment);
 		if (state.userId) fd.append('user_id', state.userId);
 		if (state.email) fd.append('email', state.email);
-		fetch(ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'})
+		fetch(e.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'})
 			.then(function(r){return r.json();})
 			.then(function(resp){
-				root.classList.remove('bmf-qa-loading');
+				var e2 = els();
+				if (e2) e2.root.classList.remove('bmf-qa-loading');
 				if (!resp || !resp.success){
 					setEmpty((resp&&resp.data&&resp.data.message)||'Could not load dates.');
 					return;
 				}
 				var data = resp.data || {};
-				if (data.member_label && memberEl){
-					memberEl.textContent = data.member_label;
+				if (data.member_label){
 					state.lastMember = data.member_label;
+					if (e2 && e2.memberEl) e2.memberEl.textContent = data.member_label;
 				}
-				if (data.user_id){ state.userId = String(data.user_id); root.dataset.userId = state.userId; }
-				if (data.label && titleEl) titleEl.textContent = data.label + ' — extremes';
+				if (data.user_id){ state.userId = String(data.user_id); if (e2) e2.root.dataset.userId = state.userId; }
+				if (data.label && e2 && e2.titleEl) e2.titleEl.textContent = data.label + ' — extremes';
 				var dates = data.dates || [];
-				selectEl.innerHTML = '';
+				if (!e2 || !e2.selectEl) return;
+				e2.selectEl.innerHTML = '';
 				if (!dates.length){
 					state.date = '';
-					if (selectWrap) selectWrap.style.display='none';
+					if (e2.selectWrap) e2.selectWrap.style.display='none';
 					setEmpty('No finalized cycles found for this member and assessment.');
 					return;
 				}
@@ -584,90 +643,82 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 					var opt=document.createElement('option');
 					opt.value=d; opt.textContent=d;
 					if(i===0) opt.selected=true;
-					selectEl.appendChild(opt);
+					e2.selectEl.appendChild(opt);
 				});
-				if (selectWrap) selectWrap.style.display='inline-flex';
+				if (e2.selectWrap) e2.selectWrap.style.display='inline-flex';
 				state.date = dates[0];
 				if (thenLoad !== false) loadExtremes();
 			})
-			.catch(function(){ root.classList.remove('bmf-qa-loading'); setEmpty('Error loading dates.'); });
-	}
-
-	if (selectEl){
-		selectEl.addEventListener('change', function(){
-			state.date = this.value;
-			loadExtremes();
-		});
-	}
-
-	function setMember(userId, email, displayName){
-		if (memberEl) memberEl.textContent = displayName || email || (userId?('User #'+userId):'Select a User');
-		state.lastMember = displayName || email || '';
-		state.userId = userId ? String(userId) : '';
-		state.email = email || '';
-		root.dataset.userId = state.userId;
-		root.dataset.email = state.email;
-		if (state.assessment) loadDates(true);
-		else setEmpty('Select a User, then click an assessment extremes link.');
+			.catch(function(){ var e2=els(); if(e2) e2.root.classList.remove('bmf-qa-loading'); setEmpty('Error loading dates.'); });
 	}
 
 	function setAssessment(key, label, direction){
 		key = (key||'').toString().trim().toLowerCase();
 		if (!key) return;
 		state.assessment = key;
-		root.dataset.assessment = key;
+		var e = els();
+		if (e) e.root.dataset.assessment = key;
 		if (direction) state.direction = direction;
-		if (label && titleEl) titleEl.textContent = label + ' — extremes';
+		if (label && e && e.titleEl) e.titleEl.textContent = label + ' — extremes';
+		ensureMember();
 		loadDates(true);
 	}
 
 	function scrollToExtremes(){
-		var el = document.getElementById('extremes');
+		var el = panel();
 		if (!el) return;
-		if (history.replaceState) {
-			history.replaceState(null, '', '#extremes');
-		} else {
-			location.hash = 'extremes';
-		}
+		if (history.replaceState) history.replaceState(null, '', '#extremes');
+		else location.hash = 'extremes';
 		el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
-	document.addEventListener('uls:selected-member', function(e){
-		if (!document.body.contains(root)) return;
-		var email = (e&&e.detail&&e.detail.email)?String(e.detail.email).trim():'';
-		if (!email) return;
-		setMember(0, email, email);
-	});
+	// ---- Bind once on document (live panel lookups) ----
+	if (!window.__bmfQaExtremesBound) {
+		window.__bmfQaExtremesBound = true;
 
-	document.addEventListener('bmf:selected-assessment', function(e){
-		if (!document.body.contains(root)) return;
-		var a = (e&&e.detail&&e.detail.assessment)?String(e.detail.assessment).trim():'';
-		var label = (e&&e.detail&&e.detail.label)?String(e.detail.label).trim():'';
-		var dir = (e&&e.detail&&e.detail.direction)?String(e.detail.direction).trim():'';
-		if (!a) return;
-		setAssessment(a, label, dir||null);
-	});
+		document.addEventListener('uls:selected-member', function(ev){
+			var email = (ev && ev.detail && ev.detail.email) ? String(ev.detail.email).trim() : '';
+			if (!email) return;
+			applyMember(0, email, email);
+			if (state.assessment) loadDates(true);
+			else setEmpty('Select a User, then click an assessment extremes link.');
+		});
 
-	if (!window.__bmfQaAssessmentClickBound){
-		window.__bmfQaAssessmentClickBound = true;
-		document.addEventListener('click', function(e){
-			var el = e.target.closest('[data-bmf-qa-assessment]');
+		document.addEventListener('click', function(ev){
+			var el = ev.target.closest('[data-bmf-qa-assessment]');
 			if (!el) return;
-			var a = (el.getAttribute('data-bmf-qa-assessment')||'').trim();
+			var a = (el.getAttribute('data-bmf-qa-assessment') || '').trim();
 			if (!a) return;
-			e.preventDefault();
+			ev.preventDefault();
+
 			document.querySelectorAll('[data-bmf-qa-assessment].is-active').forEach(function(n){ n.classList.remove('is-active'); });
 			el.classList.add('is-active');
+
 			scrollToExtremes();
-			document.dispatchEvent(new CustomEvent('bmf:selected-assessment', {
-				detail: {
-					assessment: a,
-					label: (el.textContent||'').trim(),
-					direction: (el.getAttribute('data-bmf-qa-direction')||'').trim() || null
-				}
-			}));
+
+			var dir = (el.getAttribute('data-bmf-qa-direction') || '').trim();
+			var label = (el.textContent || '').trim();
+			setAssessment(a, label, dir || null);
+		});
+
+		document.addEventListener('change', function(ev){
+			var root = panel();
+			if (!root) return;
+			if (ev.target && ev.target.classList && ev.target.classList.contains('bmf-qa-date-select') && root.contains(ev.target)) {
+				state.date = ev.target.value;
+				loadExtremes();
+			}
+		});
+
+		document.addEventListener('click', function(ev){
+			var root = panel();
+			if (!root) return;
+			var btn = ev.target.closest('.bmf-qa-export');
+			if (btn && root.contains(btn)) exportCsv();
 		});
 	}
+
+	initFromPanel();
 })();
 </script>
 			<?php
