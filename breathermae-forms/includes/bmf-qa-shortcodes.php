@@ -105,7 +105,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		}
 
 		public static function enqueue_assets() {
-			wp_register_style( 'bmf-qa', false, [], '1.3.1' );
+			wp_register_style( 'bmf-qa', false, [], '1.3.2' );
 
 			$css = '
 .bmf-qa-wrap { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; }
@@ -230,7 +230,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			$member_email = $target_user ? (string) $target_user->user_email : '';
 
 			$form_title = $form ? (string) $form->title : '— select a form —';
-			$form_slug  = $form ? (string) $form->slug : $form_attr;
+			$form_slug  = $form ? (string) $form->slug : '';
 
 			$responses = ( $target_user_id && $form_id )
 				? BMF_Repository::get_submitted_responses_for_user( $target_user_id, $form_id )
@@ -238,7 +238,9 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 
 			wp_enqueue_style( 'bmf-qa' );
 
-			$uid = 'bmf_qa_' . ( $form_id ?: 'any' ) . '_' . wp_unique_id();
+			$uid   = 'bmf_qa_' . ( $form_id ?: 'any' ) . '_' . wp_unique_id();
+			$nonce = wp_create_nonce( 'bmf_qa_nonce' );
+			$ajax  = admin_url( 'admin-ajax.php' );
 
 			if ( ! $form_id && ! $target_user_id ) {
 				$empty_msg = 'Select a User, then click a form name to view answers.';
@@ -256,17 +258,15 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			?>
 <div class="bmf-qa-wrap"
 	 id="<?php echo esc_attr( $uid ); ?>"
-	 data-form-id="<?php echo esc_attr( $form_id ); ?>"
+	 data-form-id="<?php echo $form_id ? esc_attr( (string) $form_id ) : ''; ?>"
 	 data-form-slug="<?php echo esc_attr( $form_slug ); ?>"
-	 data-user-id="<?php echo esc_attr( $target_user_id ); ?>"
+	 data-user-id="<?php echo $target_user_id ? esc_attr( (string) $target_user_id ) : ''; ?>"
 	 data-email="<?php echo esc_attr( $member_email ); ?>"
 	 data-show-scores="<?php echo $show_scores ? '1' : '0'; ?>"
 	 data-highlight="<?php echo $highlight ? '1' : '0'; ?>"
 	 data-direction="<?php echo esc_attr( $direction ); ?>"
 	 data-direction-default="<?php echo esc_attr( $direction ); ?>"
-	 data-threshold="<?php echo esc_attr( (string) $threshold ); ?>"
-	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'bmf_qa_nonce' ) ); ?>"
-	 data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>">
+	 data-threshold="<?php echo esc_attr( (string) $threshold ); ?>">
 
 	<div class="bmf-qa-header">
 		<h4 class="bmf-qa-title"><?php echo esc_html( $form_title ); ?></h4>
@@ -298,12 +298,17 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 </div>
 
 <script>
+window.bmfQaCfg = window.bmfQaCfg || {
+	ajax: <?php echo wp_json_encode( $ajax ); ?>,
+	nonce: <?php echo wp_json_encode( $nonce ); ?>
+};
 (function(){
 	var root = document.getElementById(<?php echo wp_json_encode( $uid ); ?>);
 	if (!root) return;
 
-	var ajaxUrl    = root.dataset.ajax;
-	var nonce      = root.dataset.nonce;
+	var CFG = window.bmfQaCfg || {};
+	var ajaxUrl    = CFG.ajax || '';
+	var nonce      = CFG.nonce || '';
 	var showScores = root.dataset.showScores === '1';
 	var highlight  = root.dataset.highlight === '1';
 	var selectWrap = root.querySelector('.bmf-qa-select-wrap');
@@ -313,11 +318,17 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	var titleEl    = root.querySelector('.bmf-qa-title');
 	var exportBtn  = root.querySelector('.bmf-qa-export');
 
+	function cleanId(v) {
+		var s = (v == null ? '' : String(v)).trim();
+		if (!s || s === '0') return '';
+		return s;
+	}
+
 	var state = {
-		formId:            root.dataset.formId || '',
-		formSlug:          root.dataset.formSlug || '',
-		userId:            root.dataset.userId || '',
-		email:             root.dataset.email || '',
+		formId:            cleanId(root.dataset.formId),
+		formSlug:          (root.dataset.formSlug || '').trim(),
+		userId:            cleanId(root.dataset.userId),
+		email:             (root.dataset.email || '').trim(),
 		direction:         root.dataset.direction || 'low_better',
 		directionDefault:  root.dataset.directionDefault || 'low_better',
 		threshold:         parseFloat(root.dataset.threshold || '0.75') || 0.75,
@@ -326,6 +337,13 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		lastFormTitle:     ''
 	};
 
+	function hasForm() {
+		return !!(state.formSlug || state.formId);
+	}
+	function hasMember() {
+		return !!(state.email || state.userId);
+	}
+
 	function esc(s) {
 		var d = document.createElement('div');
 		d.textContent = s == null ? '' : String(s);
@@ -333,6 +351,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	}
 
 	function setEmpty(msg) {
+		if (!bodyEl) return;
 		bodyEl.innerHTML = '<div class="bmf-qa-empty">' + esc(msg) + '</div>';
 		if (selectWrap) selectWrap.style.display = 'none';
 		if (selectEl) selectEl.innerHTML = '';
@@ -441,6 +460,10 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			setEmpty('No submitted responses found for this member and form.');
 			return;
 		}
+		if (!nonce || !ajaxUrl) {
+			setEmpty('Q&A config missing. Hard-refresh the page.');
+			return;
+		}
 		root.classList.add('bmf-qa-loading');
 		var fd = new FormData();
 		fd.append('action', 'bmf_get_response_qa');
@@ -481,22 +504,24 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 	}
 
 	function refresh() {
-		var hasForm   = !!(state.formId || state.formSlug);
-		var hasMember = !!(state.userId || state.email);
-		if (!hasForm && !hasMember) {
+		if (!hasForm() && !hasMember()) {
 			setEmpty('Select a User, then click a form name to view answers.');
 			return;
 		}
-		if (!hasForm) {
+		if (!hasForm()) {
 			setEmpty('Click a form name to view this member’s answers.');
 			return;
 		}
-		if (!hasMember) {
+		if (!hasMember()) {
 			setEmpty('Select a User to view their answers.');
 			return;
 		}
+		if (!nonce || !ajaxUrl) {
+			setEmpty('Q&A config missing. Hard-refresh the page.');
+			return;
+		}
 		root.classList.add('bmf-qa-loading');
-		bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading responses…</div>';
+		if (bodyEl) bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading responses…</div>';
 		var fd = new FormData();
 		fd.append('action', 'bmf_list_responses');
 		fd.append('nonce', nonce);
@@ -553,17 +578,22 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : 'Select a User');
 		}
 		state.lastMemberLabel = displayName || email || '';
-		state.userId = userId ? String(userId) : '';
+		state.userId = cleanId(userId);
 		state.email  = email || '';
 		root.dataset.userId = state.userId;
 		root.dataset.email  = state.email;
-		refresh();
+		// Only hit the API once both member + form are known
+		if (hasForm()) {
+			refresh();
+		} else {
+			setEmpty('Click a form name to view this member’s answers.');
+		}
 	}
 
 	function setForm(formKey, label, directionOverride) {
 		formKey = (formKey || '').toString().trim();
 		if (!formKey) return;
-		if (/^\d+$/.test(formKey)) {
+		if (/^\d+$/.test(formKey) && formKey !== '0') {
 			state.formId   = formKey;
 			state.formSlug = '';
 		} else {
@@ -593,7 +623,7 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 		});
 	}
 
-	if ((state.formId || state.formSlug) && (state.userId || state.email)) {
+	if (hasForm() && hasMember()) {
 		refresh();
 	} else if (selectEl && selectEl.value) {
 		loadResponse(selectEl.value);
