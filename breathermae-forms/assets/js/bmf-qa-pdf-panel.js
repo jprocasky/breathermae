@@ -108,6 +108,7 @@
     html += 'tr.extreme td{background:#fef2f2;}';
     html += 'tr.extreme td.answer{color:#991b1b;font-weight:600;}';
     html += '.note{margin-top:14px;font-size:10px;color:#64748b;}';
+    html += '.pdf-footer{margin-top:28px;padding-top:12px;border-top:1px solid #cbd5e1;font-size:10px;color:#64748b;text-align:center;line-height:1.5;}';
     html += '@media print{body{margin:12px;} .no-print{display:none!important;}}';
     html += '</style></head><body>';
     html += '<div class="brand">';
@@ -137,6 +138,10 @@
     });
 
     html += '</tbody></table>';
+    var genDate = new Date();
+    var genStr = genDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    var year = String(genDate.getFullYear());
+    html += '<div class="pdf-footer">Breathermae, Inc &copy; Copyright ' + year + '. All Rights Reserved.<br>Generated ' + esc(genStr) + '</div>';
     html += '<p class="note no-print">Use your browser print dialog and choose Save as PDF.</p>';
     html += '</body></html>';
 
