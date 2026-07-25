@@ -83,6 +83,45 @@ if ( ! empty( $section->meta_json ) ) {
 
 $redirects = $meta['path_redirects'] ?? [];
 
+/**
+ * Split options_string on commas that are outside of JSON braces.
+ * Same helper used by questions-list.php.
+ */
+function bmf_split_section_options( $string ) {
+    $result = [];
+    $buffer = '';
+    $depth  = 0;
+
+    $len = strlen( $string );
+
+    for ( $i = 0; $i < $len; $i++ ) {
+        $char = $string[ $i ];
+
+        if ( $char === '{' ) {
+            $depth++;
+        }
+
+        if ( $char === '}' ) {
+            $depth--;
+        }
+
+        // only split on commas OUTSIDE JSON
+        if ( $char === ',' && $depth === 0 ) {
+            $result[] = $buffer;
+            $buffer = '';
+            continue;
+        }
+
+        $buffer .= $char;
+    }
+
+    if ( $buffer !== '' ) {
+        $result[] = $buffer;
+    }
+
+    return $result;
+}
+
 ?>
 <!-- Breadcrumb -->
 <div class="bmf-breadcrumb" style="margin: 10px 0 20px;">
@@ -221,7 +260,77 @@ $redirects = $meta['path_redirects'] ?? [];
                 </p>
 
                 <!-- ===================================================== -->
-                <!-- ✅ NEW: REDIRECT MAPPING EDITOR -->
+                <!-- Section Choices (shared defaults for questions) -->
+                <!-- ===================================================== -->
+                <h3>Section Choices</h3>
+
+                <p style="color:#666; margin-top:-5px;">
+                    Shared options for questions in this section that do not define their own.
+                    Format: Label | Value | Meta JSON (weights, etc.)
+                </p>
+
+                <div id="bmf-section-choices">
+                <?php
+                $s_choices = [];
+
+                if ( ! empty( $section->options_string ) ) {
+
+                    $pairs = bmf_split_section_options( $section->options_string );
+
+                    foreach ( $pairs as $pair ) {
+
+                        $parts = explode( '|', $pair, 3 );
+
+                        $s_choices[] = [
+                            'label' => $parts[0] ?? '',
+                            'value' => $parts[1] ?? '',
+                            'meta'  => $parts[2] ?? '',
+                        ];
+                    }
+                }
+
+                foreach ( $s_choices ?: [ [ 'label' => '', 'value' => '', 'meta' => '' ] ] as $row ) :
+                ?>
+                    <div class="bmf-section-choice-row" style="display:flex; gap:8px; margin-bottom:6px;">
+
+                        <input name="choice_label[]"
+                            value="<?php echo esc_attr( $row['label'] ); ?>"
+                            placeholder="Label"
+                            style="flex:2;">
+
+                        <input name="choice_value[]"
+                            value="<?php echo esc_attr( $row['value'] ); ?>"
+                            placeholder="Value"
+                            style="flex:1;">
+
+                        <input name="choice_meta[]"
+                            value="<?php echo esc_attr( $row['meta'] ); ?>"
+                            placeholder='{"weights":{"rsi":2}}'
+                            style="flex:3; font-family:monospace;">
+
+                        <button type="button"
+                                class="bmf-delete-section-choice button-link"
+                                style="color:#b32d2e; font-size:18px; line-height:1; padding:0 4px; cursor:pointer; border:none; background:none;"
+                                title="Delete this choice">
+                            ×
+                        </button>
+                    </div>
+                <?php endforeach; ?>
+                </div>
+
+                <p style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="button" id="bmf-add-section-choice">
+                        + Add choice
+                    </button>
+
+                    <button type="button" class="button button-secondary" id="bmf-reverse-section-values">
+                        Reverse Values
+                    </button>
+                    <span id="bmf-reverse-section-notice" style="font-size: 12px; color: #2271b1; display: none;"></span>
+                </p>
+
+                <!-- ===================================================== -->
+                <!-- ✅ REDIRECT MAPPING EDITOR -->
                 <!-- ===================================================== -->
                 <h3>Redirect Mapping</h3>
                 <p style="color:#666; margin-top:-5px;">
@@ -349,6 +458,7 @@ $redirects = $meta['path_redirects'] ?? [];
 
 
 
+
                 <p>
                     <button class="button button-primary">Save Section</button>
                 </p>
@@ -388,5 +498,88 @@ document.getElementById('bmf-add-branch-rule')?.addEventListener('click', functi
     clone.querySelectorAll('input').forEach(input => input.value = '');
 
     container.appendChild(clone);
+});
+
+// === Section choices: add / delete / reverse ===
+document.addEventListener('DOMContentLoaded', function () {
+
+    const container = document.getElementById('bmf-section-choices');
+    if (!container) return;
+
+    // Add new choice row
+    const addBtn = document.getElementById('bmf-add-section-choice');
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            const rows = container.querySelectorAll('.bmf-section-choice-row');
+            if (!rows.length) return;
+
+            const clone = rows[rows.length - 1].cloneNode(true);
+
+            clone.querySelectorAll('input').forEach(input => {
+                input.value = '';
+            });
+
+            container.appendChild(clone);
+        });
+    }
+
+    // Delete choice row (event delegation)
+    container.addEventListener('click', function (e) {
+        if (e.target.classList.contains('bmf-delete-section-choice')) {
+            const rows = container.querySelectorAll('.bmf-section-choice-row');
+
+            // Allow clearing the last row (section choices are optional)
+            if (rows.length <= 1) {
+                const row = e.target.closest('.bmf-section-choice-row');
+                if (row) {
+                    row.querySelectorAll('input').forEach(input => input.value = '');
+                }
+                return;
+            }
+
+            const row = e.target.closest('.bmf-section-choice-row');
+            if (row) {
+                row.remove();
+            }
+        }
+    });
+
+});
+
+document.getElementById('bmf-reverse-section-values')?.addEventListener('click', function () {
+    const container = document.getElementById('bmf-section-choices');
+    if (!container) return;
+
+    const valueInputs = container.querySelectorAll('input[name="choice_value[]"]');
+    if (!valueInputs.length) return;
+
+    const values = Array.from(valueInputs).map(input => {
+        const num = parseFloat(input.value);
+        return isNaN(num) ? null : num;
+    }).filter(v => v !== null);
+
+    if (values.length === 0) {
+        alert('No numeric values found to reverse.');
+        return;
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    valueInputs.forEach(input => {
+        const num = parseFloat(input.value);
+        if (!isNaN(num)) {
+            input.value = (min + max - num);
+        }
+    });
+
+    const notice = document.getElementById('bmf-reverse-section-notice');
+    if (notice) {
+        notice.textContent = 'Values reversed. Review and Save.';
+        notice.style.display = 'inline';
+        setTimeout(() => {
+            notice.style.display = 'none';
+        }, 2500);
+    }
 });
 </script>

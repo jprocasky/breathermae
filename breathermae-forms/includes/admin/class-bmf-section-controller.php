@@ -46,36 +46,61 @@ protected function save(): void
 
     // ============================================
     // Choices (options_string + choices_json)
+    // Same format as question-level: Label|Value|MetaJSON
     // ============================================
     $options_string = null;
     $choices_json   = null;
 
-    if (
-        !empty($_POST['has_choices']) &&
-        !empty($_POST['choice_label']) &&
-        is_array($_POST['choice_label'])
-    ) {
+    if ( ! empty( $_POST['choice_label'] ) && is_array( $_POST['choice_label'] ) ) {
         $pairs = [];
         $json  = [];
 
-        foreach ($_POST['choice_label'] as $i => $label) {
-            $label = sanitize_text_field($label);
-            $value = sanitize_key($_POST['choice_value'][$i] ?? '');
+        foreach ( $_POST['choice_label'] as $i => $label ) {
 
-            if ($label === '' || $value === '') {
+            $label = sanitize_text_field( $label );
+            $value = sanitize_key( $_POST['choice_value'][ $i ] ?? '' );
+
+            // capture meta JSON (weights, etc.)
+            $meta_raw = $_POST['choice_meta'][ $i ] ?? '';
+            $meta_raw = trim( wp_unslash( $meta_raw ) );
+
+            if ( $label === '' || $value === '' ) {
                 continue;
             }
 
-            $pairs[] = "{$label}|{$value}";
-            $json[]  = [
+            // -----------------------------------------
+            // Build options_string (supports meta)
+            // -----------------------------------------
+            $pair = "{$label}|{$value}";
+
+            if ( ! empty( $meta_raw ) ) {
+                $pair .= '|' . $meta_raw;
+            }
+
+            $pairs[] = $pair;
+
+            // -----------------------------------------
+            // Build choices_json
+            // -----------------------------------------
+            $json_item = [
                 'label' => $label,
                 'value' => $value,
             ];
+
+            if ( ! empty( $meta_raw ) ) {
+                $meta_decoded = json_decode( $meta_raw, true );
+
+                if ( is_array( $meta_decoded ) ) {
+                    $json_item = array_merge( $json_item, $meta_decoded );
+                }
+            }
+
+            $json[] = $json_item;
         }
 
-        if ($pairs) {
-            $options_string = implode(',', $pairs);
-            $choices_json   = wp_json_encode($json);
+        if ( $pairs ) {
+            $options_string = implode( ',', $pairs );
+            $choices_json   = wp_json_encode( $json );
         }
     }
 
