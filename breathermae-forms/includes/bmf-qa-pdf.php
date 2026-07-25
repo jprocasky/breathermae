@@ -30,7 +30,7 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 
 		$logo = bmf_qa_pdf_logo_url();
 
-		obj_start();
+		ob_start();
 		?>
 <script>
 (function(){
@@ -47,10 +47,8 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 	 * opts: {
 	 *   title, member, metaLines: string[],
 	 *   headers: string[],
-	 *   rows: array of string[] (same length as headers),
-	 *   sectionRows: optional [{label, colSpan}] markers interleaved — use null cells
-	 *   note: optional footer note,
-	 *   filename: suggested name (shown in print dialog title)
+	 *   rows: [{_section,label}|{_extreme,cells}|{cells}] or legacy string[],
+	 *   note, filename
 	 * }
 	 */
 	window.bmfQaExportPdf = function(opts){
@@ -132,7 +130,6 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 		w.document.open();
 		w.document.write(html);
 		w.document.close();
-		// Wait for logo image, then print
 		setTimeout(function(){
 			try { w.focus(); w.print(); } catch(e) {}
 		}, 400);
