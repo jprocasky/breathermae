@@ -1,7 +1,4 @@
-Wiring notes (temporary)
+Removed — wiring done in shortcode files.
 
-Panels need:
-1. Button: <button type="button" class="bmf-qa-export bmf-qa-export-pdf" disabled>Export PDF</button>
-2. On data load: window.bmfQaSetPdfPayload(root, {title, member, metaLines, headers, rows, filename})
-3. On clear: window.bmfQaSetPdfPayload(root, null)
-4. Echo bmf_qa_pdf_script() once in shortcode output
+Q&A still needs: PDF button + bmfQaSetPdfPayload on renderTable + bmf_qa_pdf_script() echo.
+Extremes: DONE.
