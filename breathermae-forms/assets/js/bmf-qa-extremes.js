@@ -116,13 +116,13 @@
       var icon = '';
       var color = '#999';
       if (it.diff === 0) {
-        icon = 'OK';
+        icon = '\u2713';
         color = '#22c55e';
       } else if (it.diff > 0) {
-        icon = 'UP ' + Math.abs(it.diff);
+        icon = '\u2191 ' + Math.abs(it.diff);
         color = '#3b82f6';
       } else if (it.diff < 0) {
-        icon = 'DN ' + Math.abs(it.diff);
+        icon = '\u2193 ' + Math.abs(it.diff);
         color = '#f97316';
       }
       html += '<div class="bmf-qa-cmp-cell">' + esc(it.perceived) + '</div>';
