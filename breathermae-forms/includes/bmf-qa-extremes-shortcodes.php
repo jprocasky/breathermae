@@ -5,9 +5,8 @@
  * [bmf_qa_extremes threshold="0.75" show_scores="0"]
  * [bmf_qa_extremes_link assessment="bsi"]BSI extremes[/bmf_qa_extremes_link]
  *
- * Panel id="extremes" — links use href="#extremes" and smooth-scroll on click.
- * Member is NOT seeded from uls meta on page load (shows Select a User).
- * Live selection via uls:selected-member, selected row, or sibling Q&A panel.
+ * Panel: class bmf-qa-extremes-wrap + id="extremes" for anchor scroll.
+ * AJAX nonce/url injected via window.bmfQaExtremesCfg (survives Elementor attr stripping).
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -345,6 +344,9 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 				? self::normalize_direction( (string) $atts['direction'] )
 				: '';
 
+			$nonce    = wp_create_nonce( 'bmf_qa_nonce' );
+			$ajax_url = admin_url( 'admin-ajax.php' );
+
 			wp_enqueue_style( 'bmf-qa' );
 
 			ob_start();
@@ -352,13 +354,9 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 <div class="bmf-qa-wrap bmf-qa-extremes-wrap"
 	 id="extremes"
 	 data-assessment="<?php echo esc_attr( $assessment ); ?>"
-	 data-user-id=""
-	 data-email=""
 	 data-show-scores="<?php echo $show_scores ? '1' : '0'; ?>"
 	 data-threshold="<?php echo esc_attr( (string) $threshold ); ?>"
-	 data-direction="<?php echo esc_attr( $direction ); ?>"
-	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'bmf_qa_nonce' ) ); ?>"
-	 data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>">
+	 data-direction="<?php echo esc_attr( $direction ); ?>">
 
 	<div class="bmf-qa-header">
 		<h4 class="bmf-qa-title bmf-qa-ext-title">— select an assessment —</h4>
@@ -400,11 +398,15 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 }
 .bmf-qa-cmp-cell.right { text-align: right; }
 .bmf-qa-cmp-ind { text-align: center; font-weight: 600; min-width: 48px; }
-#extremes { scroll-margin-top: 80px; }
+.bmf-qa-extremes-wrap { scroll-margin-top: 80px; }
 </style>
 <script>
+window.bmfQaExtremesCfg = {
+	ajax: <?php echo wp_json_encode( $ajax_url ); ?>,
+	nonce: <?php echo wp_json_encode( $nonce ); ?>
+};
 (function(){
-	// Single shared controller — re-binds safely on every panel render
+	var CFG = window.bmfQaExtremesCfg || {};
 	var state = {
 		assessment: '',
 		userId: '',
@@ -417,8 +419,9 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		lastMember: ''
 	};
 
+	/** Prefer the real panel class — #extremes may collide with an Elementor section. */
 	function panel() {
-		return document.getElementById('extremes');
+		return document.querySelector('.bmf-qa-extremes-wrap');
 	}
 
 	function els() {
@@ -433,24 +436,28 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			cmpEl: root.querySelector('.bmf-qa-comparison'),
 			selectWrap: root.querySelector('.bmf-qa-select-wrap'),
 			selectEl: root.querySelector('.bmf-qa-date-select'),
-			ajaxUrl: root.dataset.ajax,
-			nonce: root.dataset.nonce,
-			showScores: root.dataset.showScores === '1'
+			ajaxUrl: CFG.ajax || '',
+			nonce: CFG.nonce || '',
+			showScores: root.getAttribute('data-show-scores') === '1'
 		};
 	}
 
 	function initFromPanel() {
 		var root = panel();
 		if (!root) return;
-		if (root.dataset.assessment) state.assessment = root.dataset.assessment;
-		if (root.dataset.direction) state.direction = root.dataset.direction;
-		state.threshold = parseFloat(root.dataset.threshold || '0.75') || 0.75;
+		var a = root.getAttribute('data-assessment') || '';
+		var d = root.getAttribute('data-direction') || '';
+		var t = root.getAttribute('data-threshold') || '0.75';
+		if (a) state.assessment = a;
+		if (d) state.direction = d;
+		state.threshold = parseFloat(t) || 0.75;
 	}
 
 	function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
 
 	function setEmpty(msg){
-		var e = els(); if (!e) return;
+		var e = els();
+		if (!e || !e.bodyEl) return;
 		e.bodyEl.innerHTML = '<div class="bmf-qa-empty">'+esc(msg)+'</div>';
 		if (e.selectWrap) e.selectWrap.style.display='none';
 		if (e.cmpEl){ e.cmpEl.style.display='none'; e.cmpEl.innerHTML=''; }
@@ -458,7 +465,6 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		if (e.exportBtn) e.exportBtn.disabled=true;
 	}
 
-	/** Pick up currently selected member from list row or sibling Q&A panel. */
 	function discoverMemberEmail() {
 		if (state.email) return state.email;
 		var row = document.querySelector('.uls-members__row.is-selected[data-email], tr.is-selected[data-email], .is-selected[data-email]');
@@ -466,7 +472,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			var em = (row.getAttribute('data-email') || '').trim();
 			if (em) return em;
 		}
-		var qa = document.querySelector('.bmf-qa-wrap:not(#extremes)[data-email]');
+		var qa = document.querySelector('.bmf-qa-wrap:not(.bmf-qa-extremes-wrap)[data-email]');
 		if (qa) {
 			var em2 = (qa.getAttribute('data-email') || '').trim();
 			if (em2) return em2;
@@ -488,10 +494,8 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		state.userId = userId ? String(userId) : '';
 		state.email = email || '';
 		state.lastMember = displayName || email || '';
-		if (e) {
-			if (e.memberEl) e.memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : 'Select a User');
-			e.root.dataset.userId = state.userId;
-			e.root.dataset.email = state.email;
+		if (e && e.memberEl) {
+			e.memberEl.textContent = displayName || email || (userId ? ('User #' + userId) : 'Select a User');
 		}
 	}
 
@@ -519,7 +523,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 	}
 
 	function renderRows(data){
-		var e = els(); if (!e) return;
+		var e = els(); if (!e || !e.bodyEl) return;
 		var rows = (data && data.rows) ? data.rows : [];
 		state.lastRows = rows;
 		state.lastLabel = (data && data.label) ? data.label : state.assessment;
@@ -571,21 +575,25 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 	function loadExtremes(){
 		var e = els(); if (!e) return;
+		if (!CFG.nonce || !CFG.ajax) {
+			setEmpty('Extremes config missing (nonce/ajax). Hard-refresh the page.');
+			return;
+		}
 		if (!state.assessment){ setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
 		if (!(state.userId || state.email)){ setEmpty('Select a User to view extremes.'); return; }
 		if (!state.date){ setEmpty('No finalized cycles found for this assessment.'); return; }
 		e.root.classList.add('bmf-qa-loading');
-		e.bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading extremes…</div>';
+		if (e.bodyEl) e.bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading extremes…</div>';
 		var fd = new FormData();
 		fd.append('action','bmf_get_assessment_extremes');
-		fd.append('nonce', e.nonce);
+		fd.append('nonce', CFG.nonce);
 		fd.append('assessment', state.assessment);
 		fd.append('date', state.date);
-		fd.append('threshold', state.threshold);
+		fd.append('threshold', String(state.threshold));
 		if (state.direction) fd.append('direction', state.direction);
 		if (state.userId) fd.append('user_id', state.userId);
 		if (state.email) fd.append('email', state.email);
-		fetch(e.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'})
+		fetch(CFG.ajax,{method:'POST',body:fd,credentials:'same-origin'})
 			.then(function(r){return r.json();})
 			.then(function(resp){
 				var e2 = els(); if (e2) e2.root.classList.remove('bmf-qa-loading');
@@ -600,6 +608,10 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 	function loadDates(thenLoad){
 		var e = els(); if (!e) return;
+		if (!CFG.nonce || !CFG.ajax) {
+			setEmpty('Extremes config missing (nonce/ajax). Hard-refresh the page.');
+			return;
+		}
 		if (!state.assessment){ setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
 		if (!(state.userId || state.email)){
 			if (!ensureMember()) {
@@ -610,11 +622,11 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		e.root.classList.add('bmf-qa-loading');
 		var fd = new FormData();
 		fd.append('action','bmf_list_assessment_dates');
-		fd.append('nonce', e.nonce);
+		fd.append('nonce', CFG.nonce);
 		fd.append('assessment', state.assessment);
 		if (state.userId) fd.append('user_id', state.userId);
 		if (state.email) fd.append('email', state.email);
-		fetch(e.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'})
+		fetch(CFG.ajax,{method:'POST',body:fd,credentials:'same-origin'})
 			.then(function(r){return r.json();})
 			.then(function(resp){
 				var e2 = els();
@@ -628,7 +640,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 					state.lastMember = data.member_label;
 					if (e2 && e2.memberEl) e2.memberEl.textContent = data.member_label;
 				}
-				if (data.user_id){ state.userId = String(data.user_id); if (e2) e2.root.dataset.userId = state.userId; }
+				if (data.user_id){ state.userId = String(data.user_id); }
 				if (data.label && e2 && e2.titleEl) e2.titleEl.textContent = data.label + ' — extremes';
 				var dates = data.dates || [];
 				if (!e2 || !e2.selectEl) return;
@@ -656,9 +668,8 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		key = (key||'').toString().trim().toLowerCase();
 		if (!key) return;
 		state.assessment = key;
-		var e = els();
-		if (e) e.root.dataset.assessment = key;
 		if (direction) state.direction = direction;
+		var e = els();
 		if (label && e && e.titleEl) e.titleEl.textContent = label + ' — extremes';
 		ensureMember();
 		loadDates(true);
@@ -672,7 +683,6 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
-	// ---- Bind once on document (live panel lookups) ----
 	if (!window.__bmfQaExtremesBound) {
 		window.__bmfQaExtremesBound = true;
 
@@ -703,8 +713,8 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 		document.addEventListener('change', function(ev){
 			var root = panel();
-			if (!root) return;
-			if (ev.target && ev.target.classList && ev.target.classList.contains('bmf-qa-date-select') && root.contains(ev.target)) {
+			if (!root || !ev.target) return;
+			if (ev.target.classList && ev.target.classList.contains('bmf-qa-date-select') && root.contains(ev.target)) {
 				state.date = ev.target.value;
 				loadExtremes();
 			}
@@ -727,21 +737,25 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 		public static function ajax_list_dates() {
 			check_ajax_referer( 'bmf_qa_nonce', 'nonce' );
+
 			if ( ! is_user_logged_in() ) {
 				wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
 			}
+
 			$assessment = strtolower( sanitize_key( $_POST['assessment'] ?? '' ) );
 			$map        = self::assessments();
 			if ( empty( $map[ $assessment ] ) ) {
 				wp_send_json_error( [ 'message' => 'Unknown assessment.' ], 400 );
 			}
+
 			list( $user_id, $email, $label ) = self::resolve_user_from_request();
 			if ( ! $user_id ) {
-				wp_send_json_error( [ 'message' => 'Select a User first.' ], 404 );
+				wp_send_json_error( [ 'message' => 'No WordPress user found for that email.' ], 404 );
 			}
 			if ( ! self::can_view_subject( $user_id ) ) {
 				wp_send_json_error( [ 'message' => 'Forbidden' ], 403 );
 			}
+
 			$dates = self::get_final_dates( $assessment, $email );
 			wp_send_json_success( [
 				'user_id'      => $user_id,
@@ -754,14 +768,17 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 		public static function ajax_get_extremes() {
 			check_ajax_referer( 'bmf_qa_nonce', 'nonce' );
+
 			if ( ! is_user_logged_in() ) {
 				wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
 			}
+
 			$assessment = strtolower( sanitize_key( $_POST['assessment'] ?? '' ) );
 			$date       = sanitize_text_field( wp_unslash( $_POST['date'] ?? '' ) );
 			$threshold  = self::normalize_threshold( $_POST['threshold'] ?? 0.75 );
 			$direction  = isset( $_POST['direction'] ) ? self::normalize_direction( (string) $_POST['direction'] ) : '';
 			$map        = self::assessments();
+
 			if ( empty( $map[ $assessment ] ) ) {
 				wp_send_json_error( [ 'message' => 'Unknown assessment.' ], 400 );
 			}
@@ -771,13 +788,15 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			if ( $direction === '' ) {
 				$direction = self::normalize_direction( $map[ $assessment ]['direction'] ?? 'low_better' );
 			}
+
 			list( $user_id, $email, $label ) = self::resolve_user_from_request();
 			if ( ! $user_id ) {
-				wp_send_json_error( [ 'message' => 'Select a User first.' ], 404 );
+				wp_send_json_error( [ 'message' => 'No WordPress user found for that email.' ], 404 );
 			}
 			if ( ! self::can_view_subject( $user_id ) ) {
 				wp_send_json_error( [ 'message' => 'Forbidden' ], 403 );
 			}
+
 			$data = self::build_extremes( $user_id, $assessment, $date, $direction, $threshold );
 			$data['member_label'] = $label;
 			$data['user_id']      = $user_id;
