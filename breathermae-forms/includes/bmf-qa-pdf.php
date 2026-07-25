@@ -1,7 +1,11 @@
 <?php
 /**
  * Shared PDF export helper for Q&A / Extremes panels.
- * Opens a print-ready document (logo + table) so the browser can Save as PDF.
+ *
+ * Panels call:  root._bmfSetPdfPayload({ title, member, metaLines, headers, rows, filename })
+ * Button:       <button class="bmf-qa-export bmf-qa-export-pdf" disabled>Export PDF</button>
+ *
+ * Opens a print-ready document (logo top-left + table) → browser Save as PDF.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -18,9 +22,6 @@ if ( ! function_exists( 'bmf_qa_pdf_logo_url' ) ) {
 }
 
 if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
-	/**
-	 * Inline once-per-page PDF helper. Safe to call from multiple shortcodes.
-	 */
 	function bmf_qa_pdf_script(): string {
 		static $done = false;
 		if ( $done ) {
@@ -34,7 +35,9 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 		?>
 <script>
 (function(){
-	if (window.bmfQaExportPdf) return;
+	if (window.__bmfQaPdfReady) return;
+	window.__bmfQaPdfReady = true;
+
 	var LOGO = <?php echo wp_json_encode( $logo ); ?>;
 
 	function esc(s){
@@ -43,14 +46,6 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 		return d.innerHTML;
 	}
 
-	/**
-	 * opts: {
-	 *   title, member, metaLines: string[],
-	 *   headers: string[],
-	 *   rows: [{_section,label}|{_extreme,cells}|{cells}] or legacy string[],
-	 *   note, filename
-	 * }
-	 */
 	window.bmfQaExportPdf = function(opts){
 		opts = opts || {};
 		var title = opts.title || 'BreatherMae Report';
@@ -74,8 +69,7 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 		html += '.brand img{max-height:48px;max-width:160px;object-fit:contain;}';
 		html += '.brand h1{margin:0;font-size:16px;color:#001d50;}';
 		html += '.brand .sub{margin:2px 0 0;color:#64748b;font-size:11px;}';
-		html += '.meta{margin:0 0 14px;color:#475569;}';
-		html += '.meta strong{color:#001d50;}';
+		html += '.meta{margin:0 0 14px;color:#475569;line-height:1.45;}';
 		html += 'table{width:100%;border-collapse:collapse;margin-top:6px;}';
 		html += 'th,td{border:1px solid #cbd5e1;padding:5px 7px;text-align:left;vertical-align:top;}';
 		html += 'th{background:#6ec1e4;color:#001d50;font-weight:600;}';
@@ -83,7 +77,7 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 		html += 'tr.extreme td{background:#fef2f2;}';
 		html += 'tr.extreme td.answer{color:#991b1b;font-weight:600;}';
 		html += '.note{margin-top:14px;font-size:10px;color:#64748b;}';
-		html += '@media print{body{margin:12px;} .no-print{display:none;}}';
+		html += '@media print{body{margin:12px;} .no-print{display:none!important;}}';
 		html += '</style></head><body>';
 
 		html += '<div class="brand">';
@@ -111,7 +105,7 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 			var cells = (r && r.cells) ? r.cells : (Array.isArray(r) ? r : []);
 			html += '<tr' + (extreme ? ' class="extreme"' : '') + '>';
 			cells.forEach(function(c, i){
-				var cls = (extreme && headers[i] && /answer/i.test(headers[i])) ? ' class="answer"' : '';
+				var cls = (extreme && headers[i] && /answer/i.test(String(headers[i]))) ? ' class="answer"' : '';
 				html += '<td' + cls + '>' + esc(c == null ? '' : c) + '</td>';
 			});
 			html += '</tr>';
@@ -119,7 +113,7 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 
 		html += '</tbody></table>';
 		if (note) html += '<p class="note">' + esc(note) + '</p>';
-		html += '<p class="note no-print">Use your browser’s print dialog → Save as PDF.</p>';
+		html += '<p class="note no-print">Use your browser print dialog → Save as PDF.</p>';
 		html += '</body></html>';
 
 		var w = window.open('', '_blank');
@@ -131,9 +125,31 @@ if ( ! function_exists( 'bmf_qa_pdf_script' ) ) {
 		w.document.write(html);
 		w.document.close();
 		setTimeout(function(){
-			try { w.focus(); w.print(); } catch(e) {}
-		}, 400);
+			try { w.focus(); w.print(); } catch (e) {}
+		}, 450);
 	};
+
+	// Panel API: attach payload + enable/disable PDF button(s) inside root
+	window.bmfQaSetPdfPayload = function(root, payload){
+		if (!root) return;
+		root._bmfPdfPayload = payload || null;
+		var enable = !!(payload && payload.rows && payload.rows.length);
+		root.querySelectorAll('.bmf-qa-export-pdf').forEach(function(btn){
+			btn.disabled = !enable;
+		});
+	};
+
+	document.addEventListener('click', function(e){
+		var btn = e.target.closest('.bmf-qa-export-pdf');
+		if (!btn || btn.disabled) return;
+		var root = btn.closest('.bmf-qa-wrap');
+		if (!root || !root._bmfPdfPayload) {
+			alert('Nothing to export yet.');
+			return;
+		}
+		e.preventDefault();
+		window.bmfQaExportPdf(root._bmfPdfPayload);
+	});
 })();
 </script>
 			<?php
