@@ -125,7 +125,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 				return 0;
 			}
 			global $wpdb;
-			$t  = $wpdb->prefix . 'bm_responses';
+			$t = $wpdb->prefix . 'bm_responses';
 			return (int) $wpdb->get_var(
 				$wpdb->prepare(
 					"SELECT id FROM {$t} WHERE user_id = %d AND form_id = %d AND status = 'submitted' AND submitted_at IS NOT NULL ORDER BY ABS(DATEDIFF(DATE(submitted_at), %s)) ASC, submitted_at DESC LIMIT 1",
@@ -298,7 +298,9 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			wp_enqueue_style( 'bmf-qa' );
 
 			ob_start();
-			echo function_exists( 'bmf_qa_pdf_script' ) ? bmf_qa_pdf_script() : '';
+			if ( function_exists( 'bmf_qa_pdf_script' ) ) {
+				echo bmf_qa_pdf_script();
+			}
 			?>
 <div class="bmf-qa-wrap bmf-qa-extremes-wrap" id="extremes"
 	 data-assessment="<?php echo esc_attr( $assessment ); ?>"
@@ -311,7 +313,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		<label class="bmf-qa-meta bmf-qa-select-wrap" style="display:none"><span>Cycle:</span>
 			<select class="bmf-qa-select bmf-qa-date-select"></select>
 		</label>
-		<span class="bmf-qa-export-group" style="margin-left:auto;display:inline-flex;gap:6px">
+		<span class="bmf-qa-export-group" style="margin-left:auto;display:inline-flex;gap:6px;flex-wrap:wrap">
 			<button type="button" class="bmf-qa-export bmf-qa-export-csv" disabled>Export CSV</button>
 			<button type="button" class="bmf-qa-export bmf-qa-export-pdf" disabled>Export PDF</button>
 		</span>
@@ -339,21 +341,99 @@ window.bmfQaExtremesCfg={ajax:<?php echo wp_json_encode( $ajax_url ); ?>,nonce:<
 	function panel(){return document.querySelector('.bmf-qa-extremes-wrap');}
 	function els(){
 		var root=panel(); if(!root) return null;
-		return {root:root,bodyEl:root.querySelector('.bmf-qa-table-wrap'),memberEl:root.querySelector('.bmf-qa-member-label'),titleEl:root.querySelector('.bmf-qa-ext-title'),exportBtn:root.querySelector('.bmf-qa-export-csv'),cmpEl:root.querySelector('.bmf-qa-comparison'),selectWrap:root.querySelector('.bmf-qa-select-wrap'),selectEl:root.querySelector('.bmf-qa-date-select'),showScores:root.getAttribute('data-show-scores')==='1'};
+		return {root:root,bodyEl:root.querySelector('.bmf-qa-table-wrap'),memberEl:root.querySelector('.bmf-qa-member-label'),titleEl:root.querySelector('.bmf-qa-ext-title'),exportBtn:root.querySelector('.bmf-qa-export-csv'),pdfBtn:root.querySelector('.bmf-qa-export-pdf'),cmpEl:root.querySelector('.bmf-qa-comparison'),selectWrap:root.querySelector('.bmf-qa-select-wrap'),selectEl:root.querySelector('.bmf-qa-date-select'),showScores:root.getAttribute('data-show-scores')==='1'};
+	}
+	function setExportButtons(enabled){
+		var root=panel(); if(!root) return;
+		root.querySelectorAll('.bmf-qa-export-csv,.bmf-qa-export-pdf').forEach(function(btn){ btn.disabled=!enabled; });
 	}
 	function initFromPanel(){var root=panel(); if(!root) return; var a=root.getAttribute('data-assessment')||''; var d=root.getAttribute('data-direction')||''; var t=root.getAttribute('data-threshold')||'0.75'; if(a) state.assessment=a; if(d) state.direction=d; state.threshold=parseFloat(t)||0.75;}
 	function esc(s){var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML;}
 	function normalizeDate(v){var s=(v==null?'':String(v)).trim(); if(!s) return ''; var m=s.match(/^(\d{4}-\d{2}-\d{2})/); return m?m[1]:'';}
-	function clearPdf(){ var r=panel(); if(r && window.bmfQaSetPdfPayload) window.bmfQaSetPdfPayload(r,null); }
-	function setEmpty(msg){var e=els(); if(!e||!e.bodyEl) return; e.bodyEl.innerHTML='<div class="bmf-qa-empty">'+esc(msg)+'</div>'; if(e.selectWrap) e.selectWrap.style.display='none'; if(e.cmpEl){e.cmpEl.style.display='none'; e.cmpEl.innerHTML='';} state.lastRows=null; state.lastComparison=null; if(e.exportBtn) e.exportBtn.disabled=true; clearPdf();}
+	function buildPdfPayload(){
+		if(!state.lastRows||!state.lastRows.length) return null;
+		var showScores=!!(els()&&els().showScores);
+		var headers=['Form','Section','#','Question','Answer'];
+		if(showScores) headers.push('Score');
+		var rows=[];
+		if(state.lastComparison&&state.lastComparison.items&&state.lastComparison.items.length){
+			rows.push({_section:true,label:'Perceived rank vs actual scores'+(state.lastComparison.master!=null?' (avg '+state.lastComparison.master+'%)':'')});
+			state.lastComparison.items.forEach(function(it){
+				rows.push({cells:[it.perceived||'','','','vs',(it.actual||'')+(it.score!=null?' ('+it.score+'%)':'')]});
+			});
+			rows.push({_section:true,label:'Extreme answers'});
+		}
+		state.lastRows.forEach(function(r){
+			var cells=[r.form,r.section,r.order_index,r.prompt,r.answer_label||'—'];
+			if(showScores) cells.push(r.score!=null?r.score:'—');
+			rows.push({_extreme:true,cells:cells});
+		});
+		return {
+			title:(state.lastLabel||state.assessment||'Assessment')+' — Extremes',
+			member:state.lastMember||state.email||'',
+			metaLines:['Cycle: '+(state.date||'')],
+			headers:headers,
+			rows:rows,
+			filename:'extremes-'+(state.assessment||'x')+'-'+(state.date||'')
+		};
+	}
+	function setPdfPayload(){
+		var root=panel();
+		if(!root) return;
+		var payload=buildPdfPayload();
+		root._bmfPdfPayload=payload;
+		setExportButtons(!!(payload&&payload.rows&&payload.rows.length));
+		if(window.bmfQaSetPdfPayload){
+			try{ window.bmfQaSetPdfPayload(root, payload); }catch(err){}
+		}
+	}
+	function setEmpty(msg){
+		var e=els(); if(!e||!e.bodyEl) return;
+		e.bodyEl.innerHTML='<div class="bmf-qa-empty">'+esc(msg)+'</div>';
+		if(e.selectWrap) e.selectWrap.style.display='none';
+		if(e.cmpEl){e.cmpEl.style.display='none'; e.cmpEl.innerHTML='';}
+		state.lastRows=null; state.lastComparison=null;
+		var root=panel();
+		if(root) root._bmfPdfPayload=null;
+		setExportButtons(false);
+	}
 	function discoverMemberEmail(){if(state.email) return state.email; var row=document.querySelector('.uls-members__row.is-selected[data-email],tr.is-selected[data-email],.is-selected[data-email]'); if(row){var em=(row.getAttribute('data-email')||'').trim(); if(em) return em;} var qa=document.querySelector('.bmf-qa-wrap:not(.bmf-qa-extremes-wrap)[data-email]'); if(qa){var em2=(qa.getAttribute('data-email')||'').trim(); if(em2) return em2;} return '';}
 	function ensureMember(){var email=discoverMemberEmail(); if(email && email!==state.email){applyMember(0,email,email); return true;} return !!(state.userId||state.email);}
 	function applyMember(userId,email,displayName){var e=els(); state.userId=userId?String(userId):''; state.email=email||''; state.lastMember=displayName||email||''; if(e&&e.memberEl) e.memberEl.textContent=displayName||email||(userId?('User #'+userId):'Select a User');}
 	function renderComparison(cmp){var e=els(); if(!e||!e.cmpEl) return; state.lastComparison=cmp||null; if(!cmp||!cmp.items||!cmp.items.length){e.cmpEl.style.display='none'; e.cmpEl.innerHTML=''; return;} var html='<h5>Perceived rank vs actual scores</h5>'; if(cmp.master!=null) html+='<p class="bmf-qa-meta" style="margin:0 0 8px">Overall average: <strong>'+esc(cmp.master)+'%</strong></p>'; html+='<div class="bmf-qa-cmp-grid">'; html+='<div class="bmf-qa-meta" style="font-weight:600">Perceived</div><div></div><div class="bmf-qa-meta" style="font-weight:600;text-align:right">Actual</div>'; cmp.items.forEach(function(it){var icon='',color='#999'; if(it.diff===0){icon='✓'; color='#22c55e';} else if(it.diff>0){icon='↑ '+Math.abs(it.diff); color='#3b82f6';} else if(it.diff<0){icon='↓ '+Math.abs(it.diff); color='#f97316';} html+='<div class="bmf-qa-cmp-cell">'+esc(it.perceived)+'</div>'; html+='<div class="bmf-qa-cmp-ind" style="color:'+color+'">'+esc(icon)+'</div>'; html+='<div class="bmf-qa-cmp-cell right">'+esc(it.actual)+(it.score!=null?' <span style="color:#666">('+esc(it.score)+'%)</span>':'')+'</div>';}); html+='</div>'; e.cmpEl.innerHTML=html; e.cmpEl.style.display='block';}
-	function setPdfPayload(){var root=panel(); if(!root||!window.bmfQaSetPdfPayload) return; if(!state.lastRows||!state.lastRows.length){window.bmfQaSetPdfPayload(root,null); return;} var headers=['Form','Section','#','Question','Answer']; if(els()&&els().showScores) headers.push('Score'); var rows=[]; if(state.lastComparison&&state.lastComparison.items){ rows.push({_section:true,label:'Perceived rank vs actual scores'+(state.lastComparison.master!=null?' (avg '+state.lastComparison.master+'%)':'')}); state.lastComparison.items.forEach(function(it){ rows.push({cells:[it.perceived||'', '', '', 'vs', (it.actual||'')+(it.score!=null?' ('+it.score+'%)':'') ]}); }); rows.push({_section:true,label:'Extreme answers'}); } state.lastRows.forEach(function(r){ var cells=[r.form,r.section,r.order_index,r.prompt,r.answer_label||'—']; if(els()&&els().showScores) cells.push(r.score!=null?r.score:'—'); rows.push({_extreme:true,cells:cells}); }); window.bmfQaSetPdfPayload(root,{title:(state.lastLabel||state.assessment)+' — Extremes',member:state.lastMember||state.email||'',metaLines:['Cycle: '+(state.date||'')],headers:headers,rows:rows,filename:'extremes-'+(state.assessment||'x')+'-'+(state.date||'')});}
-	function renderRows(data){var e=els(); if(!e||!e.bodyEl) return; var rows=(data&&data.rows)?data.rows:[]; state.lastRows=rows; state.lastLabel=(data&&data.label)?data.label:state.assessment; if(e.titleEl) e.titleEl.textContent=state.lastLabel+' — Extremes'; renderComparison(data&&data.comparison?data.comparison:null); if(!rows.length){setEmpty('No extreme answers found for this cycle.'); if(data&&data.comparison) renderComparison(data.comparison); return;} if(e.exportBtn) e.exportBtn.disabled=false; var html='<table class="bmf-qa-table"><thead><tr><th>Form</th><th>Section</th><th class="bmf-qa-q-num">#</th><th>Question</th><th>Answer</th>'; if(e.showScores) html+='<th class="bmf-qa-score">Score</th>'; html+='</tr></thead><tbody>'; rows.forEach(function(r){html+='<tr class="bmf-qa-extreme"><td>'+esc(r.form)+'</td><td>'+esc(r.section)+'</td><td class="bmf-qa-q-num">'+esc(r.order_index)+'</td><td>'+esc(r.prompt)+'</td><td class="bmf-qa-answer">'+esc(r.answer_label||'—')+'</td>'; if(e.showScores) html+='<td class="bmf-qa-score">'+(r.score!=null?esc(r.score):'—')+'</td>'; html+='</tr>';}); html+='</tbody></table>'; e.bodyEl.innerHTML=html; setPdfPayload();}
+	function renderRows(data){
+		var e=els(); if(!e||!e.bodyEl) return;
+		var rows=(data&&data.rows)?data.rows:[];
+		state.lastRows=rows;
+		state.lastLabel=(data&&data.label)?data.label:state.assessment;
+		if(e.titleEl) e.titleEl.textContent=state.lastLabel+' — Extremes';
+		renderComparison(data&&data.comparison?data.comparison:null);
+		if(!rows.length){
+			setEmpty('No extreme answers found for this cycle.');
+			if(data&&data.comparison) renderComparison(data.comparison);
+			return;
+		}
+		var html='<table class="bmf-qa-table"><thead><tr><th>Form</th><th>Section</th><th class="bmf-qa-q-num">#</th><th>Question</th><th>Answer</th>';
+		if(e.showScores) html+='<th class="bmf-qa-score">Score</th>';
+		html+='</tr></thead><tbody>';
+		rows.forEach(function(r){
+			html+='<tr class="bmf-qa-extreme"><td>'+esc(r.form)+'</td><td>'+esc(r.section)+'</td><td class="bmf-qa-q-num">'+esc(r.order_index)+'</td><td>'+esc(r.prompt)+'</td><td class="bmf-qa-answer">'+esc(r.answer_label||'—')+'</td>';
+			if(e.showScores) html+='<td class="bmf-qa-score">'+(r.score!=null?esc(r.score):'—')+'</td>';
+			html+='</tr>';
+		});
+		html+='</tbody></table>';
+		e.bodyEl.innerHTML=html;
+		setPdfPayload(); // enables CSV + PDF and stores payload
+	}
 	function csvEscape(v){var s=v==null?'':String(v); if(/[",\n\r]/.test(s)) return '"'+s.replace(/"/g,'""')+'"'; return s;}
 	function exportCsv(){if(!state.lastRows) return; var lines=[['Assessment','Date','Form','Section','#','Question','Answer','Score','Extreme'].map(csvEscape).join(',')]; state.lastRows.forEach(function(r){lines.push([state.lastLabel,state.date,r.form,r.section,r.order_index,r.prompt,r.answer_label,r.score!=null?r.score:'','Yes'].map(csvEscape).join(','));}); var blob=new Blob([lines.join('\r\n')],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); var a=document.createElement('a'); var member=(state.lastMember||state.email||'member').replace(/[^a-z0-9._-]+/gi,'_'); var assess=(state.assessment||'assessment').replace(/[^a-z0-9._-]+/gi,'_'); a.href=url; a.download='extremes-'+member+'-'+assess+'-'+(state.date||'')+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);}
+	function exportPdf(){
+		var root=panel();
+		var payload=(root&&root._bmfPdfPayload)||buildPdfPayload();
+		if(!payload||!payload.rows||!payload.rows.length){ alert('Nothing to export yet.'); return; }
+		if(typeof window.bmfQaExportPdf==='function'){ window.bmfQaExportPdf(payload); return; }
+		alert('PDF helper not loaded. Hard-refresh the page and try again.');
+	}
 	function loadExtremes(){var e=els(); if(!e) return; if(!CFG.nonce||!CFG.ajax){setEmpty('Extremes config missing. Hard-refresh the page.'); return;} if(!state.assessment){setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return;} if(!(state.userId||state.email)){setEmpty('Select a User to view extremes.'); return;} state.date=normalizeDate(state.date); if(!state.date){setEmpty('No finalized cycles found for this assessment.'); return;} e.root.classList.add('bmf-qa-loading'); if(e.bodyEl) e.bodyEl.innerHTML='<div class="bmf-qa-empty">Loading extremes…</div>'; var fd=new FormData(); fd.append('action','bmf_get_assessment_extremes'); fd.append('nonce',CFG.nonce); fd.append('assessment',state.assessment); fd.append('date',state.date); fd.append('threshold',String(state.threshold)); if(state.direction) fd.append('direction',state.direction); if(state.userId) fd.append('user_id',state.userId); if(state.email) fd.append('email',state.email); fetch(CFG.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json();}).then(function(resp){var e2=els(); if(e2) e2.root.classList.remove('bmf-qa-loading'); if(!resp||!resp.success){setEmpty((resp&&resp.data&&resp.data.message)||'Could not load extremes.'); return;} renderRows(resp.data||{});}).catch(function(){var e2=els(); if(e2) e2.root.classList.remove('bmf-qa-loading'); setEmpty('Error loading extremes.');});}
 	function loadDates(thenLoad){var e=els(); if(!e) return; if(!CFG.nonce||!CFG.ajax){setEmpty('Extremes config missing. Hard-refresh the page.'); return;} if(!state.assessment){setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return;} if(!(state.userId||state.email)){if(!ensureMember()){setEmpty('Select a User to view extremes.'); return;}} e.root.classList.add('bmf-qa-loading'); var fd=new FormData(); fd.append('action','bmf_list_assessment_dates'); fd.append('nonce',CFG.nonce); fd.append('assessment',state.assessment); if(state.userId) fd.append('user_id',state.userId); if(state.email) fd.append('email',state.email); fetch(CFG.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json();}).then(function(resp){var e2=els(); if(e2) e2.root.classList.remove('bmf-qa-loading'); if(!resp||!resp.success){setEmpty((resp&&resp.data&&resp.data.message)||'Could not load dates.'); return;} var data=resp.data||{}; if(data.member_label){state.lastMember=data.member_label; if(e2&&e2.memberEl) e2.memberEl.textContent=data.member_label;} if(data.user_id) state.userId=String(data.user_id); if(data.label&&e2&&e2.titleEl) e2.titleEl.textContent=data.label+' — Extremes'; var dates=(data.dates||[]).map(normalizeDate).filter(Boolean); if(!e2||!e2.selectEl) return; e2.selectEl.innerHTML=''; if(!dates.length){state.date=''; if(e2.selectWrap) e2.selectWrap.style.display='none'; setEmpty('No finalized cycles found for this member and assessment.'); return;} dates.forEach(function(d,i){var opt=document.createElement('option'); opt.value=d; opt.textContent=d; if(i===0) opt.selected=true; e2.selectEl.appendChild(opt);}); if(e2.selectWrap) e2.selectWrap.style.display='inline-flex'; state.date=dates[0]; if(thenLoad!==false) loadExtremes();}).catch(function(){var e2=els(); if(e2) e2.root.classList.remove('bmf-qa-loading'); setEmpty('Error loading dates.');});}
 	function setAssessment(key,label,direction){key=(key||'').toString().trim().toLowerCase(); if(!key) return; state.assessment=key; if(direction) state.direction=direction; var e=els(); if(e&&e.titleEl){var title=(label&&label.trim())?label.trim():key.toUpperCase(); if(!/extremes$/i.test(title)) title=title+' — Extremes'; e.titleEl.textContent=title;} ensureMember(); loadDates(true);}
@@ -362,7 +442,13 @@ window.bmfQaExtremesCfg={ajax:<?php echo wp_json_encode( $ajax_url ); ?>,nonce:<
 		document.addEventListener('uls:selected-member',function(ev){var email=(ev&&ev.detail&&ev.detail.email)?String(ev.detail.email).trim():''; if(!email) return; applyMember(0,email,email); if(state.assessment) loadDates(true); else setEmpty('Select a User, then click an assessment extremes link.');});
 		document.addEventListener('click',function(ev){var el=ev.target.closest('[data-bmf-qa-assessment]'); if(!el) return; var a=(el.getAttribute('data-bmf-qa-assessment')||'').trim(); if(!a) return; ev.preventDefault(); document.querySelectorAll('[data-bmf-qa-assessment].is-active').forEach(function(n){n.classList.remove('is-active');}); el.classList.add('is-active'); scrollToExtremes(); var dir=(el.getAttribute('data-bmf-qa-direction')||'').trim(); setAssessment(a,(el.textContent||'').trim(),dir||null);});
 		document.addEventListener('change',function(ev){var root=panel(); if(!root||!ev.target) return; if(ev.target.classList&&ev.target.classList.contains('bmf-qa-date-select')&&root.contains(ev.target)){state.date=normalizeDate(ev.target.value); loadExtremes();}});
-		document.addEventListener('click',function(ev){var root=panel(); if(!root) return; var btn=ev.target.closest('.bmf-qa-export-csv'); if(btn&&root.contains(btn)) exportCsv();});
+		document.addEventListener('click',function(ev){
+			var root=panel(); if(!root) return;
+			var csv=ev.target.closest('.bmf-qa-export-csv');
+			if(csv&&root.contains(csv)){ exportCsv(); return; }
+			var pdf=ev.target.closest('.bmf-qa-export-pdf');
+			if(pdf&&root.contains(pdf)&&!pdf.disabled){ ev.preventDefault(); exportPdf(); }
+		});
 	}
 	initFromPanel();
 })();
