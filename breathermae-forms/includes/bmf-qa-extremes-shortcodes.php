@@ -26,13 +26,13 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		public static function assessments(): array {
 			$defaults = [
 				'bsi' => [
-					'label'         => 'Biological Strain Index',
+					'label'         => 'BSI',
 					'direction'     => 'low_better',
 					'results_table' => 'bm_bsi_results',
 					'form_ids'      => [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ],
 				],
 				'rsi' => [
-					'label'         => 'Readiness Strain Index',
+					'label'         => 'RSI',
 					'direction'     => 'low_better',
 					'results_table' => 'bm_rsi_results',
 					'form_ids'      => [ 11, 12 ],
@@ -67,6 +67,22 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 				$t = $t / 100;
 			}
 			return max( 0.5, min( 1.0, $t ) );
+		}
+
+		/**
+		 * Coerce MySQL DATE/DATETIME/string values to Y-m-d.
+		 * wpdb often returns DATE columns as "YYYY-MM-DD 00:00:00".
+		 */
+		private static function normalize_date( $raw ): string {
+			$raw = trim( (string) $raw );
+			if ( $raw === '' ) {
+				return '';
+			}
+			if ( preg_match( '/^(\d{4}-\d{2}-\d{2})/', $raw, $m ) ) {
+				return $m[1];
+			}
+			$ts = strtotime( $raw );
+			return $ts ? gmdate( 'Y-m-d', $ts ) : '';
 		}
 
 		private static function can_view_subject( int $subject_user_id ): bool {
@@ -115,11 +131,22 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 					$email
 				)
 			);
-			return $rows ?: [];
+			if ( ! $rows ) {
+				return [];
+			}
+			$out = [];
+			foreach ( $rows as $raw ) {
+				$d = self::normalize_date( $raw );
+				if ( $d !== '' && ! in_array( $d, $out, true ) ) {
+					$out[] = $d;
+				}
+			}
+			return $out;
 		}
 
 		public static function closest_response_id( int $user_id, int $form_id, string $date ): int {
-			if ( $user_id <= 0 || $form_id <= 0 || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			$date = self::normalize_date( $date );
+			if ( $user_id <= 0 || $form_id <= 0 || $date === '' ) {
 				return 0;
 			}
 			global $wpdb;
@@ -149,7 +176,8 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		}
 
 		public static function build_extremes( int $user_id, string $assessment_key, string $date, string $direction, float $threshold ): array {
-			$map = self::assessments();
+			$map  = self::assessments();
+			$date = self::normalize_date( $date );
 			if ( empty( $map[ $assessment_key ] ) ) {
 				return [ 'rows' => [], 'comparison' => null, 'label' => $assessment_key ];
 			}
@@ -208,6 +236,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			if ( ! $user || empty( $user->user_email ) ) {
 				return null;
 			}
+			$date = self::normalize_date( $date );
 			global $wpdb;
 			$t   = $wpdb->prefix . 'bm_pillars_results';
 			$row = $wpdb->get_row(
@@ -269,7 +298,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 			return [
 				'master' => $master,
-				'date'   => $row['results_date'] ?? $date,
+				'date'   => self::normalize_date( $row['results_date'] ?? $date ),
 				'items'  => $items,
 			];
 		}
@@ -294,7 +323,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			$map   = self::assessments();
 			$label = is_string( $content ) ? trim( $content ) : '';
 			if ( $label === '' ) {
-				$label = $map[ $key ]['label'] ?? $key;
+				$label = ( $map[ $key ]['label'] ?? $key ) . ' extremes';
 			}
 			$class = 'bmf-qa-extremes-link';
 			if ( $atts['class'] !== '' ) {
@@ -419,7 +448,6 @@ window.bmfQaExtremesCfg = {
 		lastMember: ''
 	};
 
-	/** Prefer the real panel class — #extremes may collide with an Elementor section. */
 	function panel() {
 		return document.querySelector('.bmf-qa-extremes-wrap');
 	}
@@ -436,8 +464,6 @@ window.bmfQaExtremesCfg = {
 			cmpEl: root.querySelector('.bmf-qa-comparison'),
 			selectWrap: root.querySelector('.bmf-qa-select-wrap'),
 			selectEl: root.querySelector('.bmf-qa-date-select'),
-			ajaxUrl: CFG.ajax || '',
-			nonce: CFG.nonce || '',
 			showScores: root.getAttribute('data-show-scores') === '1'
 		};
 	}
@@ -454,6 +480,14 @@ window.bmfQaExtremesCfg = {
 	}
 
 	function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+
+	/** Normalize any date-ish string to YYYY-MM-DD on the client too. */
+	function normalizeDate(v){
+		var s = (v==null?'':String(v)).trim();
+		if (!s) return '';
+		var m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+		return m ? m[1] : '';
+	}
 
 	function setEmpty(msg){
 		var e = els();
@@ -527,7 +561,7 @@ window.bmfQaExtremesCfg = {
 		var rows = (data && data.rows) ? data.rows : [];
 		state.lastRows = rows;
 		state.lastLabel = (data && data.label) ? data.label : state.assessment;
-		if (e.titleEl) e.titleEl.textContent = state.lastLabel + ' — extremes';
+		if (e.titleEl) e.titleEl.textContent = state.lastLabel + ' — Extremes';
 		renderComparison(data && data.comparison ? data.comparison : null);
 		if (!rows.length){
 			setEmpty('No extreme answers found for this cycle.');
@@ -581,6 +615,7 @@ window.bmfQaExtremesCfg = {
 		}
 		if (!state.assessment){ setEmpty('Click an assessment extremes link (BSI, RSI, or Pillars).'); return; }
 		if (!(state.userId || state.email)){ setEmpty('Select a User to view extremes.'); return; }
+		state.date = normalizeDate(state.date);
 		if (!state.date){ setEmpty('No finalized cycles found for this assessment.'); return; }
 		e.root.classList.add('bmf-qa-loading');
 		if (e.bodyEl) e.bodyEl.innerHTML = '<div class="bmf-qa-empty">Loading extremes…</div>';
@@ -641,8 +676,8 @@ window.bmfQaExtremesCfg = {
 					if (e2 && e2.memberEl) e2.memberEl.textContent = data.member_label;
 				}
 				if (data.user_id){ state.userId = String(data.user_id); }
-				if (data.label && e2 && e2.titleEl) e2.titleEl.textContent = data.label + ' — extremes';
-				var dates = data.dates || [];
+				if (data.label && e2 && e2.titleEl) e2.titleEl.textContent = data.label + ' — Extremes';
+				var dates = (data.dates || []).map(normalizeDate).filter(Boolean);
 				if (!e2 || !e2.selectEl) return;
 				e2.selectEl.innerHTML = '';
 				if (!dates.length){
@@ -670,7 +705,12 @@ window.bmfQaExtremesCfg = {
 		state.assessment = key;
 		if (direction) state.direction = direction;
 		var e = els();
-		if (label && e && e.titleEl) e.titleEl.textContent = label + ' — extremes';
+		if (e && e.titleEl) {
+			var title = (label && label.trim()) ? label.trim() : (key.toUpperCase());
+			// Avoid "BSI extremes — Extremes" duplication if link text already has it
+			if (!/extremes$/i.test(title)) title = title + ' — Extremes';
+			e.titleEl.textContent = title;
+		}
 		ensureMember();
 		loadDates(true);
 	}
@@ -715,7 +755,7 @@ window.bmfQaExtremesCfg = {
 			var root = panel();
 			if (!root || !ev.target) return;
 			if (ev.target.classList && ev.target.classList.contains('bmf-qa-date-select') && root.contains(ev.target)) {
-				state.date = ev.target.value;
+				state.date = normalizeDate(ev.target.value);
 				loadExtremes();
 			}
 		});
@@ -745,7 +785,7 @@ window.bmfQaExtremesCfg = {
 			$assessment = strtolower( sanitize_key( $_POST['assessment'] ?? '' ) );
 			$map        = self::assessments();
 			if ( empty( $map[ $assessment ] ) ) {
-				wp_send_json_error( [ 'message' => 'Unknown assessment.' ], 400 );
+				wp_send_json_error( [ 'message' => 'Unknown assessment: ' . $assessment ], 400 );
 			}
 
 			list( $user_id, $email, $label ) = self::resolve_user_from_request();
@@ -774,15 +814,15 @@ window.bmfQaExtremesCfg = {
 			}
 
 			$assessment = strtolower( sanitize_key( $_POST['assessment'] ?? '' ) );
-			$date       = sanitize_text_field( wp_unslash( $_POST['date'] ?? '' ) );
+			$date       = self::normalize_date( wp_unslash( $_POST['date'] ?? '' ) );
 			$threshold  = self::normalize_threshold( $_POST['threshold'] ?? 0.75 );
 			$direction  = isset( $_POST['direction'] ) ? self::normalize_direction( (string) $_POST['direction'] ) : '';
 			$map        = self::assessments();
 
 			if ( empty( $map[ $assessment ] ) ) {
-				wp_send_json_error( [ 'message' => 'Unknown assessment.' ], 400 );
+				wp_send_json_error( [ 'message' => 'Unknown assessment: ' . $assessment ], 400 );
 			}
-			if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			if ( $date === '' ) {
 				wp_send_json_error( [ 'message' => 'Invalid date.' ], 400 );
 			}
 			if ( $direction === '' ) {
