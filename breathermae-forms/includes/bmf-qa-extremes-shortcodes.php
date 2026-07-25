@@ -423,3 +423,8 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 	BMF_QA_Extremes_Shortcodes::init();
 }
+
+// Keep date/response selects visible when they have options (shared with Q&A).
+if ( file_exists( __DIR__ . '/bmf-qa-select-fix-boot.php' ) ) {
+	require_once __DIR__ . '/bmf-qa-select-fix-boot.php';
+}
