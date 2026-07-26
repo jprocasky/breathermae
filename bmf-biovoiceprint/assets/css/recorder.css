@@ -23,6 +23,32 @@
   margin-bottom: 1rem;
 }
 
+.bmf-bv-device-wrap {
+  margin-bottom: 0.85rem;
+}
+
+.bmf-bv-device-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bv-muted);
+  margin-bottom: 0.35rem;
+}
+
+.bmf-bv-device {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--bv-border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.bmf-bv-device:disabled {
+  opacity: 0.55;
+}
+
 .bmf-bv-controls {
   display: flex;
   gap: 0.75rem;
