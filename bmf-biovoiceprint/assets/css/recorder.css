@@ -131,7 +131,57 @@
   font-size: 1.5rem;
   font-weight: 600;
   color: #0f172a;
-  margin-bottom: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.bmf-bv-limits {
+  font-size: 0.75rem;
+  color: var(--bv-muted);
+  margin: 0 0 0.85rem;
+}
+
+.bmf-bv-step-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+}
+
+.bmf-bv-step-directions {
+  font-size: 0.875rem;
+  color: #334155;
+  margin: 0 0 0.5rem;
+  line-height: 1.4;
+}
+
+.bmf-bv-step-prompt {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid var(--bv-accent);
+  background: #fff;
+  font-size: 0.85rem;
+  color: #0f172a;
+  line-height: 1.45;
+}
+
+.bmf-bv-meter {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+}
+
+.bmf-bv-meter-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--bv-accent);
+  border-radius: 4px;
+  transition: width 0.05s linear;
+}
+
+.bmf-bv-meter-bar.is-hot {
+  background: var(--bv-danger);
 }
 
 .bmf-bv-preview {
@@ -253,7 +303,7 @@
 
 .bmf-bv-admin-count {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .bmf-bv-session-size,
