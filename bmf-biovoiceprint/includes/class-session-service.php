@@ -12,14 +12,6 @@ class BMF_BioVoice_Session_Service {
 	/** Request-level cache for user session lists. */
 	private static $list_cache = [];
 
-	/**
-	 * Create a new recorded session from an uploaded file.
-	 *
-	 * @param int   $user_id
-	 * @param array $file     $_FILES-style array (tmp_name, name, type, size, error)
-	 * @param array $meta     Optional: session_type, duration_sec, device_info, notes, wellness_anchor, context_flags
-	 * @return array|WP_Error { session_id, storage_key } or error
-	 */
 	public static function create_from_upload( int $user_id, array $file, array $meta = [] ) {
 		if ( $user_id < 1 ) {
 			return new WP_Error( 'bmf_biovoice_auth', 'User must be logged in.', [ 'status' => 401 ] );
@@ -29,9 +21,6 @@ class BMF_BioVoice_Session_Service {
 			return new WP_Error( 'bmf_biovoice_upload', 'No valid audio file received.', [ 'status' => 400 ] );
 		}
 
-		// MIME / extension guard — include iOS Safari variants.
-		// iOS often sends audio/mp4, audio/aac, audio/x-m4a, or even video/mp4
-		// for audio-only recordings. Empty / octet-stream is also common.
 		$allowed_mimes = [
 			'audio/webm'               => 'webm',
 			'audio/wav'                => 'wav',
@@ -129,9 +118,6 @@ class BMF_BioVoice_Session_Service {
 		];
 	}
 
-	/**
-	 * Get sessions for the current (or specified) user.
-	 */
 	public static function get_user_sessions( int $user_id, array $args = [] ) {
 		$cache_key = $user_id . '|' . md5( wp_json_encode( $args ) );
 		if ( isset( self::$list_cache[ $cache_key ] ) ) {
@@ -143,7 +129,24 @@ class BMF_BioVoice_Session_Service {
 	}
 
 	/**
-	 * Ownership + capability check.
+	 * Can the current user inspect other members' BioVoice sessions?
+	 * Default: any logged-in user (WP Fusion page is the primary gate).
+	 * Filter: bmf_biovoice_can_inspect_member_sessions
+	 */
+	public static function can_inspect_member_sessions(): bool {
+		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+
+		if ( current_user_can( 'manage_options' ) ) {
+			return true;
+		}
+
+		return (bool) apply_filters( 'bmf_biovoice_can_inspect_member_sessions', true );
+	}
+
+	/**
+	 * Ownership + capability check (play / list a specific session).
 	 */
 	public static function user_can_access_session( int $user_id, array $session ): bool {
 		if ( empty( $session['user_id'] ) ) {
@@ -153,6 +156,9 @@ class BMF_BioVoice_Session_Service {
 			return true;
 		}
 		if ( user_can( $user_id, 'manage_options' ) ) {
+			return true;
+		}
+		if ( (int) $user_id === get_current_user_id() && self::can_inspect_member_sessions() ) {
 			return true;
 		}
 		return false;
