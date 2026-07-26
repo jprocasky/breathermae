@@ -2,6 +2,7 @@
  * BioVoicePrint – MediaRecorder client (POC).
  * Records → local preview → optional save via REST.
  * Supports microphone device selection when multiple inputs exist.
+ * iOS Safari: prefers audio/mp4 and tolerates empty blob types.
  */
 (function () {
   'use strict';
@@ -35,11 +36,43 @@
     let mediaRecorder = null;
     let chunks = [];
     let blob = null;
+    let recordedMime = '';
     let startTs = 0;
     let timerId = null;
     let stream = null;
     let selectedDeviceId = null;
     let devicesReady = false;
+
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function pickRecorderOptions() {
+      const options = {};
+      const candidates = isIOS()
+        ? ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm']
+        : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+
+      for (let i = 0; i < candidates.length; i++) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])) {
+          options.mimeType = candidates[i];
+          break;
+        }
+      }
+      return options;
+    }
+
+    function extensionForMime(type) {
+      const t = (type || '').toLowerCase();
+      if (t.indexOf('mp4') !== -1 || t.indexOf('m4a') !== -1 || t.indexOf('aac') !== -1) return 'm4a';
+      if (t.indexOf('ogg') !== -1) return 'ogg';
+      if (t.indexOf('wav') !== -1) return 'wav';
+      if (t.indexOf('mpeg') !== -1 || t.indexOf('mp3') !== -1) return 'mp3';
+      if (t.indexOf('webm') !== -1) return 'webm';
+      if (isIOS()) return 'm4a';
+      return 'webm';
+    }
 
     function setStatus(text) {
       if (statusEl) statusEl.textContent = text;
@@ -59,6 +92,7 @@
     function resetPreview() {
       blob = null;
       chunks = [];
+      recordedMime = '';
       if (playerEl) {
         playerEl.removeAttribute('src');
         playerEl.load();
@@ -201,14 +235,8 @@
       refreshDevices();
 
       chunks = [];
-      const options = {};
-      if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        options.mimeType = 'audio/mp4';
-      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        options.mimeType = 'audio/webm;codecs=opus';
-      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-        options.mimeType = 'audio/webm';
-      }
+      recordedMime = '';
+      const options = pickRecorderOptions();
 
       try {
         mediaRecorder = new MediaRecorder(stream, options);
@@ -216,14 +244,31 @@
         mediaRecorder = new MediaRecorder(stream);
       }
 
+      recordedMime = mediaRecorder.mimeType || options.mimeType || '';
+
       mediaRecorder.ondataavailable = function (e) {
         if (e.data && e.data.size > 0) {
           chunks.push(e.data);
+          if (!recordedMime && e.data.type) {
+            recordedMime = e.data.type;
+          }
         }
       };
 
       mediaRecorder.onstop = function () {
-        blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const mime = recordedMime || mediaRecorder.mimeType || (isIOS() ? 'audio/mp4' : 'audio/webm');
+        recordedMime = mime;
+        blob = new Blob(chunks, { type: mime });
+
+        if (!blob || blob.size < 1) {
+          showMessage('Recording produced no audio data. Please try again.', 'error');
+          setStatus('Ready to record');
+          btnStart.disabled = false;
+          btnStop.disabled = true;
+          if (deviceSel) deviceSel.disabled = false;
+          return;
+        }
+
         const url = URL.createObjectURL(blob);
         if (playerEl) {
           playerEl.src = url;
@@ -240,7 +285,7 @@
         }
       };
 
-      mediaRecorder.start(250);
+      mediaRecorder.start(isIOS() ? 1000 : 250);
       startTs = Date.now();
       timerEl.textContent = '00:00';
       timerId = setInterval(function () {
@@ -275,17 +320,8 @@
       hideMessage();
 
       const form = new FormData();
-      const type = blob.type || '';
-      let ext = 'webm';
-      if (type.indexOf('mp4') !== -1 || type.indexOf('m4a') !== -1 || type.indexOf('aac') !== -1) {
-        ext = 'm4a';
-      } else if (type.indexOf('ogg') !== -1) {
-        ext = 'ogg';
-      } else if (type.indexOf('wav') !== -1) {
-        ext = 'wav';
-      } else if (type.indexOf('mpeg') !== -1 || type.indexOf('mp3') !== -1) {
-        ext = 'mp3';
-      }
+      const type = blob.type || recordedMime || '';
+      const ext = extensionForMime(type);
 
       form.append('audio', blob, 'recording.' + ext);
       form.append('session_type', cfg.sessionType || 'comparison');
@@ -298,6 +334,7 @@
       if (deviceSel && deviceSel.selectedOptions && deviceSel.selectedOptions[0]) {
         deviceHint = deviceSel.selectedOptions[0].textContent + ' | ' + deviceHint;
       }
+      deviceHint = (type || 'unknown-mime') + ' | ' + deviceHint;
       form.append('device_info', deviceHint);
 
       try {
@@ -313,7 +350,11 @@
         const data = await res.json().catch(function () { return {}; });
 
         if (!res.ok) {
-          const msg = (data && data.message) ? data.message : 'Upload failed (' + res.status + ').';
+          const msg = (data && data.message)
+            ? data.message
+            : (data && data.data && data.data.message)
+              ? data.data.message
+              : 'Upload failed (' + res.status + ').';
           showMessage(msg, 'error');
           setStatus('Upload failed');
           btnSave.disabled = false;
