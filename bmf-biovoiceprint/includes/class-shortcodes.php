@@ -145,13 +145,19 @@ class BMF_BioVoice_Shortcodes {
 						$play_url = BMF_BioVoice_Play::url( (int) $s['id'] );
 						$date     = $s['created_at'] ? mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $s['created_at'] ) : '';
 						$dur      = $s['duration_sec'] !== null ? number_format( (float) $s['duration_sec'], 1 ) . 's' : '—';
-						$label    = ! empty( $s['task_code'] ) ? $s['task_code'] : $s['session_type'];
 						?>
 						<li class="bmf-bv-session-item" data-session-id="<?php echo (int) $s['id']; ?>">
 							<div class="bmf-bv-session-meta">
 								<span class="bmf-bv-session-date"><?php echo esc_html( $date ); ?></span>
-								<span class="bmf-bv-session-type"><?php echo esc_html( $label ); ?></span>
-								<span class="bmf-bv-session-status"><?php echo esc_html( $s['status'] ); ?></span>
+								<?php if ( ! empty( $s['task_code'] ) ) : ?>
+									<span class="bmf-bv-session-task"><?php echo esc_html( $s['task_code'] ); ?></span>
+								<?php endif; ?>
+								<?php if ( ! empty( $s['session_type'] ) ) : ?>
+									<span class="bmf-bv-session-type"><?php echo esc_html( $s['session_type'] ); ?></span>
+								<?php endif; ?>
+								<?php if ( ! empty( $s['status'] ) && $s['status'] !== 'recorded' ) : ?>
+									<span class="bmf-bv-session-status"><?php echo esc_html( $s['status'] ); ?></span>
+								<?php endif; ?>
 								<span class="bmf-bv-session-dur"><?php echo esc_html( $dur ); ?></span>
 							</div>
 							<audio controls preload="none" src="<?php echo esc_url( $play_url ); ?>"></audio>
