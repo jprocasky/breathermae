@@ -29,30 +29,57 @@ class BMF_BioVoice_Session_Service {
 			return new WP_Error( 'bmf_biovoice_upload', 'No valid audio file received.', [ 'status' => 400 ] );
 		}
 
-		// Basic MIME / extension guard (POC-level).
+		// MIME / extension guard — include iOS Safari variants.
+		// iOS often sends audio/mp4, audio/aac, audio/x-m4a, or even video/mp4
+		// for audio-only recordings. Empty / octet-stream is also common.
 		$allowed_mimes = [
 			'audio/webm'               => 'webm',
 			'audio/wav'                => 'wav',
 			'audio/x-wav'              => 'wav',
+			'audio/wave'               => 'wav',
 			'audio/mpeg'               => 'mp3',
+			'audio/mp3'                => 'mp3',
 			'audio/mp4'                => 'm4a',
+			'audio/m4a'                => 'm4a',
+			'audio/x-m4a'              => 'm4a',
+			'audio/aac'                => 'm4a',
+			'audio/x-aac'              => 'm4a',
 			'audio/ogg'                => 'ogg',
-			'video/webm'               => 'webm', // some browsers report webm audio as video/webm
+			'video/webm'               => 'webm',
+			'video/mp4'                => 'm4a',
+			'application/octet-stream' => null,
 		];
 
-		$mime = isset( $file['type'] ) ? strtolower( $file['type'] ) : '';
-		$ext  = $allowed_mimes[ $mime ] ?? null;
+		$allowed_exts = [ 'webm', 'wav', 'mp3', 'm4a', 'mp4', 'aac', 'ogg', 'caf' ];
+
+		$mime_raw = isset( $file['type'] ) ? strtolower( trim( $file['type'] ) ) : '';
+		$mime     = $mime_raw ? trim( explode( ';', $mime_raw )[0] ) : '';
+
+		$ext = null;
+		if ( $mime && array_key_exists( $mime, $allowed_mimes ) && $allowed_mimes[ $mime ] ) {
+			$ext = $allowed_mimes[ $mime ];
+		}
 
 		if ( ! $ext ) {
-			// Fallback: sniff from filename.
-			$orig = isset( $file['name'] ) ? $file['name'] : '';
-			$ext  = strtolower( pathinfo( $orig, PATHINFO_EXTENSION ) );
-			if ( ! in_array( $ext, [ 'webm', 'wav', 'mp3', 'm4a', 'ogg' ], true ) ) {
-				return new WP_Error( 'bmf_biovoice_mime', 'Unsupported audio format.', [ 'status' => 400 ] );
+			$orig      = isset( $file['name'] ) ? $file['name'] : '';
+			$from_name = strtolower( pathinfo( $orig, PATHINFO_EXTENSION ) );
+			if ( in_array( $from_name, $allowed_exts, true ) ) {
+				$ext = in_array( $from_name, [ 'mp4', 'aac', 'caf' ], true ) ? 'm4a' : $from_name;
 			}
 		}
 
-		// Size guard (20 MB for POC).
+		if ( ! $ext ) {
+			return new WP_Error(
+				'bmf_biovoice_mime',
+				'Unsupported audio format' . ( $mime ? ' (' . $mime . ')' : '' ) . '.',
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( ! $mime || $mime === 'application/octet-stream' ) {
+			$mime = ( $ext === 'm4a' ) ? 'audio/mp4' : ( 'audio/' . $ext );
+		}
+
 		$max_bytes = 20 * 1024 * 1024;
 		if ( ! empty( $file['size'] ) && (int) $file['size'] > $max_bytes ) {
 			return new WP_Error( 'bmf_biovoice_size', 'File exceeds 20 MB limit.', [ 'status' => 400 ] );
@@ -63,7 +90,7 @@ class BMF_BioVoice_Session_Service {
 			return new WP_Error( 'bmf_biovoice_store', 'Failed to store audio file.', [ 'status' => 500 ] );
 		}
 
-		$user      = get_userdata( $user_id );
+		$user       = get_userdata( $user_id );
 		$user_email = $user ? $user->user_email : null;
 
 		$row = [
@@ -80,7 +107,6 @@ class BMF_BioVoice_Session_Service {
 			'notes'             => isset( $meta['notes'] ) ? sanitize_textarea_field( $meta['notes'] ) : null,
 		];
 
-		// Optional JSON placeholders for future protocol fields.
 		if ( ! empty( $meta['wellness_anchor'] ) && is_array( $meta['wellness_anchor'] ) ) {
 			$row['wellness_anchor_json'] = wp_json_encode( $meta['wellness_anchor'] );
 		}
@@ -90,7 +116,6 @@ class BMF_BioVoice_Session_Service {
 
 		$session_id = BMF_BioVoice_Repository::insert_session( $row );
 		if ( ! $session_id ) {
-			// Clean up orphan file.
 			BMF_BioVoice_Storage::delete( $storage_key );
 			return new WP_Error( 'bmf_biovoice_db', 'Failed to create session record.', [ 'status' => 500 ] );
 		}
@@ -124,15 +149,12 @@ class BMF_BioVoice_Session_Service {
 		if ( empty( $session['user_id'] ) ) {
 			return false;
 		}
-		// Owner.
 		if ( (int) $session['user_id'] === $user_id ) {
 			return true;
 		}
-		// Admins / managers.
 		if ( user_can( $user_id, 'manage_options' ) ) {
 			return true;
 		}
-		// Future: provider / coach role via WP Fusion or custom capability.
 		return false;
 	}
 
