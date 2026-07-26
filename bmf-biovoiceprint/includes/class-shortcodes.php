@@ -4,7 +4,7 @@
  *
  * [bmf_biovoice_record]   – Recorder UI for the logged-in user
  * [bmf_biovoice_sessions] – List of past recordings with playback
- * [bmf_biovoice_sessions admin="1"] – Admin panel for ULS member selection
+ * [bmf_biovoice_sessions admin="1"] – ULS panel for selected member
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -42,9 +42,6 @@ class BMF_BioVoice_Shortcodes {
 		);
 	}
 
-	/**
-	 * [bmf_biovoice_record session_type="comparison"]
-	 */
 	public static function shortcode_record( $atts ) {
 		if ( bmf_biovoice_in_elementor_editor() ) {
 			return '<div class="bmf-biovoice-placeholder" style="padding:1.5rem;border:1px dashed #94a3b8;border-radius:8px;text-align:center;color:#64748b;">BioVoicePrint Recorder (preview)</div>';
@@ -178,11 +175,11 @@ class BMF_BioVoice_Shortcodes {
 	}
 
 	/**
-	 * Admin / ULS panel: waits for uls:selected-member, then AJAX-loads sessions.
+	 * ULS / staff panel — WP Fusion–gated pages; can_inspect_member_sessions().
 	 */
 	private static function render_admin_sessions_panel( array $atts ): string {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return '<p class="bmf-biovoice-login-required">Admin access required to inspect member recordings.</p>';
+		if ( ! BMF_BioVoice_Session_Service::can_inspect_member_sessions() ) {
+			return '<p class="bmf-biovoice-login-required">You do not have permission to inspect member recordings.</p>';
 		}
 
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
