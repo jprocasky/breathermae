@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.2-poc
+ * Version:           0.2.4-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.2-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.4-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
@@ -24,34 +24,19 @@ if ( ! class_exists( 'BMF_BioVoice_DBX' ) ) {
 	class BMF_BioVoice_DBX {
 		/** @var wpdb */
 		public static $db;
-
-		public static function init() {
-			global $wpdb;
-			self::$db = $wpdb;
-		}
-
-		public static function t( $suffix ) {
-			return self::$db->prefix . $suffix;
-		}
+		public static function init() { global $wpdb; self::$db = $wpdb; }
+		public static function t( $suffix ) { return self::$db->prefix . $suffix; }
 	}
 	BMF_BioVoice_DBX::init();
 }
 
 if ( ! function_exists( 'bmf_biovoice_in_elementor_editor' ) ) {
 	function bmf_biovoice_in_elementor_editor(): bool {
-		if ( ! defined( 'ELEMENTOR_VERSION' ) || ! class_exists( '\Elementor\Plugin' ) ) {
-			return false;
-		}
+		if ( ! defined( 'ELEMENTOR_VERSION' ) || ! class_exists( '\Elementor\Plugin' ) ) return false;
 		$plugin = \Elementor\Plugin::$instance;
-		if ( $plugin->editor && $plugin->editor->is_edit_mode() ) {
-			return true;
-		}
-		if ( $plugin->preview && $plugin->preview->is_preview_mode() ) {
-			return true;
-		}
-		if ( isset( $_GET['elementor-preview'] ) || isset( $_GET['elementor_library'] ) ) {
-			return true;
-		}
+		if ( $plugin->editor && $plugin->editor->is_edit_mode() ) return true;
+		if ( $plugin->preview && $plugin->preview->is_preview_mode() ) return true;
+		if ( isset( $_GET['elementor-preview'] ) || isset( $_GET['elementor_library'] ) ) return true;
 		return false;
 	}
 }
@@ -70,10 +55,7 @@ register_activation_hook( __FILE__, function () {
 	BMF_BioVoice_Protocol_Service::seed_v1_if_needed();
 	flush_rewrite_rules();
 } );
-
-register_deactivation_hook( __FILE__, function () {
-	flush_rewrite_rules();
-} );
+register_deactivation_hook( __FILE__, function () { flush_rewrite_rules(); } );
 
 add_action( 'plugins_loaded', function () {
 	BMF_BioVoice_DBX::init();
@@ -84,12 +66,8 @@ add_action( 'plugins_loaded', function () {
 } );
 
 add_action( 'admin_notices', function () {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		return;
-	}
+	if ( ! current_user_can( 'manage_options' ) ) return;
 	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-	if ( ! $screen || $screen->id !== 'plugins' ) {
-		return;
-	}
-	echo '<div class="notice notice-info"><p><strong>BioVoicePrint</strong> v' . esc_html( BMF_BIOVOICE_VERSION ) . ' — guided session wizard enabled ([bmf_biovoice_session]).</p></div>';
+	if ( ! $screen || $screen->id !== 'plugins' ) return;
+	echo '<div class="notice notice-info"><p><strong>BioVoicePrint</strong> v' . esc_html( BMF_BIOVOICE_VERSION ) . ' — guided session wizard + ambient noise soft QC.</p></div>';
 } );
