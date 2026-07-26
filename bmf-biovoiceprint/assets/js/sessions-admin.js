@@ -1,13 +1,6 @@
 /**
  * BioVoicePrint – admin sessions panel.
  * Listens for ULS member selection and loads that member's recordings.
- *
- * Expects:
- *   window.bmfBioVoiceSessionsAdmin = { restUrl, nonce, limit }
- *   container: [data-bmf-biovoice-sessions-admin]
- *
- * Event (from uls-members):
- *   uls:selected-member  detail: { email, user_id? }
  */
 (function () {
   'use strict';
@@ -34,10 +27,10 @@
 
   function escapeHtml(s) {
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&')
+      .replace(/</g, '<')
+      .replace(/>/g, '>')
+      .replace(/"/g, '"');
   }
 
   function renderList(container, data) {
@@ -66,8 +59,15 @@
       html += '<li class="bmf-bv-session-item" data-session-id="' + s.id + '">';
       html += '<div class="bmf-bv-session-meta">';
       html += '<span class="bmf-bv-session-date">' + escapeHtml(s.created_at || '') + '</span>';
-      html += '<span class="bmf-bv-session-type">' + escapeHtml(s.session_type || '') + '</span>';
-      html += '<span class="bmf-bv-session-status">' + escapeHtml(s.status || '') + '</span>';
+      if (s.task_code) {
+        html += '<span class="bmf-bv-session-task">' + escapeHtml(s.task_code) + '</span>';
+      }
+      if (s.session_type) {
+        html += '<span class="bmf-bv-session-type">' + escapeHtml(s.session_type) + '</span>';
+      }
+      if (s.status && s.status !== 'recorded') {
+        html += '<span class="bmf-bv-session-status">' + escapeHtml(s.status) + '</span>';
+      }
       html += '<span class="bmf-bv-session-dur">' + escapeHtml(dur) + '</span>';
       if (size) {
         html += '<span class="bmf-bv-session-size">' + escapeHtml(size) + '</span>';
