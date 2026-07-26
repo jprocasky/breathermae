@@ -76,7 +76,8 @@ class BMF_BioVoice_Shortcodes {
 		] );
 
 		$class = 'bmf-biovoice-recorder' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
-		obs_start();
+		obs_start = null; // placeholder removed
+		obst = ob_start();
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>" data-bmf-biovoice-recorder
 			data-task="<?php echo esc_attr( $task ); ?>"
@@ -129,7 +130,7 @@ class BMF_BioVoice_Shortcodes {
 		$user_id  = get_current_user_id();
 		$sessions = BMF_BioVoice_Session_Service::get_user_sessions( $user_id, [ 'limit' => absint( $atts['limit'] ) ] );
 		$class = 'bmf-biovoice-sessions' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
-		obs_start();
+		obst = ob_start();
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>">
 			<?php if ( empty( $sessions ) ) : ?>
