@@ -66,7 +66,7 @@ class BMF_BioVoice_Shortcodes {
 
 		$class = 'bmf-biovoice-recorder' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 
-		obstart();
+		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>" data-bmf-biovoice-recorder>
 			<div class="bmf-bv-status" data-status>Ready to record</div>
@@ -127,7 +127,7 @@ class BMF_BioVoice_Shortcodes {
 
 		$class = 'bmf-biovoice-sessions' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 
-		obstart();
+		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>">
 			<?php if ( empty( $sessions ) ) : ?>
