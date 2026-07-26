@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       Skeleton for BioVoicePrint voice recording, private storage, and session tracking. Framework only — no scoring yet.
- * Version:           0.1.0-poc
+ * Version:           0.1.1-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.1.0-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.1.1-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
@@ -66,6 +66,7 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-repository.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-storage.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-session-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-rest-api.php';
+require_once BMF_BIOVOICE_PATH . 'includes/class-play.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
 
 /**
@@ -91,6 +92,7 @@ add_action( 'plugins_loaded', function () {
 	BMF_BioVoice_DBX::init();
 	BMF_BioVoice_Shortcodes::init();
 	BMF_BioVoice_REST_API::init();
+	BMF_BioVoice_Play::init();
 } );
 
 /**

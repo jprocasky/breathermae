@@ -135,7 +135,7 @@ class BMF_BioVoice_Shortcodes {
 			<?php else : ?>
 				<ul class="bmf-bv-session-list">
 					<?php foreach ( $sessions as $s ) :
-						$play_url = rest_url( 'bmf-biovoice/v1/sessions/' . (int) $s['id'] . '/play' );
+						$play_url = BMF_BioVoice_Play::url( (int) $s['id'] );
 						$date     = $s['created_at'] ? mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $s['created_at'] ) : '';
 						$dur      = $s['duration_sec'] !== null ? number_format( (float) $s['duration_sec'], 1 ) . 's' : '—';
 						?>

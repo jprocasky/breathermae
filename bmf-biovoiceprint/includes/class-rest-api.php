@@ -144,6 +144,7 @@ class BMF_BioVoice_REST_API {
 	/**
 	 * GET /sessions/{id}/play
 	 * Streams the audio file with correct Content-Type.
+	 * Prefer BMF_BioVoice_Play for <audio> tags; this REST route remains for API clients.
 	 */
 	public static function play_session( WP_REST_Request $request ) {
 		$user_id    = get_current_user_id();
@@ -226,7 +227,9 @@ class BMF_BioVoice_REST_API {
 			'mime_type'         => $row['mime_type'],
 			'original_filename' => $row['original_filename'],
 			'created_at'        => $row['created_at'],
-			'play_url'          => rest_url( self::NS . '/sessions/' . (int) $row['id'] . '/play' ),
+			'play_url'          => class_exists( 'BMF_BioVoice_Play' )
+				? BMF_BioVoice_Play::url( (int) $row['id'] )
+				: rest_url( self::NS . '/sessions/' . (int) $row['id'] . '/play' ),
 		];
 	}
 }
