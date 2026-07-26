@@ -71,6 +71,11 @@ class BMF_BioVoice_Shortcodes {
 		<div class="<?php echo esc_attr( $class ); ?>" data-bmf-biovoice-recorder>
 			<div class="bmf-bv-status" data-status>Ready to record</div>
 
+			<div class="bmf-bv-device-wrap" data-device-wrap hidden>
+				<label class="bmf-bv-device-label" for="bmf-bv-device">Microphone</label>
+				<select class="bmf-bv-device" data-device id="bmf-bv-device"></select>
+			</div>
+
 			<div class="bmf-bv-controls">
 				<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start">
 					<span class="bmf-bv-dot"></span> Start Recording
