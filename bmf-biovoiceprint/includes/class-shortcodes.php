@@ -4,6 +4,7 @@
  *
  * [bmf_biovoice_record]   – Recorder UI for the logged-in user
  * [bmf_biovoice_sessions] – List of past recordings with playback
+ * [bmf_biovoice_sessions admin="1"] – Admin panel for ULS member selection
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -28,6 +29,13 @@ class BMF_BioVoice_Shortcodes {
 		wp_register_script(
 			'bmf-biovoice-recorder',
 			BMF_BIOVOICE_URL . 'assets/js/recorder.js',
+			[],
+			BMF_BIOVOICE_VERSION,
+			true
+		);
+		wp_register_script(
+			'bmf-biovoice-sessions-admin',
+			BMF_BIOVOICE_URL . 'assets/js/sessions-admin.js',
 			[],
 			BMF_BIOVOICE_VERSION,
 			true
@@ -108,6 +116,7 @@ class BMF_BioVoice_Shortcodes {
 
 	/**
 	 * [bmf_biovoice_sessions limit="20"]
+	 * [bmf_biovoice_sessions admin="1" limit="50"]
 	 */
 	public static function shortcode_sessions( $atts ) {
 		if ( bmf_biovoice_in_elementor_editor() ) {
@@ -121,7 +130,14 @@ class BMF_BioVoice_Shortcodes {
 		$atts = shortcode_atts( [
 			'limit' => 20,
 			'class' => '',
+			'admin' => '0',
 		], $atts, 'bmf_biovoice_sessions' );
+
+		$admin_mode = in_array( strtolower( (string) $atts['admin'] ), [ '1', 'true', 'yes' ], true );
+
+		if ( $admin_mode ) {
+			return self::render_admin_sessions_panel( $atts );
+		}
 
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
 
@@ -159,5 +175,33 @@ class BMF_BioVoice_Shortcodes {
 		</div>
 		<?php
 		return ob_get_clean();
+	}
+
+	/**
+	 * Admin / ULS panel: waits for uls:selected-member, then AJAX-loads sessions.
+	 */
+	private static function render_admin_sessions_panel( array $atts ): string {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return '<p class="bmf-biovoice-login-required">Admin access required to inspect member recordings.</p>';
+		}
+
+		wp_enqueue_style( 'bmf-biovoice-recorder' );
+		wp_enqueue_script( 'bmf-biovoice-sessions-admin' );
+
+		$rest_url = esc_url_raw( rest_url( 'bmf-biovoice/v1/sessions' ) );
+		$nonce    = wp_create_nonce( 'wp_rest' );
+		$limit    = absint( $atts['limit'] ) ?: 50;
+
+		wp_localize_script( 'bmf-biovoice-sessions-admin', 'bmfBioVoiceSessionsAdmin', [
+			'restUrl' => $rest_url,
+			'nonce'   => $nonce,
+			'limit'   => $limit,
+		] );
+
+		$class = 'bmf-biovoice-sessions bmf-biovoice-sessions--admin' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
+
+		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-sessions-admin>'
+			. '<p class="bmf-bv-empty">Select a member to view recordings.</p>'
+			. '</div>';
 	}
 }
