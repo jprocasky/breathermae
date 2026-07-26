@@ -1,0 +1,207 @@
+/* BioVoicePrint – Recorder & session list (POC) */
+
+.bmf-biovoice-recorder {
+  --bv-accent: #0ea5e9;
+  --bv-danger: #ef4444;
+  --bv-success: #22c55e;
+  --bv-muted: #64748b;
+  --bv-border: #e2e8f0;
+  --bv-bg: #f8fafc;
+
+  max-width: 420px;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--bv-border);
+  border-radius: 12px;
+  background: var(--bv-bg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.bmf-bv-status {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #0f172a;
+  margin-bottom: 1rem;
+}
+
+.bmf-bv-controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.bmf-bv-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.bmf-bv-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bmf-bv-btn-record {
+  background: var(--bv-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bmf-bv-btn-record:hover:not(:disabled) {
+  background: #0284c7;
+}
+
+.bmf-bv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6);
+}
+
+.bmf-biovoice-recorder.is-recording .bmf-bv-dot {
+  animation: bmf-bv-pulse 1.2s infinite;
+}
+
+@keyframes bmf-bv-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); background: #fecaca; }
+  70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.bmf-bv-btn-stop {
+  background: #fff;
+  border-color: var(--bv-border);
+  color: #0f172a;
+}
+
+.bmf-bv-btn-stop:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.bmf-bv-btn-save {
+  background: var(--bv-success);
+  color: #fff;
+}
+
+.bmf-bv-btn-save:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.bmf-bv-btn-discard {
+  background: #fff;
+  border-color: var(--bv-border);
+  color: var(--bv-muted);
+}
+
+.bmf-bv-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 1rem;
+}
+
+.bmf-bv-preview {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--bv-border);
+}
+
+.bmf-bv-preview-label {
+  font-size: 0.8rem;
+  color: var(--bv-muted);
+  margin: 0 0 0.5rem;
+}
+
+.bmf-bv-preview audio {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.bmf-bv-preview-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bmf-bv-message {
+  margin-top: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.bmf-bv-message--success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.bmf-bv-message--error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.bmf-bv-message--info {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+/* Session list */
+.bmf-biovoice-sessions {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.bmf-bv-empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+.bmf-bv-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bmf-bv-session-item {
+  padding: 0.85rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.bmf-bv-session-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.bmf-bv-session-date {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.bmf-bv-session-type,
+.bmf-bv-session-status {
+  text-transform: capitalize;
+}
+
+.bmf-bv-session-item audio {
+  width: 100%;
+  max-width: 360px;
+}
+
+.bmf-biovoice-login-required {
+  color: #64748b;
+}
