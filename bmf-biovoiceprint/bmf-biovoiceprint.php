@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.1-poc
+ * Version:           0.2.2-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.1-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.2-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
