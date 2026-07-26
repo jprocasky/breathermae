@@ -142,6 +142,13 @@ class BMF_BioVoice_REST_API {
 			'task_code'        => $request->get_param( 'task_code' ),
 			'notes'            => $request->get_param( 'notes' ),
 		];
+		$cf = $request->get_param( 'context_flags' );
+		if ( $cf ) {
+			$decoded = is_string( $cf ) ? json_decode( $cf, true ) : $cf;
+			if ( is_array( $decoded ) ) {
+				$meta['context_flags'] = $decoded;
+			}
+		}
 		$result = BMF_BioVoice_Session_Service::create_from_upload( $user_id, $files['audio'], $meta );
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -260,6 +267,12 @@ class BMF_BioVoice_REST_API {
 		if ( $with_debug ) {
 			$out['device_info'] = $row['device_info'] ?? null;
 			$out['user_id']     = isset( $row['user_id'] ) ? (int) $row['user_id'] : null;
+			if ( ! empty( $row['context_flags_json'] ) ) {
+				$flags = json_decode( $row['context_flags_json'], true );
+				if ( is_array( $flags ) ) {
+					$out['context_flags'] = $flags;
+				}
+			}
 		}
 		return $out;
 	}
