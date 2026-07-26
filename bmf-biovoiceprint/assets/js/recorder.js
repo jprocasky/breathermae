@@ -2,16 +2,18 @@
  * BioVoicePrint – MediaRecorder client.
  * Records → VU meter → min-duration hard fail → optional save via REST.
  * Supports mic selection, task_code, session_group_id, mic_check (client-only).
+ *
+ * IMPORTANT: do not early-return when window.bmfBioVoice is missing.
+ * The guided session wizard sets it just before mounting a recorder.
  */
 (function () {
   'use strict';
 
-  if (typeof window.bmfBioVoice === 'undefined') {
-    return;
-  }
-
-  const cfg = window.bmfBioVoice;
   const STORAGE_KEY = 'bmf_biovoice_device_id';
+
+  function getCfg() {
+    return window.bmfBioVoice || {};
+  }
 
   function formatTime(sec) {
     const m = Math.floor(sec / 60);
@@ -37,6 +39,7 @@
   }
 
   function initRecorder(root) {
+    const cfg = getCfg();
     const statusEl   = root.querySelector('[data-status]');
     const timerEl    = root.querySelector('[data-timer]');
     const previewEl  = root.querySelector('[data-preview]');
@@ -311,7 +314,8 @@
       const type = blob.type || recordedMime || '';
       const ext = extensionForMime(type);
       form.append('audio', blob, 'recording.' + ext);
-      form.append('session_type', cfg.sessionType || 'comparison');
+      const liveCfg = getCfg();
+      form.append('session_type', liveCfg.sessionType || cfg.sessionType || 'comparison');
       form.append('duration_sec', String(Math.round(duration * 10) / 10));
       if (taskCode) form.append('task_code', taskCode);
       if (groupId) form.append('session_group_id', String(groupId));
@@ -319,7 +323,7 @@
       form.append('device_info_json', JSON.stringify(device));
       form.append('device_info', [device.device_class, device.os, device.mic_label, device.browser].filter(Boolean).join(' | '));
       try {
-        const res = await fetch(cfg.restUrl, { method: 'POST', headers: { 'X-WP-Nonce': cfg.nonce }, body: form, credentials: 'same-origin' });
+        const res = await fetch(liveCfg.restUrl || cfg.restUrl, { method: 'POST', headers: { 'X-WP-Nonce': liveCfg.nonce || cfg.nonce }, body: form, credentials: 'same-origin' });
         const data = await res.json().catch(function () { return {}; });
         if (!res.ok) {
           showMessage((data && data.message) ? data.message : 'Upload failed (' + res.status + ').', 'error');
