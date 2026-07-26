@@ -4,7 +4,7 @@
  *
  * Routes:
  *   POST   /wp-json/bmf-biovoice/v1/sessions          → upload audio + create session
- *   GET    /wp-json/bmf-biovoice/v1/sessions          → list current user's sessions
+ *   GET    /wp-json/bmf-biovoice/v1/sessions          → list sessions (own, or any if admin)
  *   GET    /wp-json/bmf-biovoice/v1/sessions/{id}/play → stream audio (owner or admin)
  *   DELETE /wp-json/bmf-biovoice/v1/sessions/{id}     → delete session + file
  */
@@ -67,8 +67,6 @@ class BMF_BioVoice_REST_API {
 
 	/**
 	 * POST /sessions
-	 * Expects multipart/form-data with field "audio".
-	 * Optional fields: session_type, duration_sec, device_info, notes
 	 */
 	public static function create_session( WP_REST_Request $request ) {
 		$user_id = get_current_user_id();
@@ -85,7 +83,6 @@ class BMF_BioVoice_REST_API {
 			'notes'        => $request->get_param( 'notes' ),
 		];
 
-		// Optional JSON fields (stringified by the client).
 		$wa = $request->get_param( 'wellness_anchor' );
 		if ( $wa ) {
 			$decoded = is_string( $wa ) ? json_decode( $wa, true ) : $wa;
@@ -117,10 +114,31 @@ class BMF_BioVoice_REST_API {
 
 	/**
 	 * GET /sessions
+	 *
+	 * Admins may pass user_id or email to inspect another member's recordings.
+	 * Non-admins always receive their own sessions only.
 	 */
 	public static function list_sessions( WP_REST_Request $request ) {
-		$user_id = get_current_user_id();
-		$args    = [
+		$current_id = get_current_user_id();
+		$target_id  = $current_id;
+		$is_admin   = current_user_can( 'manage_options' );
+
+		if ( $is_admin ) {
+			$req_user  = absint( $request->get_param( 'user_id' ) );
+			$req_email = sanitize_email( (string) $request->get_param( 'email' ) );
+
+			if ( $req_user > 0 ) {
+				$target_id = $req_user;
+			} elseif ( $req_email ) {
+				$user = get_user_by( 'email', $req_email );
+				if ( ! $user ) {
+					return new WP_Error( 'bmf_biovoice_user', 'No user found for that email.', [ 'status' => 404 ] );
+				}
+				$target_id = (int) $user->ID;
+			}
+		}
+
+		$args = [
 			'limit'  => min( 100, absint( $request->get_param( 'limit' ) ?: 50 ) ),
 			'offset' => absint( $request->get_param( 'offset' ) ?: 0 ),
 		];
@@ -128,23 +146,26 @@ class BMF_BioVoice_REST_API {
 			$args['session_type'] = sanitize_key( $request->get_param( 'session_type' ) );
 		}
 
-		$rows = BMF_BioVoice_Session_Service::get_user_sessions( $user_id, $args );
+		$rows = BMF_BioVoice_Session_Service::get_user_sessions( $target_id, $args );
 
 		$out = [];
 		foreach ( $rows as $row ) {
-			$out[] = self::format_session_summary( $row );
+			$out[] = self::format_session_summary( $row, $is_admin );
 		}
 
+		$target_user = get_userdata( $target_id );
+
 		return rest_ensure_response( [
-			'sessions' => $out,
-			'count'    => count( $out ),
+			'sessions'       => $out,
+			'count'          => count( $out ),
+			'target_user_id' => $target_id,
+			'target_email'   => $target_user ? $target_user->user_email : null,
+			'target_display' => $target_user ? $target_user->display_name : null,
 		] );
 	}
 
 	/**
 	 * GET /sessions/{id}/play
-	 * Streams the audio file with correct Content-Type.
-	 * Prefer BMF_BioVoice_Play for <audio> tags; this REST route remains for API clients.
 	 */
 	public static function play_session( WP_REST_Request $request ) {
 		$user_id    = get_current_user_id();
@@ -167,14 +188,12 @@ class BMF_BioVoice_REST_API {
 		$mime = $session['mime_type'] ?: 'audio/webm';
 		$size = filesize( $path );
 
-		// Stream the file.
 		header( 'Content-Type: ' . $mime );
 		header( 'Content-Length: ' . $size );
 		header( 'Content-Disposition: inline; filename="biovoice-' . $session_id . '"' );
 		header( 'Accept-Ranges: bytes' );
 		header( 'Cache-Control: private, no-store' );
 
-		// Simple full-file stream for POC (range support can be added later).
 		$fp = fopen( $path, 'rb' );
 		if ( $fp ) {
 			fpassthru( $fp );
@@ -199,7 +218,6 @@ class BMF_BioVoice_REST_API {
 			return new WP_Error( 'bmf_biovoice_forbidden', 'You cannot delete this recording.', [ 'status' => 403 ] );
 		}
 
-		// Only owner or admin for now.
 		if ( (int) $session['user_id'] !== $user_id && ! current_user_can( 'manage_options' ) ) {
 			return new WP_Error( 'bmf_biovoice_forbidden', 'You cannot delete this recording.', [ 'status' => 403 ] );
 		}
@@ -216,9 +234,10 @@ class BMF_BioVoice_REST_API {
 
 	/**
 	 * Public-safe session summary (no storage_key).
+	 * Admins get extra debug fields (device_info).
 	 */
-	private static function format_session_summary( array $row ): array {
-		return [
+	private static function format_session_summary( array $row, bool $is_admin = false ): array {
+		$out = [
 			'id'                => (int) $row['id'],
 			'session_type'      => $row['session_type'],
 			'status'            => $row['status'],
@@ -231,5 +250,12 @@ class BMF_BioVoice_REST_API {
 				? BMF_BioVoice_Play::url( (int) $row['id'] )
 				: rest_url( self::NS . '/sessions/' . (int) $row['id'] . '/play' ),
 		];
+
+		if ( $is_admin ) {
+			$out['device_info'] = $row['device_info'] ?? null;
+			$out['user_id']     = isset( $row['user_id'] ) ? (int) $row['user_id'] : null;
+		}
+
+		return $out;
 	}
 }
