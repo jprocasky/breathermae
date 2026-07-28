@@ -1,0 +1,179 @@
+/* Breathermae Active Coupons – clean internal table */
+
+.bmf-ac-wrap {
+	font-family: inherit;
+	margin: 1.5rem 0;
+	max-width: 100%;
+}
+
+.bmf-ac-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+	flex-wrap: wrap;
+}
+
+.bmf-ac-title {
+	margin: 0;
+	font-size: 1.35rem;
+	font-weight: 600;
+	color: #1a1a1a;
+}
+
+.bmf-ac-count {
+	font-size: 0.9rem;
+	color: #666;
+	background: #f0f4f8;
+	padding: 0.25rem 0.65rem;
+	border-radius: 999px;
+}
+
+.bmf-ac-empty,
+.bmf-ac-notice {
+	padding: 1.25rem;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	color: #475569;
+}
+
+.bmf-ac-table-wrap {
+	overflow-x: auto;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Override DataTables defaults for a cleaner look */
+.bmf-ac-table.dataTable {
+	margin: 0 !important;
+	border-collapse: collapse;
+	width: 100% !important;
+}
+
+.bmf-ac-table thead th {
+	background: #f8fafc;
+	color: #334155;
+	font-weight: 600;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	padding: 0.85rem 1rem !important;
+	border-bottom: 1px solid #e2e8f0 !important;
+	white-space: nowrap;
+}
+
+.bmf-ac-table tbody td {
+	padding: 0.75rem 1rem !important;
+	border-bottom: 1px solid #f1f5f9 !important;
+	vertical-align: top;
+	font-size: 0.925rem;
+	color: #1e293b;
+}
+
+.bmf-ac-table tbody tr:last-child td {
+	border-bottom: none !important;
+}
+
+.bmf-ac-table tbody tr:hover {
+	background: #f8fafc;
+}
+
+.bmf-ac-code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 0.9rem;
+	font-weight: 600;
+	background: #f1f5f9;
+	padding: 0.2rem 0.5rem;
+	border-radius: 4px;
+	color: #0f172a;
+	letter-spacing: 0.02em;
+}
+
+/* DataTables controls */
+.bmf-ac-wrap .dataTables_wrapper {
+	padding: 0.75rem 1rem 1rem;
+}
+
+.bmf-ac-wrap .dataTables_filter {
+	margin-bottom: 0.75rem;
+}
+
+.bmf-ac-wrap .dataTables_filter label {
+	font-size: 0.9rem;
+	color: #64748b;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.bmf-ac-wrap .dataTables_filter input {
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+	padding: 0.4rem 0.75rem;
+	font-size: 0.9rem;
+	min-width: 220px;
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.bmf-ac-wrap .dataTables_filter input:focus {
+	border-color: #64748b;
+	box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
+}
+
+.bmf-ac-wrap .dataTables_info {
+	font-size: 0.85rem;
+	color: #64748b;
+	padding-top: 0.75rem !important;
+}
+
+.bmf-ac-wrap .dataTables_paginate {
+	padding-top: 0.5rem !important;
+}
+
+.bmf-ac-wrap .dataTables_paginate .paginate_button {
+	border-radius: 6px !important;
+	border: 1px solid transparent !important;
+	padding: 0.3rem 0.7rem !important;
+	margin: 0 2px !important;
+	font-size: 0.875rem !important;
+}
+
+.bmf-ac-wrap .dataTables_paginate .paginate_button.current {
+	background: #334155 !important;
+	color: #fff !important;
+	border-color: #334155 !important;
+}
+
+.bmf-ac-wrap .dataTables_paginate .paginate_button:hover {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+	border-color: #e2e8f0 !important;
+}
+
+.bmf-ac-wrap .dataTables_length {
+	margin-bottom: 0.5rem;
+}
+
+.bmf-ac-wrap .dataTables_length select {
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+	padding: 0.25rem 0.5rem;
+	font-size: 0.875rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+	.bmf-ac-wrap .dataTables_filter input {
+		min-width: 140px;
+	}
+	.bmf-ac-table thead th,
+	.bmf-ac-table tbody td {
+		padding: 0.6rem 0.7rem !important;
+		font-size: 0.85rem;
+	}
+}
