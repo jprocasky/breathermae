@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — Subcategory enrichment from forms
+
+- Added `BMAE_AVF_Section_Map` mapping live `bm_form_sections` IDs (forms 18–25) to registry subcategory keys.
+- Registry updated to match live form section titles; added forms-only sections (`mind_body_connection`, `environmental_reflection`).
+- Adapter now joins `bm_responses` + `bm_section_scores` to attach subcategory scores to each `bm_pillars_results` assessment.
+- Matching uses a ±21 day window around `results_date`, preferring the closest submitted response per pillar form.
+- Section scores normalized from 0–1 to 0–100 when needed.
+
 ## 1.1.1 — Pillar-level production history
 
 - Added `BMAE_AVF_Pillars_Results_Adapter` to read finalized rows from `{prefix}bm_pillars_results`.
