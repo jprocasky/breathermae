@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 
 Frontend shortcode that lists non-expired WooCommerce coupons in a clean, sortable & filterable table for internal team use.
@@ -14,7 +14,7 @@ Adds the shortcode `[bmf_active_coupons]`.
 Place it on any page (Elementor Shortcode widget works). Protect the page with WP Fusion so only the intended team members can see it.
 
 Shows:
-* Coupon code
+* Coupon code (click to copy)
 * Discount (percent / fixed cart / fixed product)
 * Restricted products (or “Any product”)
 * Restricted categories (or “Any category”)
@@ -22,7 +22,7 @@ Shows:
 * Usage count / limit
 * Description
 
-Uses DataTables for instant search + column sorting.
+Uses DataTables for instant search + column sorting. Coupon codes are clickable to copy to clipboard.
 
 == Installation ==
 
@@ -32,6 +32,9 @@ Uses DataTables for instant search + column sorting.
 4. Restrict the page with WP Fusion
 
 == Changelog ==
+
+= 1.0.1 =
+* Click coupon code to copy to clipboard (hover: “Click to copy”, brief “Copied!” feedback)
 
 = 1.0.0 =
 * Initial release
