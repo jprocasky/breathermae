@@ -184,9 +184,17 @@
 
         renderPillarGrid() {
             const section = this.el("section", "bmae-avf-pillars-section");
+            const hasSubDetail = this.hasAnySubcategoryDetail();
             section.append(
                 this.el("div", "bmae-avf-section-heading",
-                    this.el("div", "", this.el("h3", "", "Eight Pillars of Wellness"), this.el("p", "", "Select a pillar to reveal its complete subcategory profile."))
+                    this.el("div", "",
+                        this.el("h3", "", "Eight Pillars of Wellness"),
+                        this.el("p", "",
+                            hasSubDetail
+                                ? "Select a pillar to reveal its complete subcategory profile."
+                                : "Select a pillar to view its historical sparkline. Subcategory detail is not stored for this history."
+                        )
+                    )
                 )
             );
 
@@ -201,6 +209,11 @@
 
             section.append(grid);
             return section;
+        }
+
+        hasAnySubcategoryDetail() {
+            const pillars = this.data.current?.pillars || {};
+            return Object.values(pillars).some(p => Array.isArray(p?.subcategories) && p.subcategories.length > 0);
         }
 
         pillarCard(definition, current, history) {
@@ -236,22 +249,33 @@
             body.hidden = true;
             body.append(this.sparkline(sparkValues));
 
-            const list = this.el("div", "bmae-avf-subcategory-list");
-            (current?.subcategories || []).forEach(subcategory => {
-                const row = this.el("div", "bmae-avf-subcategory");
-                row.append(
-                    this.el("span", "", subcategory.label),
-                    this.el("strong", "", subcategory.score ?? "—"),
+            const subs = current?.subcategories || [];
+            if (subs.length > 0) {
+                const list = this.el("div", "bmae-avf-subcategory-list");
+                subs.forEach(subcategory => {
+                    const row = this.el("div", "bmae-avf-subcategory");
+                    row.append(
+                        this.el("span", "", subcategory.label),
+                        this.el("strong", "", subcategory.score ?? "—"),
+                        this.el(
+                            "small",
+                            `bmae-avf-band bmae-avf-band--${(subcategory.band?.id || "none")}`,
+                            subcategory.band?.label ?? "No data"
+                        )
+                    );
+                    list.append(row);
+                });
+                body.append(list);
+            } else {
+                body.append(
                     this.el(
-                        "small",
-                        `bmae-avf-band bmae-avf-band--${(subcategory.band?.id || "none")}`,
-                        subcategory.band?.label ?? "No data"
+                        "p",
+                        "bmae-avf-subcategory-empty",
+                        "Pillar-level score only. Subcategory breakdown is not available in the current history."
                     )
                 );
-                list.append(row);
-            });
+            }
 
-            body.append(list);
             header.addEventListener("click", () => {
                 const expanded = header.getAttribute("aria-expanded") === "true";
                 header.setAttribute("aria-expanded", String(!expanded));
@@ -287,16 +311,22 @@
 
         renderDataNotice() {
             const notice = this.el("div", "bmae-avf-data-notice");
-            const source = this.data.source === "demo" ? "Demonstration data" : "Breathermae platform data";
+            let sourceLabel = "Breathermae platform data";
+            let sourceDetail = " is supplying this dashboard through the production data layer.";
+
+            if (this.data.source === "demo") {
+                sourceLabel = "Demonstration data";
+                sourceDetail = " is currently displayed so the dashboard integration can be tested before production history is available.";
+            } else if (this.data.source === "bm_pillars_results") {
+                sourceLabel = "bm_pillars_results";
+                sourceDetail = " is supplying finalized Eight Pillars history for this member.";
+            } else if (this.data.source === "platform") {
+                sourceDetail = " is supplying this dashboard through the bmae_avf_eight_pillars_history filter.";
+            }
+
             notice.append(
-                this.el("strong", "", source),
-                this.el(
-                    "span",
-                    "",
-                    this.data.source === "demo"
-                        ? " is currently displayed so the dashboard integration can be tested before the production data adapter is connected."
-                        : " is supplying this dashboard through the bmae_avf_eight_pillars_history filter."
-                )
+                this.el("strong", "", sourceLabel),
+                this.el("span", "", sourceDetail)
             );
 
             if (this.data.validation?.warnings?.length) {
