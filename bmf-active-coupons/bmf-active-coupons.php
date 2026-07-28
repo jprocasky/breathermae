@@ -134,7 +134,7 @@ final class BMF_Active_Coupons {
 			}
 
 			// Discount display + sort key.
-			type   = $coupon->get_discount_type();
+			$type   = $coupon->get_discount_type();
 			$amount = $coupon->get_amount();
 			$discount_label = self::format_discount( $type, $amount );
 			$discount_sort  = ( 'percent' === $type ) ? (float) $amount : (float) $amount * 100; // rough numeric sort
