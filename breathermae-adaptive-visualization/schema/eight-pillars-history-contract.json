@@ -1,0 +1,449 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Breathermae Eight Pillars Historical Assessment Contract",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "assessment_id",
+      "assessment_date",
+      "pillars"
+    ],
+    "properties": {
+      "assessment_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "assessment_date": {
+        "type": "string",
+        "format": "date"
+      },
+      "label": {
+        "type": "string"
+      },
+      "pillars": {
+        "type": "object",
+        "required": [
+          "physical",
+          "mental",
+          "emotional",
+          "spiritual",
+          "social",
+          "occupational",
+          "financial",
+          "environmental"
+        ],
+        "properties": {
+          "physical": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "overall_physical_health": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "physical_activity_daily_movement": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "daily_habits_health_behaviors": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "health_maintenance_medical_beliefs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "mental": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "cognitive_functioning": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "self_efficacy": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "curiosity": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "growth_mindset": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "emotional": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "emotion_regulation": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "emotional_self_efficacy": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "emotional_self_awareness": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "self_compassion": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "resilience": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "self_care": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "spiritual": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "meaning_purpose": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "spirituality": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "mindful_attention": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "everyday_practice_frequency": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "social": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "social_satisfaction_comfort": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "social_anxiety": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "emotional_support": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "communication": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "taking_part_activities": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "boundaries_conflict_resolution": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "occupational": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "work_life_balance": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "job_satisfaction": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "confidence_work_abilities": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "workplace_relationships_support": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "career_growth_work_environment": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "financial": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "financial_status_experience": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "financial_status_experience_continued": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "financial_self_efficacy": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "financial_management_habits": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "financial_reflection": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "environmental": {
+            "type": "object",
+            "required": [
+              "subcategories"
+            ],
+            "properties": {
+              "subcategories": {
+                "type": "object",
+                "properties": {
+                  "connection_nature": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "environmental_actions_behaviors": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "environmental_identity": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "limiting_radiation_device_exposure": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

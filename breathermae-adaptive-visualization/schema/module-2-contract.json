@@ -1,0 +1,33 @@
+{
+  "module": 2,
+  "name": "Eight Pillars Data Foundation and Working Dashboard",
+  "plugin_version": "1.1.0",
+  "schema_version": "2.0.0",
+  "extends": "Module 1",
+  "dashboard": "eight-pillars",
+  "cadence": "quarterly",
+  "score_scale": {
+    "minimum": 0,
+    "maximum": 100
+  },
+  "score_bands": [
+    {
+      "id": "low",
+      "minimum": 0,
+      "maximum": 39.99
+    },
+    {
+      "id": "moderate",
+      "minimum": 40,
+      "maximum": 79.99
+    },
+    {
+      "id": "high",
+      "minimum": 80,
+      "maximum": 100
+    }
+  ],
+  "pillar_count": 8,
+  "subcategory_count": 38,
+  "production_filter": "bmae_avf_eight_pillars_history"
+}
