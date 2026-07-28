@@ -46,7 +46,7 @@ final class BMF_Active_Coupons {
 			return '<div class="bmf-ac-wrap"><p class="bmf-ac-empty">No active (non-expired) coupons found.</p></div>';
 		}
 
-		obst_start();
+		ob_start();
 		?>
 		<div class="bmf-ac-wrap">
 			<div class="bmf-ac-header">
