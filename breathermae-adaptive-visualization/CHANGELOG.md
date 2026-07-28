@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1 — Pillar-level production history
+
+- Added `BMAE_AVF_Pillars_Results_Adapter` to read finalized rows from `{prefix}bm_pillars_results`.
+- Provider now prefers live `bm_pillars_results` data over demo data when available.
+- Provider and validator accept **direct pillar scores** (no subcategory required).
+- Overall score prefers stored `master_score` when present.
+- JavaScript shows a clear message when subcategory detail is not available.
+- Source label distinguishes `bm_pillars_results`, filter-supplied platform data, and demo data.
+
 ## 1.1.0 — Module 2
 
 - Preserved the original Module 1 WordPress, Elementor, security, REST, and asset foundation.
