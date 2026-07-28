@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae Active Coupons
  * Plugin URI:        https://breathermae.com
  * Description:       Frontend shortcode [bmf_active_coupons] that lists non-expired WooCommerce coupons in a clean, sortable & filterable table for internal team use. Protect the page with WP Fusion.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_ACTIVE_COUPONS_VERSION', '1.0.0' );
+define( 'BMF_ACTIVE_COUPONS_VERSION', '1.0.1' );
 define( 'BMF_ACTIVE_COUPONS_FILE', __FILE__ );
 define( 'BMF_ACTIVE_COUPONS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_ACTIVE_COUPONS_URL', plugin_dir_url( __FILE__ ) );
@@ -70,7 +70,14 @@ final class BMF_Active_Coupons {
 						<?php foreach ( $coupons as $row ) : ?>
 							<tr>
 								<td data-order="<?php echo esc_attr( $row['code'] ); ?>">
-									<code class="bmf-ac-code"><?php echo esc_html( $row['code'] ); ?></code>
+									<code
+										class="bmf-ac-code"
+										data-code="<?php echo esc_attr( $row['code'] ); ?>"
+										title="Click to copy"
+										role="button"
+										tabindex="0"
+										aria-label="Copy coupon code <?php echo esc_attr( $row['code'] ); ?>"
+									><?php echo esc_html( $row['code'] ); ?></code>
 								</td>
 								<td data-order="<?php echo esc_attr( $row['discount_sort'] ); ?>">
 									<?php echo esc_html( $row['discount'] ); ?>
@@ -127,7 +134,7 @@ final class BMF_Active_Coupons {
 			}
 
 			// Discount display + sort key.
-			$type   = $coupon->get_discount_type();
+			type   = $coupon->get_discount_type();
 			$amount = $coupon->get_amount();
 			$discount_label = self::format_discount( $type, $amount );
 			$discount_sort  = ( 'percent' === $type ) ? (float) $amount : (float) $amount * 100; // rough numeric sort
