@@ -13,6 +13,16 @@ final class BMAE_AVF_Eight_Pillars_Provider {
 
         $source = 'platform';
 
+        // Prefer live data from bm_pillars_results when the filter did not supply history.
+        if (!is_array($raw_history) || count($raw_history) === 0) {
+            $adapter_history = BMAE_AVF_Pillars_Results_Adapter::history_for_user($user_id);
+            if (is_array($adapter_history) && count($adapter_history) > 0) {
+                $raw_history = $adapter_history;
+                $source = 'bm_pillars_results';
+            }
+        }
+
+        // Fall back to deterministic demo data only when nothing else is available.
         if ((!is_array($raw_history) || count($raw_history) === 0)
             && (bool) BMAE_AVF_Config::setting('enable_demo_data', true)
         ) {
@@ -33,7 +43,7 @@ final class BMAE_AVF_Eight_Pillars_Provider {
         return [
             'status' => $validation['valid'] ? 'ready' : 'validation_error',
             'dashboard_id' => 'eight-pillars',
-            'schema_version' => '2.0.0',
+            'schema_version' => '2.1.0',
             'source' => $source,
             'user_id' => $user_id,
             'generated_at' => gmdate('c'),
@@ -66,23 +76,43 @@ final class BMAE_AVF_Eight_Pillars_Provider {
             $overall_weight_total = 0.0;
 
             foreach ($registry as $pillar_id => $pillar_definition) {
-                $subscores = $assessment['pillars'][$pillar_id]['subcategories'] ?? [];
+                $pillar_payload = $assessment['pillars'][$pillar_id] ?? [];
+                if (!is_array($pillar_payload)) {
+                    $pillar_payload = [];
+                }
+
+                // Support both shapes:
+                // 1) Direct pillar score (from bm_pillars_results)
+                // 2) Subcategory scores (weighted average)
+                $direct_score = array_key_exists('score', $pillar_payload)
+                    ? self::nullable_float($pillar_payload['score'])
+                    : null;
+
+                $subscores = $pillar_payload['subcategories'] ?? [];
+                if (!is_array($subscores)) {
+                    $subscores = [];
+                }
+
                 $weighted_total = 0.0;
                 $weight_total = 0.0;
                 $public_subcategories = [];
+                $has_any_sub = false;
 
                 foreach ($pillar_definition['subcategories'] as $subcategory_id => $subcategory_definition) {
-                    $score = $subscores[$subcategory_id] ?? null;
+                    $score = array_key_exists($subcategory_id, $subscores)
+                        ? self::nullable_float($subscores[$subcategory_id])
+                        : null;
 
                     if ($score !== null) {
+                        $has_any_sub = true;
                         $weight = (float) $subcategory_definition['weight'];
-                        $weighted_total += ((float) $score) * $weight;
+                        $weighted_total += $score * $weight;
                         $weight_total += $weight;
                     }
 
                     $band = $score === null
                         ? null
-                        : BMAE_AVF_Eight_Pillars_Registry::score_band((float) $score);
+                        : BMAE_AVF_Eight_Pillars_Registry::score_band($score);
 
                     $public_subcategories[] = [
                         'id' => $subcategory_id,
@@ -92,14 +122,21 @@ final class BMAE_AVF_Eight_Pillars_Provider {
                     ];
                 }
 
-                $pillar_score = $weight_total > 0
-                    ? round($weighted_total / $weight_total, 1)
-                    : null;
+                // Prefer explicit pillar score when present; otherwise derive from subcategories.
+                $pillar_score = $direct_score;
+                if ($pillar_score === null && $weight_total > 0) {
+                    $pillar_score = round($weighted_total / $weight_total, 1);
+                }
 
                 if ($pillar_score !== null) {
                     $pillar_weight = (float) $pillar_definition['weight'];
                     $overall_weighted_total += $pillar_score * $pillar_weight;
                     $overall_weight_total += $pillar_weight;
+                }
+
+                // When only pillar-level data exists, do not invent empty subcategory rows.
+                if (!$has_any_sub) {
+                    $public_subcategories = [];
                 }
 
                 $pillar_results[$pillar_id] = [
@@ -110,12 +147,17 @@ final class BMAE_AVF_Eight_Pillars_Provider {
                         ? null
                         : BMAE_AVF_Eight_Pillars_Registry::score_band($pillar_score),
                     'subcategories' => $public_subcategories,
+                    'detail_level' => $has_any_sub ? 'subcategory' : 'pillar',
                 ];
             }
 
-            $overall_score = $overall_weight_total > 0
-                ? round($overall_weighted_total / $overall_weight_total, 1)
-                : null;
+            // Prefer stored master_score when the adapter supplied it.
+            $master = self::nullable_float($assessment['master_score'] ?? null);
+            $overall_score = $master !== null
+                ? $master
+                : ($overall_weight_total > 0
+                    ? round($overall_weighted_total / $overall_weight_total, 1)
+                    : null);
 
             $computed[] = [
                 'assessment_id' => $assessment['assessment_id'],
@@ -130,6 +172,16 @@ final class BMAE_AVF_Eight_Pillars_Provider {
         }
 
         return self::attach_change_metrics($computed);
+    }
+
+    private static function nullable_float(mixed $value): ?float {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (!is_numeric($value)) {
+            return null;
+        }
+        return round((float) $value, 2);
     }
 
     private static function attach_change_metrics(array $history): array {
