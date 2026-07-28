@@ -6,8 +6,8 @@ if (!defined('ABSPATH')) {
 /**
  * Canonical Eight Pillars and subcategory registry.
  *
- * All identifiers are stable machine keys. Display labels can be filtered
- * without changing stored data or API contracts.
+ * Aligned to live bm_form_sections for forms 18–25 (export 2026-07-28).
+ * Machine IDs are stable; labels follow the forms titles where practical.
  */
 final class BMAE_AVF_Eight_Pillars_Registry {
     public static function all(): array {
@@ -30,10 +30,11 @@ final class BMAE_AVF_Eight_Pillars_Registry {
                 'weight' => 1.0,
                 'accent' => '#2d9cdb',
                 'subcategories' => [
-                    'cognitive_functioning' => ['label' => 'Cognitive Functioning', 'weight' => 1.0],
-                    'self_efficacy' => ['label' => 'Self-Efficacy', 'weight' => 1.0],
-                    'curiosity' => ['label' => 'Curiosity', 'weight' => 1.0],
-                    'growth_mindset' => ['label' => 'Growth Mindset', 'weight' => 1.0],
+                    'cognitive_functioning' => ['label' => 'Everyday Thinking & Memory', 'weight' => 1.0],
+                    'self_efficacy' => ['label' => 'Confidence in Handling Everyday Challenges', 'weight' => 1.0],
+                    'curiosity' => ['label' => 'Curiosity and Learning', 'weight' => 1.0],
+                    'growth_mindset' => ['label' => 'Beliefs About Personal Change', 'weight' => 1.0],
+                    'mind_body_connection' => ['label' => 'Exploring the Mind-Body Connection', 'weight' => 1.0],
                 ],
             ],
             'emotional' => [
@@ -43,7 +44,7 @@ final class BMAE_AVF_Eight_Pillars_Registry {
                 'accent' => '#ef7f5b',
                 'subcategories' => [
                     'emotion_regulation' => ['label' => 'Emotion Regulation', 'weight' => 1.0],
-                    'emotional_self_efficacy' => ['label' => 'Emotional Self-Efficacy', 'weight' => 1.0],
+                    'emotional_self_efficacy' => ['label' => 'Emotion Regulation Confidence', 'weight' => 1.0],
                     'emotional_self_awareness' => ['label' => 'Emotional Self-Awareness', 'weight' => 1.0],
                     'self_compassion' => ['label' => 'Self-Compassion', 'weight' => 1.0],
                     'resilience' => ['label' => 'Resilience', 'weight' => 1.0],
@@ -57,9 +58,9 @@ final class BMAE_AVF_Eight_Pillars_Registry {
                 'accent' => '#9b7bd3',
                 'subcategories' => [
                     'meaning_purpose' => ['label' => 'Meaning and Purpose', 'weight' => 1.0],
-                    'spirituality' => ['label' => 'Spirituality', 'weight' => 1.0],
-                    'mindful_attention' => ['label' => 'Mindful Attention', 'weight' => 1.0],
-                    'everyday_practice_frequency' => ['label' => 'Everyday Practice Frequency', 'weight' => 1.0],
+                    'spirituality' => ['label' => 'Spirituality and Support', 'weight' => 1.0],
+                    'mindful_attention' => ['label' => 'Mindful Awareness in the Moment', 'weight' => 1.0],
+                    'everyday_practice_frequency' => ['label' => 'Everyday Practices that Support Inner Well-being', 'weight' => 1.0],
                 ],
             ],
             'social' => [
@@ -69,11 +70,12 @@ final class BMAE_AVF_Eight_Pillars_Registry {
                 'accent' => '#43a5d8',
                 'subcategories' => [
                     'social_satisfaction_comfort' => ['label' => 'Social Satisfaction & Comfort', 'weight' => 1.0],
-                    'social_anxiety' => ['label' => 'Social Anxiety', 'weight' => 1.0],
                     'emotional_support' => ['label' => 'Emotional Support', 'weight' => 1.0],
                     'communication' => ['label' => 'Communication', 'weight' => 1.0],
                     'taking_part_activities' => ['label' => 'Taking Part in Activities', 'weight' => 1.0],
                     'boundaries_conflict_resolution' => ['label' => 'Boundaries & Conflict Resolution', 'weight' => 1.0],
+                    // Kept for forward-compat if a Social Anxiety section is added later.
+                    'social_anxiety' => ['label' => 'Social Anxiety', 'weight' => 1.0],
                 ],
             ],
             'occupational' => [
@@ -95,8 +97,8 @@ final class BMAE_AVF_Eight_Pillars_Registry {
                 'weight' => 1.0,
                 'accent' => '#66b36b',
                 'subcategories' => [
-                    'financial_status_experience' => ['label' => 'Financial Status & Experience', 'weight' => 1.0],
-                    'financial_status_experience_continued' => ['label' => 'Financial Status & Experience — Continued', 'weight' => 1.0],
+                    'financial_status_experience' => ['label' => 'Financial Status and Experience', 'weight' => 1.0],
+                    'financial_status_experience_continued' => ['label' => 'Financial Status and Experience — Continued', 'weight' => 1.0],
                     'financial_self_efficacy' => ['label' => 'Financial Self-Efficacy', 'weight' => 1.0],
                     'financial_management_habits' => ['label' => 'Financial Management Habits', 'weight' => 1.0],
                     'financial_reflection' => ['label' => 'Financial Reflection', 'weight' => 1.0],
@@ -109,9 +111,10 @@ final class BMAE_AVF_Eight_Pillars_Registry {
                 'accent' => '#47c0b6',
                 'subcategories' => [
                     'connection_nature' => ['label' => 'Connection to Nature', 'weight' => 1.0],
-                    'environmental_actions_behaviors' => ['label' => 'Environmental Actions & Behaviors', 'weight' => 1.0],
-                    'environmental_identity' => ['label' => 'Environmental Identity', 'weight' => 1.0],
-                    'limiting_radiation_device_exposure' => ['label' => 'Limiting Radiation & Device Exposure', 'weight' => 1.0],
+                    'environmental_actions_behaviors' => ['label' => 'Environmental Actions and Behaviors', 'weight' => 1.0],
+                    'environmental_identity' => ['label' => 'Environmental Identity and Reflection', 'weight' => 1.0],
+                    'limiting_radiation_device_exposure' => ['label' => 'Limiting Radiation and Device Exposure', 'weight' => 1.0],
+                    'environmental_reflection' => ['label' => 'Environmental Reflection', 'weight' => 1.0],
                 ],
             ],
         ];
