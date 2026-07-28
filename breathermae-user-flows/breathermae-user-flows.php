@@ -557,7 +557,7 @@ console.log('Bar chart AJAX called with mode:', mode);
             : $wpdb->get_results($sql);
 
         // Temporary debug - remove later
-        bm_log("Flow list query - filter: $filter_type, search: '$search', page: $page, per_page: $per_page, results: " . count($results));
+        //bm_log("Flow list query - filter: $filter_type, search: '$search', page: $page, per_page: $per_page, results: " . count($results));
 
         ob_start();
         ?>
