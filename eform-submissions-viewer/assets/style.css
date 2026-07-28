@@ -10,14 +10,13 @@
 }
 
 .eform-table th,
-
 .eform-detail-table th {
     font-size: 13px;
     font-weight: 600;
     text-align: center;
     padding: 8px;
-    /*background-color: #f0f0f0;*/
 }
+
 .eform-table td {
     border: 1px solid #ddd;
     padding: 8px;
@@ -47,22 +46,19 @@
     border-collapse: collapse;
 }
 
-
 .eform-detail-table th {
     border: 1px solid #ddd;
     padding: 6px;
     text-align: center;
+    background: #eee;
 }
 
 .eform-detail-table td {
     word-break: break-word;
     font-size: 11px;
     padding: 6px;
-}
-
-
-.eform-detail-table th {
-    background: #eee;
+    border: 1px solid #ddd;
+    vertical-align: top;
 }
 
 .eform-sync-wrapper {
@@ -111,7 +107,6 @@
     font-size: 14px;
 }
 
-/* Buttons */
 .eform-pagination button {
     padding: 4px 10px;
     font-size: 13px;
@@ -123,18 +118,15 @@
     transition: all 0.2s ease;
 }
 
-/* Hover */
 .eform-pagination button:hover {
     background: #e0e0e0;
 }
 
-/* Disabled state */
 .eform-pagination button:disabled {
     opacity: 0.4;
     cursor: default;
 }
 
-/* Page number */
 .eform-pagination .eform-page {
     font-weight: 600;
     padding: 0 6px;
@@ -143,11 +135,227 @@
 
 .eform-table-scroll {
     width: 100%;
-    
 }
 
-/* ✅ THIS is the critical fix */
 .eform-table {
-    width: 100%;           /* ✅ fill container normally */
+    width: 100%;
     border-collapse: collapse;
+}
+
+/* =========================
+   Reply button in details
+========================= */
+.eform-email-value {
+    margin-right: 8px;
+}
+
+.eform-reply-btn {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    background: #40c6ff;
+    color: #001d50;
+    border: 1px solid #001d50;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    line-height: 1.3;
+    vertical-align: middle;
+}
+
+.eform-reply-btn:hover {
+    background: #2bb0e8;
+}
+
+/* =========================
+   Modal
+========================= */
+.eform-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: none;
+}
+
+.eform-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.eform-modal-content {
+    position: relative;
+    background: #fff;
+    width: 92%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: 4vh auto;
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+}
+
+.eform-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.eform-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #001d50;
+}
+
+.eform-modal-close {
+    background: none;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+    padding: 0 4px;
+}
+
+.eform-modal-close:hover {
+    color: #000;
+}
+
+.eform-modal-body {
+    padding: 18px 20px;
+    flex: 1;
+}
+
+.eform-modal-body label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 12px 0 4px;
+    color: #333;
+}
+
+.eform-modal-body label:first-of-type {
+    margin-top: 0;
+}
+
+.eform-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.eform-input:focus {
+    outline: none;
+    border-color: #40c6ff;
+    box-shadow: 0 0 0 2px rgba(64, 198, 255, 0.25);
+}
+
+textarea.eform-input {
+    resize: vertical;
+    min-height: 140px;
+}
+
+.eform-reply-to {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.eform-cta-toggle {
+    margin: 14px 0 6px;
+    font-size: 14px;
+}
+
+.eform-cta-toggle label {
+    display: inline;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#eform-cta-fields {
+    margin-top: 6px;
+    padding: 10px 12px;
+    background: #f7fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.eform-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid #e5e5e5;
+    background: #fafafa;
+    border-radius: 0 0 10px 10px;
+}
+
+.eform-btn {
+    padding: 9px 18px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.eform-btn-primary {
+    background: #40c6ff;
+    color: #001d50;
+    border-color: #001d50;
+}
+
+.eform-btn-primary:hover {
+    background: #2bb0e8;
+}
+
+.eform-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.eform-btn-secondary {
+    background: #fff;
+    color: #333;
+    border-color: #ccc;
+}
+
+.eform-btn-secondary:hover {
+    background: #f0f0f0;
+}
+
+.eform-reply-status {
+    padding: 0 20px 14px;
+    font-size: 13px;
+    min-height: 20px;
+}
+
+.eform-reply-status .success {
+    color: #0a7a2f;
+    font-weight: 600;
+}
+
+.eform-reply-status .error {
+    color: #c00;
+    font-weight: 600;
+}
+
+.eform-reply-status .sending {
+    color: #555;
+}
+
+/* Mobile-ish */
+@media (max-width: 640px) {
+    .eform-modal-content {
+        width: 96%;
+        margin: 2vh auto;
+        max-height: 96vh;
+    }
 }

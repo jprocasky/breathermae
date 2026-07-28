@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const details = document.getElementById('eform-details');
     let activeFilters = new Map();
-
+    let currentFormName = '';
+    let currentSubmissionId = 0;
 
     /* =========================
        Helpers
@@ -10,11 +11,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function isLikelyLink(value) {
         if (!value) return false;
-
         if (value.startsWith('http://') || value.startsWith('https://')) return true;
         if (value.startsWith('/wp-content/')) return true;
-
         return false;
+    }
+
+    function isEmail(value) {
+        if (!value || typeof value !== 'string') return false;
+        // Simple but practical email check
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     /* =========================
@@ -22,18 +36,14 @@ document.addEventListener('DOMContentLoaded', function () {
     ========================= */
 
     function attachRowClickHandlers() {
-
         document.querySelectorAll('.eform-row').forEach(row => {
-
             row.addEventListener('click', function () {
-
                 document.querySelectorAll('.eform-row').forEach(r => r.classList.remove('active'));
                 this.classList.add('active');
 
                 if (!details) return;
 
                 let id = this.dataset.id;
-
                 details.innerHTML = '<p>Loading...</p>';
 
                 fetch(eform_ajax.ajax_url, {
@@ -46,25 +56,41 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .then(res => res.json())
                 .then(res => {
-
                     if (!res.success) {
                         details.innerHTML = '<p>Error loading details.</p>';
                         return;
                     }
 
+                    // New response shape: { fields, form_name, submission_id }
+                    const payload = res.data;
+                    const fields = payload.fields || payload; // backward compatible
+                    currentFormName = payload.form_name || '';
+                    currentSubmissionId = payload.submission_id || id;
+
                     let html = '<table class="eform-detail-table">';
                     html += '<tr><th>Field</th><th>Value</th></tr>';
 
-                    res.data.forEach(item => {
-
+                    fields.forEach(item => {
                         let value = item.value;
+                        let displayValue = escapeHtml(value);
 
                         if (isLikelyLink(value)) {
                             let url = value.startsWith('http')
                                 ? value
                                 : window.location.origin + value;
+                            displayValue = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+                        }
 
-                            value = `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+                        // Email detection + Reply button
+                        if (isEmail(value) && eform_ajax.can_send) {
+                            displayValue = `
+                                <span class="eform-email-value">${escapeHtml(value)}</span>
+                                <button type="button"
+                                        class="eform-reply-btn"
+                                        data-email="${escapeHtml(value)}"
+                                        title="Send email reply">
+                                    ✉ Reply
+                                </button>`;
                         }
 
                         let label = item.label || item.key;
@@ -72,24 +98,21 @@ document.addEventListener('DOMContentLoaded', function () {
                         html += `
                         <tr>
                             <td class="eform-filterable"
-                                data-key="${item.key}"
-                                title="Click to filter by ${label}">
-                                ${label}
+                                data-key="${escapeHtml(item.key)}"
+                                title="Click to filter by ${escapeHtml(label)}">
+                                ${escapeHtml(label)}
                             </td>
-                            <td>${value}</td>
+                            <td>${displayValue}</td>
                         </tr>`;
                     });
 
                     html += '</table>';
-
                     details.innerHTML = html;
                 })
                 .catch(() => {
                     details.innerHTML = '<p>Request failed.</p>';
                 });
-
             });
-
         });
     }
 
@@ -98,8 +121,6 @@ document.addEventListener('DOMContentLoaded', function () {
     ========================= */
 
     function fetchFilterValues(key, wrapper) {
-
-
         fetch(eform_ajax.ajax_url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -110,11 +131,8 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(res => res.json())
         .then(res => {
-
             if (!res.success) return;
-
             renderFilterPopup(key, res.data, wrapper);
-
         });
     }
 
@@ -123,16 +141,14 @@ document.addEventListener('DOMContentLoaded', function () {
     ========================= */
 
     function renderFilterPopup(key, values, wrapper) {
-
-        // remove existing popup
         document.querySelectorAll('.eform-popup').forEach(p => p.remove());
 
         let html = `<div class="eform-popup">
-            <h4>Filter by ${key}</h4>
+            <h4>Filter by ${escapeHtml(key)}</h4>
             <select id="eform-value-select">`;
 
         values.forEach(val => {
-            html += `<option value="${val}">${val}</option>`;
+            html += `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
         });
 
         html += `</select>
@@ -143,21 +159,16 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = html;
 
         let target = document.getElementById('eform-filter-panel');
-
         if (target) {
-            target.innerHTML = ''; // clear previous
+            target.innerHTML = '';
             target.appendChild(container);
         } else {
-            // fallback if container not present
             document.body.appendChild(container);
         }
 
         document.getElementById('apply-filter').addEventListener('click', function () {
-
             let value = document.getElementById('eform-value-select').value;
-
             applyFilter(key, value, wrapper);
-
             container.remove();
         });
     }
@@ -166,27 +177,21 @@ document.addEventListener('DOMContentLoaded', function () {
        FILTER: Apply + Fetch
     ========================= */
     function applyFilter(key, value, wrapper) {
-
         if (!activeFilters.has(wrapper)) {
             activeFilters.set(wrapper, {});
         }
-
         let filters = activeFilters.get(wrapper);
         filters[key] = value;
-
-        // ✅ Reset to page 1 when filters change
         wrapper.dataset.page = 1;
-
         fetchFilteredResults(wrapper);
     }
 
     function fetchFilteredResults(wrapper) {
-
         let formName = wrapper.dataset.form;
         let filters = activeFilters.get(wrapper) || {};
         let page = wrapper.dataset.page || 1;
         let rows = wrapper.dataset.rows || 10;
-console.log('ROWS SENT:', rows);
+
         fetch(eform_ajax.ajax_url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -197,15 +202,11 @@ console.log('ROWS SENT:', rows);
                 '&page=' + encodeURIComponent(page) +
                 '&rows=' + encodeURIComponent(rows) +
                 '&nonce=' + encodeURIComponent(eform_ajax.nonce)
-
         })
         .then(res => res.json())
         .then(res => {
-
             if (!res.success) return;
-
             updateResultsTable(res.data, wrapper);
-
         });
     }
 
@@ -214,7 +215,6 @@ console.log('ROWS SENT:', rows);
     ========================= */
 
     function updateResultsTable(data, wrapper) {
-
         const tableBody = wrapper.querySelector('.eform-table tbody');
         if (!tableBody) return;
 
@@ -224,18 +224,13 @@ console.log('ROWS SENT:', rows);
         }
 
         let html = '';
-
         data.forEach(row => {
-
             let id = row.id;
-
             html += `<tr class="eform-row" data-id="${id}">`;
-
             wrapper.querySelectorAll('.eform-table thead th').forEach(th => {
                 let key = th.dataset.key;
-                html += `<td>${row[key] || ''}</td>`;
+                html += `<td>${escapeHtml(row[key] || '')}</td>`;
             });
-
             html += `</tr>`;
         });
 
@@ -244,17 +239,7 @@ console.log('ROWS SENT:', rows);
         if (pageDisplay) {
             pageDisplay.innerText = wrapper.dataset.page || 1;
         }
-
         attachRowClickHandlers();
-    }
-
-
-    function getCurrentPage(wrapper) {
-        return parseInt(wrapper.dataset.page || 1);
-    }
-
-    function setCurrentPage(wrapper, page) {
-        wrapper.dataset.page = page;
     }
 
     /* =========================
@@ -262,7 +247,6 @@ console.log('ROWS SENT:', rows);
     ========================= */
 
     document.addEventListener('click', function (e) {
-
         if (!e.target.classList.contains('eform-sync-btn')) return;
 
         const button = e.target;
@@ -282,68 +266,51 @@ console.log('ROWS SENT:', rows);
         })
         .then(res => res.json())
         .then(res => {
-
             if (res.success) {
                 status.innerHTML = `<span style="color:green;">${res.data}</span>`;
             } else {
                 status.innerHTML = `<span style="color:red;">Error: ${res.data}</span>`;
             }
-
             button.disabled = false;
         })
         .catch(() => {
             status.innerHTML = '<span style="color:red;">Request failed.</span>';
             button.disabled = false;
         });
-
-
-
-    });
-
-    document.addEventListener('click', function(e) {
-
-        // NEXT
-        if (e.target.classList.contains('eform-next')) {
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            let wrapper = e.target.closest('.eform-wrapper');
-            if (!wrapper) return;
-
-            let currentPage = parseInt(wrapper.dataset.page || 1);
-            let nextPage = currentPage + 1;
-
-            wrapper.dataset.page = nextPage;
-
-            fetchFilteredResults(wrapper);
-        }
-
-        // PREV
-        if (e.target.classList.contains('eform-prev')) {
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            let wrapper = e.target.closest('.eform-wrapper');
-            if (!wrapper) return;
-
-            let currentPage = parseInt(wrapper.dataset.page || 1);
-            let prevPage = Math.max(1, currentPage - 1);
-
-            wrapper.dataset.page = prevPage;
-
-            fetchFilteredResults(wrapper);
-        }
-
     });
 
     /* =========================
-       Prevent link triggering row click
+       Pagination
+    ========================= */
+
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('eform-next')) {
+            e.preventDefault();
+            e.stopPropagation();
+            let wrapper = e.target.closest('.eform-wrapper');
+            if (!wrapper) return;
+            let currentPage = parseInt(wrapper.dataset.page || 1);
+            wrapper.dataset.page = currentPage + 1;
+            fetchFilteredResults(wrapper);
+        }
+
+        if (e.target.classList.contains('eform-prev')) {
+            e.preventDefault();
+            e.stopPropagation();
+            let wrapper = e.target.closest('.eform-wrapper');
+            if (!wrapper) return;
+            let currentPage = parseInt(wrapper.dataset.page || 1);
+            wrapper.dataset.page = Math.max(1, currentPage - 1);
+            fetchFilteredResults(wrapper);
+        }
+    });
+
+    /* =========================
+       Prevent link / button from triggering row click
     ========================= */
 
     document.addEventListener('click', function (e) {
-        if (e.target.tagName === 'A') {
+        if (e.target.tagName === 'A' || e.target.closest('.eform-reply-btn')) {
             e.stopPropagation();
         }
     });
@@ -353,32 +320,210 @@ console.log('ROWS SENT:', rows);
     ========================= */
 
     document.addEventListener('click', function (e) {
-
         let el = e.target.closest('.eform-filterable');
         if (!el) return;
 
         let key = el.dataset.key;
-
-        // ✅ find which table this came from
         let wrapper = document.querySelector('.eform-wrapper .eform-row.active')?.closest('.eform-wrapper');
 
         if (!wrapper) {
             console.warn('No active wrapper found');
             return;
         }
-
         fetchFilterValues(key, wrapper);
     });
+
+    /* =========================
+       REPLY EMAIL MODAL
+    ========================= */
+
+    const modal = document.getElementById('eform-reply-modal');
+    const recipientEl = document.getElementById('eform-reply-recipient');
+    const subjectEl = document.getElementById('eform-reply-subject');
+    const bodyEl = document.getElementById('eform-reply-body');
+    const quickStartEl = document.getElementById('eform-reply-quickstart');
+    const includeCtaEl = document.getElementById('eform-include-cta');
+    const ctaFields = document.getElementById('eform-cta-fields');
+    const ctaTextEl = document.getElementById('eform-cta-text');
+    const ctaUrlEl = document.getElementById('eform-cta-url');
+    const statusEl = document.getElementById('eform-reply-status');
+    const sendBtn = document.getElementById('eform-send-reply-btn');
+
+    function populateQuickStarts() {
+        if (!quickStartEl || !eform_ajax.quick_starts) return;
+        quickStartEl.innerHTML = '';
+        eform_ajax.quick_starts.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.body;
+            opt.textContent = item.label;
+            quickStartEl.appendChild(opt);
+        });
+    }
+
+    function openReplyModal(email) {
+        if (!modal || !eform_ajax.can_send) return;
+
+        recipientEl.textContent = email;
+        document.getElementById('eform-reply-submission-id').value = currentSubmissionId;
+        document.getElementById('eform-reply-form-name').value = currentFormName;
+
+        // Sensible default subject based on form name
+        let defaultSubject = 'Re: Your message';
+        const fn = (currentFormName || '').toLowerCase();
+        if (fn.includes('career') || fn.includes('job') || fn.includes('apply') || fn.includes('application')) {
+            defaultSubject = 'Update regarding your application – Breathermae';
+        } else if (fn.includes('comment') || fn.includes('question') || fn.includes('feedback') || fn.includes('help')) {
+            defaultSubject = 'Re: Your question / comment';
+        }
+        subjectEl.value = defaultSubject;
+
+        bodyEl.value = '';
+        includeCtaEl.checked = false;
+        ctaFields.style.display = 'none';
+        ctaTextEl.value = '';
+        ctaUrlEl.value = '';
+        statusEl.innerHTML = '';
+        statusEl.className = 'eform-reply-status';
+
+        populateQuickStarts();
+        quickStartEl.value = '';
+
+        modal.style.display = 'block';
+        modal.setAttribute('aria-hidden', 'false');
+        bodyEl.focus();
+    }
+
+    function closeReplyModal() {
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    // Open modal when Reply button clicked
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.eform-reply-btn');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openReplyModal(btn.dataset.email);
+    });
+
+    // Close handlers
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('eform-modal-close') ||
+            e.target.classList.contains('eform-modal-cancel') ||
+            e.target.classList.contains('eform-modal-overlay')) {
+            closeReplyModal();
+        }
+    });
+
+    // Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal && modal.style.display === 'block') {
+            closeReplyModal();
+        }
+    });
+
+    // CTA toggle
+    if (includeCtaEl) {
+        includeCtaEl.addEventListener('change', function () {
+            ctaFields.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+
+    // Quick start loader
+    if (quickStartEl) {
+        quickStartEl.addEventListener('change', function () {
+            if (this.value) {
+                bodyEl.value = this.value;
+            }
+        });
+    }
+
+    // Send button
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function () {
+            const recipient = recipientEl.textContent.trim();
+            const subject = subjectEl.value.trim();
+            const body = bodyEl.value.trim();
+            const includeCta = includeCtaEl.checked;
+            const ctaText = ctaTextEl.value.trim();
+            const ctaUrl = ctaUrlEl.value.trim();
+            const submissionId = document.getElementById('eform-reply-submission-id').value;
+            const formName = document.getElementById('eform-reply-form-name').value;
+
+            statusEl.className = 'eform-reply-status';
+            statusEl.innerHTML = '';
+
+            if (!recipient) {
+                statusEl.innerHTML = '<span class="error">No recipient.</span>';
+                return;
+            }
+            if (!subject) {
+                statusEl.innerHTML = '<span class="error">Subject is required.</span>';
+                subjectEl.focus();
+                return;
+            }
+            if (!body) {
+                statusEl.innerHTML = '<span class="error">Message body is required.</span>';
+                bodyEl.focus();
+                return;
+            }
+            if (includeCta && (!ctaText || !ctaUrl)) {
+                statusEl.innerHTML = '<span class="error">CTA requires both button text and URL.</span>';
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            statusEl.innerHTML = '<span class="sending">Sending email...</span>';
+
+            const params = new URLSearchParams();
+            params.append('action', 'eform_send_reply');
+            params.append('nonce', eform_ajax.nonce);
+            params.append('submission_id', submissionId);
+            params.append('form_name', formName);
+            params.append('recipient', recipient);
+            params.append('subject', subject);
+            params.append('body', body);
+            params.append('include_cta', includeCta ? '1' : '');
+            params.append('cta_text', ctaText);
+            params.append('cta_url', ctaUrl);
+
+            fetch(eform_ajax.ajax_url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            })
+            .then(res => res.json())
+            .then(res => {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send Email';
+
+                if (res.success) {
+                    statusEl.innerHTML = '<span class="success">' + (res.data.message || 'Email sent!') + '</span>';
+                    // Auto-close after a short delay
+                    setTimeout(closeReplyModal, 1600);
+                } else {
+                    statusEl.innerHTML = '<span class="error">' + (res.data || 'Send failed.') + '</span>';
+                }
+            })
+            .catch(() => {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send Email';
+                statusEl.innerHTML = '<span class="error">Request failed. Please try again.</span>';
+            });
+        });
+    }
 
     /* =========================
        INIT
     ========================= */
 
-    // Initialize page = 1 for each table
     document.querySelectorAll('.eform-wrapper').forEach(wrapper => {
         wrapper.dataset.page = 1;
-    });    
+    });
 
     attachRowClickHandlers();
-
+    populateQuickStarts();
 });
