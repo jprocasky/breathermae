@@ -201,6 +201,28 @@ class BMF_BioVoice_Repository {
 		return (int) $db->get_var( $db->prepare( "SELECT COUNT(*) FROM {$t} WHERE user_id = %d AND is_final = 1 AND purpose = %s", $user_id, sanitize_key( $purpose ) ) );
 	}
 
+	public static function get_groups_for_user( int $user_id, array $args = [] ): array {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		$purpose = isset( $args['purpose'] ) ? sanitize_key( $args['purpose'] ) : '';
+		$limit = isset( $args['limit'] ) ? max( 1, min( 200, (int) $args['limit'] ) ) : 50;
+		$sql = "SELECT * FROM {$t} WHERE user_id = %d";
+		$params = [ $user_id ];
+		if ( $purpose ) {
+			$sql .= ' AND purpose = %s';
+			$params[] = $purpose;
+		}
+		$sql .= ' ORDER BY id DESC LIMIT %d';
+		$params[] = $limit;
+		return $db->get_results( $db->prepare( $sql, $params ), ARRAY_A ) ?: [];
+	}
+
+	public static function count_device_mismatch_groups( int $user_id ): int {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		return (int) $db->get_var( $db->prepare( "SELECT COUNT(*) FROM {$t} WHERE user_id = %d AND device_mismatch = 1", $user_id ) );
+	}
+
 	public static function clear_current_groups( int $user_id, string $purpose = '' ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
