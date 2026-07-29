@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BMF_BioVoice_Repository {
 
-	const DB_VERSION = '0.2.0';
+	const DB_VERSION = '0.2.6';
 
 	public static function install_tables() {
 		global $wpdb;
@@ -19,6 +19,7 @@ class BMF_BioVoice_Repository {
 		$steps     = $wpdb->prefix . 'bm_biovoice_protocol_steps';
 		$groups    = $wpdb->prefix . 'bm_biovoice_session_groups';
 		$sessions  = $wpdb->prefix . 'bm_biovoice_sessions';
+		$results   = $wpdb->prefix . 'bm_biovoice_results';
 
 		dbDelta( "CREATE TABLE {$protocols} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -114,7 +115,61 @@ class BMF_BioVoice_Repository {
 			KEY task_code (task_code)
 		) {$charset};" );
 
+		dbDelta( "CREATE TABLE {$results} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			user_id BIGINT UNSIGNED NOT NULL,
+			user_email VARCHAR(191) COLLATE utf8mb4_unicode_520_ci NULL,
+			session_group_id BIGINT UNSIGNED NULL,
+			comparison_session_id VARCHAR(120) NULL,
+			schema_version VARCHAR(20) NOT NULL DEFAULT 'stage7',
+			source VARCHAR(40) NOT NULL DEFAULT 'engine',
+			rdi_score DECIMAL(8,2) NULL,
+			rdi_band VARCHAR(60) NULL,
+			rdi_color VARCHAR(40) NULL,
+			plain_report_json LONGTEXT NULL,
+			pattern_payload_json LONGTEXT NULL,
+			analyzed_at DATETIME NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY user_id (user_id),
+			KEY session_group_id (session_group_id),
+			KEY analyzed_at (analyzed_at),
+			KEY source (source)
+		) {$charset};" );
+
 		update_option( 'bmf_biovoice_db_version', self::DB_VERSION );
+	}
+
+	public static function insert_result( array $data ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
+		$data = array_merge( [
+			'schema_version' => 'stage7',
+			'source'         => 'engine',
+			'created_at'     => current_time( 'mysql', true ),
+			'updated_at'     => current_time( 'mysql', true ),
+		], $data );
+		$ok = $db->insert( $t, $data );
+		return $ok ? (int) $db->insert_id : false;
+	}
+
+	public static function get_result( int $id ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
+		return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE id = %d LIMIT 1", $id ), ARRAY_A );
+	}
+
+	public static function get_latest_result_for_user( int $user_id ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
+		return $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE user_id = %d ORDER BY COALESCE(analyzed_at, created_at) DESC, id DESC LIMIT 1",
+				$user_id
+			),
+			ARRAY_A
+		);
 	}
 
 	public static function insert_protocol( array $data ) {
