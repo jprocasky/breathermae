@@ -64,6 +64,7 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-results-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-rest-api.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-play.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
+require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-report.php';
 
 register_activation_hook( __FILE__, function () {
 	BMF_BioVoice_Repository::install_tables();
@@ -80,6 +81,7 @@ add_action( 'plugins_loaded', function () {
 	BMF_BioVoice_DBX::init();
 	BMF_BioVoice_Protocol_Service::maybe_upgrade();
 	BMF_BioVoice_Shortcodes::init();
+	BMF_BioVoice_Shortcodes_Report::init();
 	BMF_BioVoice_REST_API::init();
 	BMF_BioVoice_Play::init();
 } );
