@@ -10,6 +10,12 @@ class BMF_BioVoice_Session_Service {
 
 	private static $list_cache = [];
 
+	/** Baseline groups required to establish baseline. */
+	public const BASELINE_REQUIRED = 3;
+
+	/** Soft target for comparison groups (display / product; not a hard cap). */
+	public const COMPARISON_TARGET_DEFAULT = 6;
+
 	public static function ensure_group( int $user_id, string $purpose = 'baseline', array $wellness = [] ) {
 		if ( $user_id < 1 ) {
 			return new WP_Error( 'bmf_biovoice_auth', 'User must be logged in.', [ 'status' => 401 ] );
@@ -105,7 +111,7 @@ class BMF_BioVoice_Session_Service {
 			'is_group_complete' => $complete,
 			'baseline_progress' => [
 				'complete_groups' => $progress_n,
-				'required'        => 3,
+				'required'        => self::BASELINE_REQUIRED,
 			],
 			'started_at'        => $group['started_at'],
 			'updated_at'        => $group['updated_at'],
@@ -211,6 +217,9 @@ class BMF_BioVoice_Session_Service {
 		if ( $task_code ) { $row['task_code'] = $task_code; }
 		if ( $step ) { $row['step_number'] = (int) $step['step_number']; }
 		if ( $device_json ) { $row['device_info_json'] = wp_json_encode( $device_json ); }
+		if ( ! empty( $meta['context_flags'] ) && is_array( $meta['context_flags'] ) ) {
+			$row['context_flags_json'] = wp_json_encode( $meta['context_flags'] );
+		}
 		$session_id = BMF_BioVoice_Repository::insert_session( $row );
 		if ( ! $session_id ) {
 			BMF_BioVoice_Storage::delete( $storage_key );
@@ -244,7 +253,7 @@ class BMF_BioVoice_Session_Service {
 		$updates = [];
 		if ( is_array( $device_json ) && $device_json ) {
 			$summary = $group['device_summary_json'] ? json_decode( $group['device_summary_json'], true ) : null;
-			if ( ! is_array( $summary ) || empty( $summary ) ) {
+		if ( ! is_array( $summary ) || empty( $summary ) ) {
 				$updates['device_summary_json'] = wp_json_encode( $device_json );
 			} else {
 				$prev_class = $summary['device_class'] ?? '';
@@ -307,5 +316,84 @@ class BMF_BioVoice_Session_Service {
 		} else {
 			self::$list_cache = [];
 		}
+	}
+
+	/**
+	 * Status panel payload: baseline → comparison → ongoing.
+	 */
+	public static function get_status_summary( int $user_id, int $comparison_target = 0 ): array {
+		$baseline_required = self::BASELINE_REQUIRED;
+		$comparison_target = $comparison_target > 0 ? $comparison_target : self::COMPARISON_TARGET_DEFAULT;
+
+		$baseline_done   = BMF_BioVoice_Repository::count_final_groups( $user_id, 'baseline' );
+		$comparison_done = BMF_BioVoice_Repository::count_final_groups( $user_id, 'comparison' );
+		$ongoing_done    = BMF_BioVoice_Repository::count_final_groups( $user_id, 'ongoing' );
+		$mismatch_n      = BMF_BioVoice_Repository::count_device_mismatch_groups( $user_id );
+
+		if ( $baseline_done < $baseline_required ) {
+			$phase = 'baseline';
+		} elseif ( $comparison_done < $comparison_target ) {
+			$phase = 'comparison';
+		} else {
+			$phase = 'ongoing';
+		}
+
+		$current = BMF_BioVoice_Repository::get_current_group_for_user( $user_id, $phase );
+		if ( ! $current ) {
+			$current = BMF_BioVoice_Repository::get_current_group_for_user( $user_id, '' );
+		}
+		$current_state = $current ? self::format_group_state( $current ) : null;
+
+		$baseline_pct   = min( 100, (int) round( ( $baseline_done / max( 1, $baseline_required ) ) * 100 ) );
+		$comparison_pct = min( 100, (int) round( ( $comparison_done / max( 1, $comparison_target ) ) * 100 ) );
+
+		if ( $phase === 'baseline' ) {
+			$headline = $baseline_done >= $baseline_required
+				? 'Baseline complete'
+				: sprintf( 'Baseline in progress · %d of %d', $baseline_done, $baseline_required );
+		} elseif ( $phase === 'comparison' ) {
+			$headline = sprintf( 'Comparison series · %d of %d', $comparison_done, $comparison_target );
+		} else {
+			$headline = $ongoing_done > 0
+				? sprintf( 'Ongoing · %d session%s', $ongoing_done, $ongoing_done === 1 ? '' : 's' )
+				: 'Comparison complete · ongoing available';
+		}
+
+		$next_label = null;
+		if ( $current_state && ! empty( $current_state['next_step']['title'] ) ) {
+			$next_label = $current_state['next_step']['title'];
+		} elseif ( $current_state && ! empty( $current_state['is_group_complete'] ) ) {
+			$next_label = 'Session complete';
+		} elseif ( ! $current_state ) {
+			if ( $phase === 'baseline' && $baseline_done < $baseline_required ) {
+				$next_label = 'Start next baseline session';
+			} elseif ( $phase === 'comparison' ) {
+				$next_label = 'Start next comparison session';
+			} else {
+				$next_label = 'Start an ongoing session';
+			}
+		}
+
+		return [
+			'phase'             => $phase,
+			'headline'          => $headline,
+			'next_label'        => $next_label,
+			'baseline'          => [
+				'done'     => $baseline_done,
+				'required' => $baseline_required,
+				'pct'      => $baseline_pct,
+				'complete' => $baseline_done >= $baseline_required,
+			],
+			'comparison'        => [
+				'done'     => $comparison_done,
+				'target'   => $comparison_target,
+				'pct'      => $comparison_pct,
+				'complete' => $comparison_done >= $comparison_target,
+			],
+			'ongoing'           => [ 'done' => $ongoing_done ],
+			'device_mismatch'   => $mismatch_n > 0,
+			'device_mismatch_n' => $mismatch_n,
+			'current_group'     => $current_state,
+		];
 	}
 }
