@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.5-poc
+ * Version:           0.2.6-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.5-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.6-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
@@ -60,6 +60,7 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-repository.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-storage.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-protocol-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-session-service.php';
+require_once BMF_BIOVOICE_PATH . 'includes/class-results-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-rest-api.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-play.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
@@ -91,5 +92,5 @@ add_action( 'admin_notices', function () {
 	if ( ! $screen || $screen->id !== 'plugins' ) {
 		return;
 	}
-	echo '<div class="notice notice-info"><p><strong>BioVoicePrint</strong> v' . esc_html( BMF_BIOVOICE_VERSION ) . ' — wizard + status panel ([bmf_biovoice_session], [bmf_biovoice_status]).</p></div>';
+	echo '<div class="notice notice-info"><p><strong>BioVoicePrint</strong> v' . esc_html( BMF_BIOVOICE_VERSION ) . ' — wizard, status, report ([bmf_biovoice_session], [bmf_biovoice_status], [bmf_biovoice_report]).</p></div>';
 } );
