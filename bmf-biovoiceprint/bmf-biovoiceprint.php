@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.6-poc
+ * Version:           0.2.7-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.6-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.7-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
@@ -65,6 +65,7 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-rest-api.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-play.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-report.php';
+require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-scores.php';
 
 register_activation_hook( __FILE__, function () {
 	BMF_BioVoice_Repository::install_tables();
@@ -82,6 +83,7 @@ add_action( 'plugins_loaded', function () {
 	BMF_BioVoice_Protocol_Service::maybe_upgrade();
 	BMF_BioVoice_Shortcodes::init();
 	BMF_BioVoice_Shortcodes_Report::init();
+	BMF_BioVoice_Shortcodes_Scores::init();
 	BMF_BioVoice_REST_API::init();
 	BMF_BioVoice_Play::init();
 } );
@@ -94,5 +96,5 @@ add_action( 'admin_notices', function () {
 	if ( ! $screen || $screen->id !== 'plugins' ) {
 		return;
 	}
-	echo '<div class="notice notice-info"><p><strong>BioVoicePrint</strong> v' . esc_html( BMF_BIOVOICE_VERSION ) . ' — wizard, status, report ([bmf_biovoice_session], [bmf_biovoice_status], [bmf_biovoice_report]).</p></div>';
+	echo '<div class="notice notice-info"><p><strong>BioVoicePrint</strong> v' . esc_html( BMF_BIOVOICE_VERSION ) . ' — session, status, report, scores ([bmf_biovoice_session], [bmf_biovoice_status], [bmf_biovoice_report], [bmf_biovoice_scores]).</p></div>';
 } );
