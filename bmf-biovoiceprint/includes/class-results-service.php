@@ -90,6 +90,54 @@ class BMF_BioVoice_Results_Service {
 		];
 	}
 
+	/**
+	 * Resolve BSI pattern payload for scores UI.
+	 * Priority: fixture → latest DB pattern_payload_json.
+	 *
+	 * @return array{payload: array, meta: array}|null
+	 */
+	public static function resolve_pattern_payload( int $user_id, bool $use_fixture = false ): ?array {
+		if ( $use_fixture ) {
+			$payload = self::load_fixture_pattern_payload();
+			if ( ! $payload ) {
+				return null;
+			}
+			return [
+				'payload' => $payload,
+				'meta'    => [
+					'source'      => 'fixture',
+					'result_id'   => 0,
+					'analyzed_at' => null,
+					'is_fixture'  => true,
+				],
+			];
+		}
+
+		if ( $user_id < 1 ) {
+			return null;
+		}
+
+		$row = BMF_BioVoice_Repository::get_latest_result_for_user( $user_id );
+		if ( ! $row || empty( $row['pattern_payload_json'] ) ) {
+			return null;
+		}
+
+		$payload = json_decode( $row['pattern_payload_json'], true );
+		if ( ! is_array( $payload ) ) {
+			return null;
+		}
+
+		return [
+			'payload' => $payload,
+			'meta'    => [
+				'source'      => $row['source'] ?? 'engine',
+				'result_id'   => (int) $row['id'],
+				'analyzed_at' => $row['analyzed_at'] ?? $row['created_at'] ?? null,
+				'is_fixture'  => false,
+			],
+		];
+	}
+
 	public static function store_result( int $user_id, array $args ) {
 		$user = get_userdata( $user_id );
 		$plain = isset( $args['plain_report'] ) && is_array( $args['plain_report'] )
