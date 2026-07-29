@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function isEmail(value) {
         if (!value || typeof value !== 'string') return false;
-        // Simple but practical email check
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
     }
 
@@ -30,10 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .replace(/>/g, '>')
             .replace(/"/g, '"');
     }
-
-    /* =========================
-       Row Click Handler
-    ========================= */
 
     function attachRowClickHandlers() {
         document.querySelectorAll('.eform-row').forEach(row => {
@@ -61,9 +56,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         return;
                     }
 
-                    // New response shape: { fields, form_name, submission_id }
                     const payload = res.data;
-                    const fields = payload.fields || payload; // backward compatible
+                    const fields = payload.fields || payload;
                     currentFormName = payload.form_name || '';
                     currentSubmissionId = payload.submission_id || id;
 
@@ -81,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             displayValue = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
                         }
 
-                        // Email detection + Reply button
                         if (isEmail(value)) {
                             displayValue = `
                                 <span class="eform-email-value">${escapeHtml(value)}</span>
@@ -116,10 +109,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* =========================
-       FILTER: Get Values
-    ========================= */
-
     function fetchFilterValues(key, wrapper) {
         fetch(eform_ajax.ajax_url, {
             method: 'POST',
@@ -135,10 +124,6 @@ document.addEventListener('DOMContentLoaded', function () {
             renderFilterPopup(key, res.data, wrapper);
         });
     }
-
-    /* =========================
-       FILTER: Popup
-    ========================= */
 
     function renderFilterPopup(key, values, wrapper) {
         document.querySelectorAll('.eform-popup').forEach(p => p.remove());
@@ -173,9 +158,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* =========================
-       FILTER: Apply + Fetch
-    ========================= */
     function applyFilter(key, value, wrapper) {
         if (!activeFilters.has(wrapper)) {
             activeFilters.set(wrapper, {});
@@ -210,10 +192,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* =========================
-       TABLE UPDATE
-    ========================= */
-
     function updateResultsTable(data, wrapper) {
         const tableBody = wrapper.querySelector('.eform-table tbody');
         if (!tableBody) return;
@@ -241,10 +219,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         attachRowClickHandlers();
     }
-
-    /* =========================
-       Sync Button
-    ========================= */
 
     document.addEventListener('click', function (e) {
         if (!e.target.classList.contains('eform-sync-btn')) return;
@@ -279,10 +253,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    /* =========================
-       Pagination
-    ========================= */
-
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('eform-next')) {
             e.preventDefault();
@@ -305,19 +275,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    /* =========================
-       Prevent link / button from triggering row click
-    ========================= */
-
     document.addEventListener('click', function (e) {
         if (e.target.tagName === 'A' || e.target.closest('.eform-reply-btn')) {
             e.stopPropagation();
         }
     });
-
-    /* =========================
-       Click field -> filter
-    ========================= */
 
     document.addEventListener('click', function (e) {
         let el = e.target.closest('.eform-filterable');
@@ -332,10 +294,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         fetchFilterValues(key, wrapper);
     });
-
-    /* =========================
-       REPLY EMAIL MODAL
-    ========================= */
 
     const modal = document.getElementById('eform-reply-modal');
     const recipientEl = document.getElementById('eform-reply-recipient');
@@ -367,7 +325,23 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('eform-reply-submission-id').value = currentSubmissionId;
         document.getElementById('eform-reply-form-name').value = currentFormName;
 
-        // Actual default subject text (not just a placeholder)
+        // Resolve Reply-To: prefer details shortcode, fall back to list shortcode
+        let replyTo = '';
+        const detailsEl = document.getElementById('eform-details');
+        if (detailsEl && detailsEl.dataset.replyTo) {
+            replyTo = detailsEl.dataset.replyTo.trim();
+        }
+        if (!replyTo) {
+            const activeWrapper = document.querySelector('.eform-wrapper .eform-row.active')?.closest('.eform-wrapper');
+            if (activeWrapper && activeWrapper.dataset.replyTo) {
+                replyTo = activeWrapper.dataset.replyTo.trim();
+            }
+        }
+        const replyToInput = document.getElementById('eform-reply-to-email');
+        if (replyToInput) {
+            replyToInput.value = replyTo;
+        }
+
         let defaultSubject = 'Re: Your message';
         const fn = (currentFormName || '').toLowerCase();
         if (fn.includes('career') || fn.includes('job') || fn.includes('apply') || fn.includes('application')) {
@@ -380,7 +354,6 @@ document.addEventListener('DOMContentLoaded', function () {
         bodyEl.value = '';
         includeCtaEl.checked = false;
         ctaFields.style.display = 'none';
-        // Defaults for CTA (user can still change them)
         ctaTextEl.value = 'Breathermae';
         ctaUrlEl.value = 'https://breathermae.com';
         statusEl.innerHTML = '';
@@ -400,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.setAttribute('aria-hidden', 'true');
     }
 
-    // Open modal when Reply button clicked
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('.eform-reply-btn');
         if (!btn) return;
@@ -409,7 +381,6 @@ document.addEventListener('DOMContentLoaded', function () {
         openReplyModal(btn.dataset.email);
     });
 
-    // Close handlers
     document.addEventListener('click', function (e) {
         if (e.target.classList.contains('eform-modal-close') ||
             e.target.classList.contains('eform-modal-cancel') ||
@@ -418,21 +389,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Escape key
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && modal && modal.style.display === 'block') {
             closeReplyModal();
         }
     });
 
-    // CTA toggle
     if (includeCtaEl) {
         includeCtaEl.addEventListener('change', function () {
             ctaFields.style.display = this.checked ? 'block' : 'none';
         });
     }
 
-    // Quick start loader
     if (quickStartEl) {
         quickStartEl.addEventListener('change', function () {
             if (this.value) {
@@ -441,7 +409,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Send button
     if (sendBtn) {
         sendBtn.addEventListener('click', function () {
             const recipient = recipientEl.textContent.trim();
@@ -452,6 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const ctaUrl = ctaUrlEl.value.trim();
             const submissionId = document.getElementById('eform-reply-submission-id').value;
             const formName = document.getElementById('eform-reply-form-name').value;
+            const replyTo = (document.getElementById('eform-reply-to-email') || {}).value || '';
 
             statusEl.className = 'eform-reply-status';
             statusEl.innerHTML = '';
@@ -490,6 +458,7 @@ document.addEventListener('DOMContentLoaded', function () {
             params.append('include_cta', includeCta ? '1' : '');
             params.append('cta_text', ctaText);
             params.append('cta_url', ctaUrl);
+            params.append('reply_to', replyTo);
 
             fetch(eform_ajax.ajax_url, {
                 method: 'POST',
@@ -503,7 +472,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (res.success) {
                     statusEl.innerHTML = '<span class="success">' + (res.data.message || 'Email sent!') + '</span>';
-                    // Auto-close after a short delay
                     setTimeout(closeReplyModal, 1600);
                 } else {
                     statusEl.innerHTML = '<span class="error">' + (res.data || 'Send failed.') + '</span>';
@@ -516,10 +484,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
-
-    /* =========================
-       INIT
-    ========================= */
 
     document.querySelectorAll('.eform-wrapper').forEach(wrapper => {
         wrapper.dataset.page = 1;
