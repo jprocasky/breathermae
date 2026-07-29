@@ -1,4 +1,4 @@
-/* BioVoicePrint – Recorder, sessions, guided wizard */
+/* BioVoicePrint – Recorder, sessions, guided wizard, status panel */
 
 .bmf-biovoice-recorder,
 .bmf-biovoice-session {
@@ -99,3 +99,78 @@
 .bmf-bv-complete .bmf-bv-success-note { margin-top: 1rem; padding: 0.65rem 0.85rem; border-radius: 8px; background: #dcfce7; color: #166534; font-size: 0.9rem; }
 .bmf-bv-step-panel { margin-top: 0.5rem; }
 .bmf-bv-step-panel .bmf-biovoice-recorder { max-width: none; }
+
+/* Status panel – dark, half-column */
+.bmf-biovoice-status {
+  --bv-st-bg: #0f172a;
+  --bv-st-card: #1e293b;
+  --bv-st-border: #334155;
+  --bv-st-text: #e2e8f0;
+  --bv-st-muted: #94a3b8;
+  --bv-st-accent: #38bdf8;
+  --bv-st-accent2: #a78bfa;
+  --bv-st-ok: #34d399;
+  --bv-st-warn: #fbbf24;
+  max-width: 380px;
+  width: 100%;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border-radius: 14px;
+  background: var(--bv-st-bg);
+  border: 1px solid var(--bv-st-border);
+  color: var(--bv-st-text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  box-sizing: border-box;
+}
+.bmf-bv-status-kicker {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--bv-st-accent); margin-bottom: 0.25rem;
+}
+.bmf-bv-status-headline { font-size: 1.05rem; font-weight: 650; color: #f8fafc; line-height: 1.3; }
+.bmf-bv-status-next { margin-top: 0.35rem; font-size: 0.8rem; color: var(--bv-st-muted); }
+.bmf-bv-status-phase {
+  margin-top: 0.95rem; padding: 0.7rem 0.75rem; border-radius: 10px;
+  background: var(--bv-st-card); border: 1px solid transparent; opacity: 0.92;
+}
+.bmf-bv-status-phase.is-active {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.12);
+  opacity: 1;
+}
+.bmf-bv-status-phase.is-done { opacity: 1; }
+.bmf-bv-status-phase.is-locked { opacity: 0.45; }
+.bmf-bv-status-phase-label {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 0.5rem; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.45rem;
+}
+.bmf-bv-status-count {
+  font-variant-numeric: tabular-nums; color: var(--bv-st-muted);
+  font-weight: 500; font-size: 0.75rem;
+}
+.bmf-bv-status-nodes { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.45rem; }
+.bmf-bv-node {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #334155; border: 1px solid #475569; box-sizing: border-box;
+}
+.bmf-bv-node.is-filled { background: var(--bv-st-ok); border-color: #6ee7b7; }
+.bmf-bv-node.is-current {
+  background: transparent; border-color: var(--bv-st-accent);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+}
+.bmf-bv-status-bar { height: 4px; border-radius: 2px; background: #334155; overflow: hidden; }
+.bmf-bv-status-bar > span {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--bv-st-accent), var(--bv-st-accent2));
+  border-radius: 2px; transition: width 0.25s ease;
+}
+.bmf-bv-status-ongoing-note {
+  margin: 0.15rem 0 0; font-size: 0.72rem; color: var(--bv-st-muted); line-height: 1.35;
+}
+.bmf-bv-status-notice {
+  display: flex; gap: 0.5rem; align-items: flex-start;
+  margin-top: 0.95rem; padding: 0.6rem 0.7rem; border-radius: 8px;
+  background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fde68a; font-size: 0.75rem; line-height: 1.4;
+}
+.bmf-bv-status-notice-icon {
+  flex-shrink: 0; font-size: 0.95rem; line-height: 1.2; color: var(--bv-st-warn);
+}
