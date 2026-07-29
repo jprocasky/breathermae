@@ -110,6 +110,101 @@ add_action('wpda_dbinit', function($wpdadb) {
 }, 10, 1);
 
 
+/**
+ * Dashboard Quick Access Widget
+ */
+add_action('wp_dashboard_setup', 'uls_dashboard_quick_access_widget');
+
+function uls_dashboard_quick_access_widget() {
+    wp_add_dashboard_widget(
+        'uls_quick_access',
+        '🚀 ULS Quick Access',
+        'uls_dashboard_quick_access_content'
+    );
+}
+
+function uls_dashboard_quick_access_content() {
+
+    $links = array(
+
+        'WordPress Admin' => array(
+            '📄 Pages' => admin_url('edit.php?post_type=page'),
+            '👥 Users' => admin_url('users.php'),
+            '📋 Menus' => admin_url('nav-menus.php'),
+            '🛒 WooCommerce Products' => admin_url('edit.php?post_type=product'),
+        ),
+
+        'Tools' => array(
+            '🎨 Elementor Pages' => admin_url('tools.php?page=uls-elementor-pages'),
+            '📄 Elementor Templates' => admin_url('tools.php?page=uls-elementor-templates'),
+            '🗄️ Breathermae SQL Edit' => admin_url('tools.php?page=bmse-sql'),
+        ),
+
+        'Breathermae Forms' => array(
+            '📝 Forms' => admin_url('admin.php?page=bmf-forms'),
+            '📑 Sections' => admin_url('admin.php?page=bmf-sections'),
+            '❓ Questions' => admin_url('admin.php?page=bmf-questions'),
+        ),
+
+        'WP Data Access' => array(
+            '📊 Data Explorer' => admin_url('admin.php?page=wpda'),
+            '⚡ SQL Query Builder' => admin_url('admin.php?page=wpda_query_builder'),
+        ),
+    );
+
+    echo '
+    <style>
+        .uls-dashboard-sections{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:15px;
+        }
+
+        .uls-dashboard-card{
+            border:1px solid #dcdcde;
+            border-radius:8px;
+            background:#fff;
+            padding:12px;
+        }
+
+        .uls-dashboard-card h3{
+            margin:0 0 10px 0;
+            padding-bottom:8px;
+            border-bottom:1px solid #eee;
+        }
+
+        .uls-dashboard-card a{
+            display:block;
+            padding:8px 10px;
+            margin-bottom:6px;
+            background:#f6f7f7;
+            border-radius:4px;
+            text-decoration:none;
+        }
+
+        .uls-dashboard-card a:hover{
+            background:#2271b1;
+            color:#fff;
+        }
+    </style>
+
+    <div class="uls-dashboard-sections">
+    ';
+
+    foreach ($links as $section => $items) {
+
+        echo '<div class="uls-dashboard-card">';
+        echo '<h3>' . esc_html($section) . '</h3>';
+
+        foreach ($items as $label => $url) {
+            echo '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+        }
+
+        echo '</div>';
+    }
+
+    echo '</div>';
+}
 
 /* --------------------------------------------------------------------------
  * SHORTCODE: [custom_field field="col7" param="field"]
