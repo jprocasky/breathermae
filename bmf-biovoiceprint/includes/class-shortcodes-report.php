@@ -54,6 +54,12 @@ class BMF_BioVoice_Shortcodes_Report {
 		$color_mod = BMF_BioVoice_Results_Service::color_class( $rdi_color );
 
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
+		wp_enqueue_style(
+			'bmf-biovoice-report-tags',
+			BMF_BIOVOICE_URL . 'assets/css/report-tags.css',
+			[ 'bmf-biovoice-recorder' ],
+			BMF_BIOVOICE_VERSION
+		);
 
 		$class = 'bmf-biovoice-report' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 
