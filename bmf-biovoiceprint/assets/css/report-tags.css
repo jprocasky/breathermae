@@ -1,0 +1,9 @@
+/* Score snapshot tags - match scores shortcode (Stable green / Watch amber) */
+.bmf-bv-report-score-tag.is-stable {
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
+}
+.bmf-bv-report-score-tag.is-watch {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fde68a;
+}
