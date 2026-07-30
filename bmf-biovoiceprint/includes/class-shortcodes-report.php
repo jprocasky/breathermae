@@ -1,6 +1,6 @@
 <?php
 /**
- * BioVoicePrint – Plain-language report shortcode.
+ * BioVoicePrint - Plain-language report shortcode.
  * Loaded from main plugin; keeps report UI out of the large shortcodes class file.
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -171,13 +171,15 @@ class BMF_BioVoice_Shortcodes_Report {
 						];
 						foreach ( $score_keys as $sk => $slabel ) :
 							if ( empty( $scores[ $sk ] ) || ! is_array( $scores[ $sk ] ) ) { continue; }
-							$s = $scores[ $sk ];
+							$s        = $scores[ $sk ];
+							$tag_label = isset( $s['label'] ) ? (string) $s['label'] : '';
+							$tag_mod   = strtolower( $tag_label ) === 'watch' ? 'is-watch' : 'is-stable';
 							?>
 							<li>
 								<span class="bmf-bv-report-score-label"><?php echo esc_html( $slabel ); ?></span>
 								<span class="bmf-bv-report-score-val">
 									<?php if ( isset( $s['score'] ) ) : ?><strong><?php echo esc_html( number_format_i18n( (float) $s['score'], 1 ) ); ?></strong><?php endif; ?>
-									<?php if ( ! empty( $s['label'] ) ) : ?><span class="bmf-bv-report-score-tag"><?php echo esc_html( $s['label'] ); ?></span><?php endif; ?>
+									<?php if ( $tag_label ) : ?><span class="bmf-bv-report-score-tag <?php echo esc_attr( $tag_mod ); ?>"><?php echo esc_html( $tag_label ); ?></span><?php endif; ?>
 								</span>
 							</li>
 						<?php endforeach; ?>
