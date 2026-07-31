@@ -26,6 +26,8 @@ class BMF_BioVoice_Shortcodes {
 		wp_register_script( 'bmf-biovoice-recorder', BMF_BIOVOICE_URL . 'assets/js/recorder.js', [], BMF_BIOVOICE_VERSION, true );
 		wp_register_script( 'bmf-biovoice-session-wizard', BMF_BIOVOICE_URL . 'assets/js/session-wizard.js', [ 'bmf-biovoice-recorder' ], BMF_BIOVOICE_VERSION, true );
 		wp_register_script( 'bmf-biovoice-sessions-admin', BMF_BIOVOICE_URL . 'assets/js/sessions-admin.js', [], BMF_BIOVOICE_VERSION, true );
+		wp_register_style( 'bmf-biovoice-status-admin', BMF_BIOVOICE_URL . 'assets/css/status-admin.css', [ 'bmf-biovoice-recorder' ], BMF_BIOVOICE_VERSION );
+		wp_register_script( 'bmf-biovoice-status-admin', BMF_BIOVOICE_URL . 'assets/js/status-admin.js', [], BMF_BIOVOICE_VERSION, true );
 	}
 
 	public static function shortcode_record( $atts ) {
@@ -178,7 +180,10 @@ class BMF_BioVoice_Shortcodes {
 		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-session data-purpose="' . esc_attr( $purpose ) . '"><div data-wizard-panel><p class="bmf-bv-empty">Loading session…</p></div></div>';
 	}
 
-	/** [bmf_biovoice_status comparison_target="6"] */
+	/**
+	 * [bmf_biovoice_status comparison_target="6"]
+	 * [bmf_biovoice_status admin="1" comparison_target="6"]
+	 */
 	public static function shortcode_status( $atts ) {
 		if ( bmf_biovoice_in_elementor_editor() ) {
 			return '<div class="bmf-biovoice-placeholder" style="padding:1.25rem;border:1px dashed #64748b;border-radius:10px;text-align:center;color:#94a3b8;background:#0f172a;">BioVoicePrint Status (preview)</div>';
@@ -189,7 +194,13 @@ class BMF_BioVoice_Shortcodes {
 		$atts = shortcode_atts( [
 			'comparison_target' => (string) BMF_BioVoice_Session_Service::COMPARISON_TARGET_DEFAULT,
 			'class' => '',
+			'admin' => '0',
 		], $atts, 'bmf_biovoice_status' );
+
+		if ( in_array( strtolower( (string) $atts['admin'] ), [ '1', 'true', 'yes' ], true ) ) {
+			return self::render_admin_status_panel( $atts );
+		}
+
 		$target = max( 1, absint( $atts['comparison_target'] ) );
 		$summary = BMF_BioVoice_Session_Service::get_status_summary( get_current_user_id(), $target );
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
@@ -255,5 +266,24 @@ class BMF_BioVoice_Shortcodes {
 		] );
 		$class = 'bmf-biovoice-sessions bmf-biovoice-sessions--admin' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-sessions-admin><p class="bmf-bv-empty">Select a member to view recordings.</p></div>';
+	}
+
+	private static function render_admin_status_panel( array $atts ): string {
+		if ( ! BMF_BioVoice_Session_Service::can_inspect_member_sessions() ) {
+			return '<p class="bmf-biovoice-login-required">You do not have permission to inspect member status.</p>';
+		}
+		wp_enqueue_style( 'bmf-biovoice-recorder' );
+		wp_enqueue_style( 'bmf-biovoice-status-admin' );
+		wp_enqueue_script( 'bmf-biovoice-status-admin' );
+		$target = max( 1, absint( $atts['comparison_target'] ) ?: BMF_BioVoice_Session_Service::COMPARISON_TARGET_DEFAULT );
+		wp_localize_script( 'bmf-biovoice-status-admin', 'bmfBioVoiceStatusAdmin', [
+			'restUrl' => esc_url_raw( rest_url( 'bmf-biovoice/v1/status' ) ),
+			'nonce' => wp_create_nonce( 'wp_rest' ),
+			'comparisonTarget' => $target,
+		] );
+		$class = 'bmf-biovoice-status bmf-biovoice-status--admin' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
+		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-status-admin data-comparison-target="' . esc_attr( (string) $target ) . '">' 
+			. '<p class="bmf-bv-empty" style="color:#94a3b8;margin:0;">Select a member to view BioVoicePrint status.</p>'
+			. '</div>';
 	}
 }
