@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.7-poc
+ * Version:           0.2.8-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,11 +15,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.7-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.8-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
 
+/**
+ * Lightweight DB accessor — same pattern used by BSI shortcodes.
+ */
 if ( ! class_exists( 'BMF_BioVoice_DBX' ) ) {
 	class BMF_BioVoice_DBX {
 		/** @var wpdb */
@@ -37,6 +40,9 @@ if ( ! class_exists( 'BMF_BioVoice_DBX' ) ) {
 	BMF_BioVoice_DBX::init();
 }
 
+/**
+ * Elementor editor detection (shared helper style).
+ */
 if ( ! function_exists( 'bmf_biovoice_in_elementor_editor' ) ) {
 	function bmf_biovoice_in_elementor_editor(): bool {
 		if ( ! defined( 'ELEMENTOR_VERSION' ) || ! class_exists( '\Elementor\Plugin' ) ) {
@@ -67,6 +73,9 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-report.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-scores.php';
 
+/**
+ * Activation: tables + storage + protocol seed.
+ */
 register_activation_hook( __FILE__, function () {
 	BMF_BioVoice_Repository::install_tables();
 	BMF_BioVoice_Storage::ensure_directory();
