@@ -1,0 +1,19 @@
+/* Admin status panel (ULS members) */
+.bmf-biovoice-status--admin .bmf-bv-admin-header--status {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--bv-st-border, #334155);
+}
+.bmf-biovoice-status--admin .bmf-bv-admin-member {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.9rem;
+}
+.bmf-biovoice-status--admin .bmf-bv-admin-email {
+  font-weight: 400;
+  color: var(--bv-st-muted, #94a3b8);
+  font-size: 0.8rem;
+}
+.bmf-biovoice-status--admin .bmf-bv-empty--error {
+  color: #fca5a5 !important;
+}
