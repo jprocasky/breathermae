@@ -73,6 +73,12 @@ class BMF_BioVoice_REST_API {
 				'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
 			],
 		] );
+
+		register_rest_route( self::NS, '/status', [
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => [ __CLASS__, 'get_status' ],
+			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+		] );
 	}
 
 	public static function require_logged_in() {
@@ -161,6 +167,41 @@ class BMF_BioVoice_REST_API {
 			'group'      => $result['group'] ?? null,
 			'message'    => 'Recording saved.',
 		] );
+	}
+
+	/**
+	 * GET /status — current user, or (with inspect permission) another member.
+	 */
+	public static function get_status( WP_REST_Request $request ) {
+		$current_id  = get_current_user_id();
+		$target_id   = $current_id;
+		$can_inspect = BMF_BioVoice_Session_Service::can_inspect_member_sessions();
+
+		if ( $can_inspect ) {
+			$req_user  = absint( $request->get_param( 'user_id' ) );
+			$req_email = sanitize_email( (string) $request->get_param( 'email' ) );
+
+			if ( $req_user > 0 ) {
+				$target_id = $req_user;
+			} elseif ( $req_email ) {
+				$user = get_user_by( 'email', $req_email );
+				if ( ! $user ) {
+					return new WP_Error( 'bmf_biovoice_user', 'No user found for that email.', [ 'status' => 404 ] );
+				}
+				$target_id = (int) $user->ID;
+			}
+		}
+
+		$target = max( 1, absint( $request->get_param( 'comparison_target' ) ?: BMF_BioVoice_Session_Service::COMPARISON_TARGET_DEFAULT ) );
+		$summary = BMF_BioVoice_Session_Service::get_status_summary( $target_id, $target );
+
+		$target_user = get_userdata( $target_id );
+
+		return rest_ensure_response( array_merge( $summary, [
+			'target_user_id' => $target_id,
+			'target_email'   => $target_user ? $target_user->user_email : null,
+			'target_display' => $target_user ? $target_user->display_name : null,
+		] ) );
 	}
 
 	public static function list_sessions( WP_REST_Request $request ) {
