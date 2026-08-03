@@ -12,80 +12,299 @@
   const cfg = window.bmfBioVoiceSession;
 
   const WELLNESS_ITEMS = [
-    { key: 'balanced', label: 'How balanced or centered do you feel right now?', low: 'Very Unbalanced', high: 'Very Balanced' },
-    { key: 'clear', label: 'How mentally clear and focused do you feel at this moment?', low: 'Very Unclear', high: 'Very Clear' },
-    { key: 'energized', label: 'How physically energized do you feel right now?', low: 'Very Low Energy', high: 'Very High Energy' },
-    { key: 'ready', label: 'How comfortable and ready do you feel for this recording?', low: 'Not Comfortable/Ready', high: 'Very Comfortable/Ready' },
-    { key: 'restored', label: 'How restored or recovered do you feel today overall?', low: 'Not Restored', high: 'Fully Restored' }
+    {
+      key: 'balanced',
+      label: 'How balanced or centered do you feel right now?',
+      low: 'Very Unbalanced',
+      high: 'Very Balanced'
+    },
+    {
+      key: 'clear',
+      label: 'How mentally clear and focused do you feel at this moment?',
+      low: 'Very Unclear',
+      high: 'Very Clear'
+    },
+    {
+      key: 'energized',
+      label: 'How physically energized do you feel right now?',
+      low: 'Very Low Energy',
+      high: 'Very High Energy'
+    },
+    {
+      key: 'ready',
+      label: 'How comfortable and ready do you feel for this recording?',
+      low: 'Not Comfortable/Ready',
+      high: 'Very Comfortable/Ready'
+    },
+    {
+      key: 'restored',
+      label: 'How restored or recovered do you feel today overall?',
+      low: 'Not Restored',
+      high: 'Fully Restored'
+    }
   ];
 
-  function micKey(groupId) { return 'bmf_biovoice_mic_ok_' + groupId; }
-  function hasMicPass(groupId) { try { return sessionStorage.getItem(micKey(groupId)) === '1'; } catch (e) { return false; } }
-  function setMicPass(groupId) { try { sessionStorage.setItem(micKey(groupId), '1'); } catch (e) {} }
+  function micKey(groupId) {
+    return 'bmf_biovoice_mic_ok_' + groupId;
+  }
+
+  function hasMicPass(groupId) {
+    try {
+      return sessionStorage.getItem(micKey(groupId)) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setMicPass(groupId) {
+    try {
+      sessionStorage.setItem(micKey(groupId), '1');
+    } catch (e) { /* ignore */ }
+  }
 
   function api(path, options) {
     const opts = options || {};
-    const headers = Object.assign({ 'X-WP-Nonce': cfg.nonce }, opts.headers || {});
-    return fetch(cfg.restBase + path, Object.assign({}, opts, { headers: headers, credentials: 'same-origin' }))
-      .then(function (res) {
-        return res.json().then(function (data) {
-          if (!res.ok) {
-            const msg = (data && data.message) ? data.message : ('Request failed (' + res.status + ')');
-            const err = new Error(msg);
-            err.status = res.status;
-            err.data = data;
-            throw err;
-          }
-          return data;
-        });
+    const headers = Object.assign(
+      { 'X-WP-Nonce': cfg.nonce },
+      opts.headers || {}
+    );
+    return fetch(cfg.restBase + path, Object.assign({}, opts, {
+      headers: headers,
+      credentials: 'same-origin'
+    })).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          const msg = (data && data.message) ? data.message : ('Request failed (' + res.status + ')');
+          const err = new Error(msg);
+          err.status = res.status;
+          err.data = data;
+          throw err;
+        }
+        return data;
       });
+    });
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-  function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
-
-  function recorderMarkup(step, groupId) {
+  function recorderMarkup(step, groupId, sessionType) {
     const task = step.task_code || '';
     const min = step.min_seconds != null ? step.min_seconds : 0;
     const max = step.max_seconds != null ? step.max_seconds : 0;
     const title = step.title ? '<div class="bmf-bv-step-title">' + escapeHtml(step.title) + '</div>' : '';
-    const dirs = step.directions ? '<p class="bmf-bv-step-directions">' + escapeHtml(step.directions) + '</p>' : '';
-    const prompt = step.prompt_text ? '<blockquote class="bmf-bv-step-prompt">' + escapeHtml(step.prompt_text) + '</blockquote>' : '';
-    const limits = (min || max) ? ('<p class="bmf-bv-limits">' + (min ? ('Min ' + min + 's') : '') + (min && max ? ' · ' : '') + (max ? ('Max ' + max + 's') : '') + '</p>') : '';
-    return '<div class="bmf-biovoice-recorder" data-bmf-biovoice-recorder data-task="' + escapeAttr(task) + '" data-min="' + escapeAttr(String(min)) + '" data-max="' + escapeAttr(String(max)) + '" data-group="' + escapeAttr(String(groupId || 0)) + '">' +
+    const dirs = step.directions
+      ? '<p class="bmf-bv-step-directions">' + escapeHtml(step.directions) + '</p>'
+      : '';
+    const prompt = step.prompt_text
+      ? '<blockquote class="bmf-bv-step-prompt">' + escapeHtml(step.prompt_text) + '</blockquote>'
+      : '';
+    const limits = (min || max)
+      ? '<p class="bmf-bv-limits">' +
+        (min ? ('Min ' + min + 's') : '') +
+        (min && max ? ' · ' : '') +
+        (max ? ('Max ' + max + 's') : '') +
+        '</p>'
+      : '';
+
+    const silenceAttr = step.is_silence ? ' data-silence="1"' : '';
+
+    return (
+      '<div class="bmf-biovoice-recorder" data-bmf-biovoice-recorder' +
+      ' data-task="' + escapeAttr(task) + '"' +
+      ' data-min="' + escapeAttr(String(min)) + '"' +
+      ' data-max="' + escapeAttr(String(max)) + '"' +
+      ' data-group="' + escapeAttr(String(groupId || 0)) + '"' +
+      silenceAttr + '>' +
       title + dirs + prompt +
       '<div class="bmf-bv-status" data-status>Ready to record</div>' +
-      '<div class="bmf-bv-device-wrap" data-device-wrap hidden><label class="bmf-bv-device-label" for="bmf-bv-device-wiz">Microphone</label><select class="bmf-bv-device" data-device id="bmf-bv-device-wiz"></select></div>' +
+      '<div class="bmf-bv-device-wrap" data-device-wrap hidden>' +
+      '<label class="bmf-bv-device-label" for="bmf-bv-device-wiz">Microphone</label>' +
+      '<select class="bmf-bv-device" data-device id="bmf-bv-device-wiz"></select>' +
+      '</div>' +
       '<div class="bmf-bv-meter" data-meter aria-hidden="true"><div class="bmf-bv-meter-bar" data-meter-bar></div></div>' +
-      '<div class="bmf-bv-controls"><button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start"><span class="bmf-bv-dot"></span> Start Recording</button><button type="button" class="bmf-bv-btn bmf-bv-btn-stop" data-action="stop" disabled>Stop</button></div>' +
-      '<div class="bmf-bv-timer" data-timer>00:00</div>' + limits +
-      '<div class="bmf-bv-preview" data-preview hidden><p class="bmf-bv-preview-label">Last take</p><audio controls data-player></audio><div class="bmf-bv-preview-actions"><button type="button" class="bmf-bv-btn bmf-bv-btn-save" data-action="save">Save Recording</button><button type="button" class="bmf-bv-btn bmf-bv-btn-discard" data-action="discard">Discard</button></div></div>' +
-      '<div class="bmf-bv-message" data-message hidden></div></div>';
+      '<div class="bmf-bv-controls">' +
+      '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start">' +
+      '<span class="bmf-bv-dot"></span> Start Recording</button>' +
+      '<button type="button" class="bmf-bv-btn bmf-bv-btn-stop" data-action="stop" disabled>Stop</button>' +
+      '</div>' +
+      '<div class="bmf-bv-timer" data-timer>00:00</div>' +
+      limits +
+      '<div class="bmf-bv-preview" data-preview hidden>' +
+      '<p class="bmf-bv-preview-label">Last take</p>' +
+      '<audio controls data-player></audio>' +
+      '<div class="bmf-bv-preview-actions">' +
+      '<button type="button" class="bmf-bv-btn bmf-bv-btn-save" data-action="save">Save Recording</button>' +
+      '<button type="button" class="bmf-bv-btn bmf-bv-btn-discard" data-action="discard">Discard</button>' +
+      '</div></div>' +
+      '<div class="bmf-bv-message" data-message hidden></div>' +
+      '</div>'
+    );
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escapeAttr(s) {
+    return escapeHtml(s).replace(/'/g, '&#39;');
   }
 
   function initWizard(root) {
     const purpose = root.getAttribute('data-purpose') || cfg.purpose || 'baseline';
     const panel = root.querySelector('[data-wizard-panel]');
     let state = null;
+    let protocol = null;
 
-    function setPanel(html) { panel.innerHTML = html; }
+    function setPanel(html) {
+      panel.innerHTML = html;
+    }
+
+    function canRetakeGroup(group) {
+      return !!(
+        group &&
+        group.group_id &&
+        group.status === 'in_progress' &&
+        !group.is_final &&
+        !group.is_group_complete
+      );
+    }
 
     function progressHtml(group) {
       const bp = group.baseline_progress || { complete_groups: 0, required: 3 };
-      const steps = (group.steps || []).filter(function (s) { return s.task_code !== 'mic_check'; });
+      const steps = (group.steps || []).filter(function (s) {
+        return s.task_code !== 'mic_check';
+      });
       const done = group.completed_tasks || {};
       const doneCount = Object.keys(done).length;
       const total = steps.length || 1;
       const pct = Math.min(100, Math.round((doneCount / total) * 100));
+      const allowRetake = canRetakeGroup(group);
+
       let chips = '';
       steps.forEach(function (s) {
-        chips += '<span class="bmf-bv-chip' + (done[s.task_code] ? ' is-done' : '') + '">' + escapeHtml(s.title || s.task_code) + '</span>';
+        const ok = !!done[s.task_code];
+        const retakeOk = ok && allowRetake && s.allow_retake !== false && s.allow_retake !== 0;
+        const title = s.title || s.task_code;
+        if (retakeOk) {
+          chips +=
+            '<button type="button" class="bmf-bv-chip is-done is-retakeable"' +
+            ' data-retake-task="' + escapeAttr(s.task_code) + '"' +
+            ' data-retake-title="' + escapeAttr(title) + '"' +
+            ' title="Retake this step" aria-label="Retake ' + escapeAttr(title) + '">' +
+            escapeHtml(title) +
+            ' <span class="bmf-bv-chip-retake" aria-hidden="true">↻</span></button>';
+        } else {
+          chips +=
+            '<span class="bmf-bv-chip' + (ok ? ' is-done' : '') + '">' +
+            escapeHtml(title) +
+            '</span>';
+        }
       });
-      return '<div class="bmf-bv-progress"><div class="bmf-bv-progress-meta"><span>Session steps: ' + doneCount + ' / ' + total + '</span><span>Baseline groups: ' + bp.complete_groups + ' / ' + bp.required + '</span></div>' +
-        '<div class="bmf-bv-progress-bar"><div class="bmf-bv-progress-fill" style="width:' + pct + '%"></div></div><div class="bmf-bv-chips">' + chips + '</div>' +
-        (group.device_mismatch ? '<p class="bmf-bv-warn">Different device or mic detected vs earlier takes in this session.</p>' : '') + '</div>';
+
+      return (
+        '<div class="bmf-bv-progress">' +
+        '<div class="bmf-bv-progress-meta">' +
+        '<span>Session steps: ' + doneCount + ' / ' + total + '</span>' +
+        '<span>Baseline groups: ' + bp.complete_groups + ' / ' + bp.required + '</span>' +
+        '</div>' +
+        '<div class="bmf-bv-progress-bar"><div class="bmf-bv-progress-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="bmf-bv-chips">' + chips + '</div>' +
+        (allowRetake && doneCount > 0
+          ? '<p class="bmf-bv-retake-hint">Tap a completed step to retake it.</p>'
+          : '') +
+        (group.device_mismatch
+          ? '<p class="bmf-bv-warn">Different device or mic detected vs earlier takes in this session.</p>'
+          : '') +
+        '</div>'
+      );
+    }
+
+    function retakeDialogHtml(taskCode, title) {
+      return (
+        '<div class="bmf-bv-retake-overlay" data-retake-dialog role="dialog" aria-modal="true"' +
+        ' aria-labelledby="bmf-bv-retake-title">' +
+        '<div class="bmf-bv-retake-card">' +
+        '<h3 id="bmf-bv-retake-title" class="bmf-bv-heading">Retake “' + escapeHtml(title) + '”?</h3>' +
+        '<p class="bmf-bv-lead">The previous recording for this step will be permanently deleted.</p>' +
+        '<div class="bmf-bv-retake-options">' +
+        '<label class="bmf-bv-retake-opt">' +
+        '<input type="radio" name="bmf_retake_mode" value="one" checked>' +
+        '<span><strong>This step only</strong><br><small>Keep later recordings</small></span>' +
+        '</label>' +
+        '<label class="bmf-bv-retake-opt">' +
+        '<input type="radio" name="bmf_retake_mode" value="forward">' +
+        '<span><strong>This step and everything after</strong><br><small>Clear this and all following steps</small></span>' +
+        '</label>' +
+        '</div>' +
+        '<div class="bmf-bv-retake-actions">' +
+        '<button type="button" class="bmf-bv-btn bmf-bv-btn-discard" data-retake-cancel>Cancel</button>' +
+        '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-retake-confirm' +
+        ' data-task="' + escapeAttr(taskCode) + '">Retake</button>' +
+        '</div>' +
+        '</div></div>'
+      );
+    }
+
+    function openRetakeDialog(taskCode, title) {
+      closeRetakeDialog();
+      const wrap = document.createElement('div');
+      wrap.innerHTML = retakeDialogHtml(taskCode, title);
+      const dialog = wrap.firstChild;
+      panel.appendChild(dialog);
+
+      const cancel = dialog.querySelector('[data-retake-cancel]');
+      const confirmBtn = dialog.querySelector('[data-retake-confirm]');
+      if (cancel) {
+        cancel.addEventListener('click', closeRetakeDialog);
+      }
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', function () {
+          const mode = dialog.querySelector('input[name="bmf_retake_mode"]:checked');
+          const clearForward = mode && mode.value === 'forward';
+          runRetake(taskCode, clearForward, confirmBtn);
+        });
+      }
+      dialog.addEventListener('click', function (ev) {
+        if (ev.target === dialog) {
+          closeRetakeDialog();
+        }
+      });
+    }
+
+    function closeRetakeDialog() {
+      const existing = panel.querySelector('[data-retake-dialog]');
+      if (existing) {
+        existing.remove();
+      }
+    }
+
+    function runRetake(taskCode, clearForward, btn) {
+      if (!state || !state.group_id) {
+        return;
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Working…';
+      }
+      api('/groups/' + state.group_id + '/retake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_code: taskCode,
+          clear_forward: !!clearForward
+        })
+      }).then(function (data) {
+        closeRetakeDialog();
+        showForState(data);
+      }).catch(function (err) {
+        alert(err.message || 'Could not retake that step.');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Retake';
+        }
+      });
     }
 
     function wellnessHtml() {
@@ -93,65 +312,126 @@
       WELLNESS_ITEMS.forEach(function (item) {
         let opts = '';
         for (let i = 1; i <= 5; i++) {
-          opts += '<label class="bmf-bv-scale-opt"><input type="radio" name="w_' + item.key + '" value="' + i + '" required><span>' + i + '</span></label>';
+          opts += '<label class="bmf-bv-scale-opt">' +
+            '<input type="radio" name="w_' + item.key + '" value="' + i + '" required>' +
+            '<span>' + i + '</span></label>';
         }
-        items += '<fieldset class="bmf-bv-wellness-item"><legend>' + escapeHtml(item.label) + '</legend><div class="bmf-bv-scale-ends"><span>' + escapeHtml(item.low) + '</span><span>' + escapeHtml(item.high) + '</span></div><div class="bmf-bv-scale">' + opts + '</div></fieldset>';
+        items +=
+          '<fieldset class="bmf-bv-wellness-item">' +
+          '<legend>' + escapeHtml(item.label) + '</legend>' +
+          '<div class="bmf-bv-scale-ends"><span>' + escapeHtml(item.low) +
+          '</span><span>' + escapeHtml(item.high) + '</span></div>' +
+          '<div class="bmf-bv-scale">' + opts + '</div>' +
+          '</fieldset>';
       });
-      return '<div class="bmf-bv-wellness"><h3 class="bmf-bv-heading">Before you begin</h3><p class="bmf-bv-lead">Answer these five questions, then we will walk through the recording steps.</p><form data-wellness-form>' + items + '<button type="submit" class="bmf-bv-btn bmf-bv-btn-record">Continue</button></form></div>';
+
+      return (
+        '<div class="bmf-bv-wellness">' +
+        '<h3 class="bmf-bv-heading">Before you begin</h3>' +
+        '<p class="bmf-bv-lead">Answer these five questions, then we’ll walk through the recording steps.</p>' +
+        '<form data-wellness-form>' + items +
+        '<button type="submit" class="bmf-bv-btn bmf-bv-btn-record">Continue</button>' +
+        '</form></div>'
+      );
     }
 
     function completeHtml(group) {
       const bp = group.baseline_progress || { complete_groups: 0, required: 3 };
       const done = bp.complete_groups >= bp.required;
-      return '<div class="bmf-bv-complete"><h3 class="bmf-bv-heading">Session complete</h3><p class="bmf-bv-lead">All steps for this session are saved.</p>' + progressHtml(group) +
-        (done ? '<p class="bmf-bv-success-note">Baseline complete (' + bp.required + ' sessions).</p>' :
-          '<p class="bmf-bv-lead">You still need ' + (bp.required - bp.complete_groups) + ' more full session(s) for baseline.</p><button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start-next-group">Start next session</button>') +
-        '</div>';
+      return (
+        '<div class="bmf-bv-complete">' +
+        '<h3 class="bmf-bv-heading">Session complete</h3>' +
+        '<p class="bmf-bv-lead">All steps for this session are saved.</p>' +
+        progressHtml(group) +
+        (done
+          ? '<p class="bmf-bv-success-note">Baseline complete (' + bp.required + ' sessions).</p>'
+          : '<p class="bmf-bv-lead">You still need ' +
+            (bp.required - bp.complete_groups) +
+            ' more full session(s) for baseline.</p>' +
+            '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start-next-group">' +
+            'Start next session</button>') +
+        '</div>'
+      );
     }
 
     function mountRecorder(step, groupId) {
+      // Provide cfg expected by recorder.js for this step.
       window.bmfBioVoice = {
-        restUrl: cfg.sessionsUrl, nonce: cfg.nonce, sessionType: purpose, userId: cfg.userId,
-        taskCode: step.task_code || '', sessionGroupId: groupId || 0,
-        minSeconds: step.min_seconds || 0, maxSeconds: step.max_seconds || 0
+        restUrl: cfg.sessionsUrl,
+        nonce: cfg.nonce,
+        sessionType: purpose,
+        userId: cfg.userId,
+        taskCode: step.task_code || '',
+        sessionGroupId: groupId || 0,
+        minSeconds: step.min_seconds || 0,
+        maxSeconds: step.max_seconds || 0
       };
-      setPanel(progressHtml(state) + '<div class="bmf-bv-step-panel">' + recorderMarkup(step, groupId) + '</div>');
+
+      const html =
+        progressHtml(state) +
+        '<div class="bmf-bv-step-panel">' +
+        recorderMarkup(step, groupId, purpose) +
+        '</div>';
+      setPanel(html);
+
+      // Boot recorder on the new node.
       if (typeof window.bmfBioVoiceBootRecorders === 'function') {
         window.bmfBioVoiceBootRecorders();
+      } else {
+        // Fallback: re-run same selector boot if available via custom event.
+        document.dispatchEvent(new Event('bmf-biovoice-boot-recorders'));
       }
     }
 
     function showForState(group) {
       state = group;
+
       if (!group || !group.group_id) {
         setPanel('<p class="bmf-bv-empty">Unable to start a session. Please refresh and try again.</p>');
         return;
       }
+
       if (!group.wellness_anchor) {
         setPanel(progressHtml(group) + wellnessHtml());
         const form = panel.querySelector('[data-wellness-form]');
-        if (form) form.addEventListener('submit', onWellnessSubmit);
+        if (form) {
+          form.addEventListener('submit', onWellnessSubmit);
+        }
         return;
       }
+
       if (group.is_group_complete || group.status === 'complete') {
         setPanel(completeHtml(group));
         const btn = panel.querySelector('[data-action="start-next-group"]');
-        if (btn) btn.addEventListener('click', startFreshGroup);
+        if (btn) {
+          btn.addEventListener('click', function () {
+            startFreshGroup();
+          });
+        }
         return;
       }
+
+      // Mic check once per group (client-only).
       if (!hasMicPass(group.group_id)) {
-        const micStep = (group.steps || []).find(function (s) { return s.task_code === 'mic_check'; }) || {
-          task_code: 'mic_check', title: 'Microphone check',
+        const micStep = (group.steps || []).find(function (s) {
+          return s.task_code === 'mic_check';
+        }) || {
+          task_code: 'mic_check',
+          title: 'Microphone check',
           directions: 'Speak naturally for a couple of seconds so we can confirm audio is coming through.',
-          prompt_text: 'Testing one two three.', min_seconds: 2, max_seconds: 5
+          prompt_text: 'Testing one two three.',
+          min_seconds: 2,
+          max_seconds: 5
         };
         mountRecorder(micStep, group.group_id);
         return;
       }
+
       if (group.next_step) {
         mountRecorder(group.next_step, group.group_id);
         return;
       }
+
       setPanel(completeHtml(group));
     }
 
@@ -162,19 +442,31 @@
       let valid = true;
       WELLNESS_ITEMS.forEach(function (item) {
         const el = form.querySelector('input[name="w_' + item.key + '"]:checked');
-        if (!el) { valid = false; return; }
+        if (!el) {
+          valid = false;
+          return;
+        }
         answers[item.key] = parseInt(el.value, 10);
       });
-      if (!valid) { alert('Please answer all five questions.'); return; }
+      if (!valid) {
+        alert('Please answer all five questions.');
+        return;
+      }
       answers.captured_at = new Date().toISOString();
+
       const btn = form.querySelector('button[type="submit"]');
       if (btn) btn.disabled = true;
+
       api('/groups/' + state.group_id + '/wellness', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wellness_anchor: answers })
-      }).then(function (data) { showForState(data); })
-        .catch(function (err) { alert(err.message || 'Could not save wellness answers.'); if (btn) btn.disabled = false; });
+      }).then(function (data) {
+        showForState(data);
+      }).catch(function (err) {
+        alert(err.message || 'Could not save wellness answers.');
+        if (btn) btn.disabled = false;
+      });
     }
 
     function startFreshGroup() {
@@ -183,46 +475,90 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ purpose: purpose })
-      }).then(function (data) { showForState(data); })
-        .catch(function (err) { setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message) + '</p>'); });
+      }).then(function (data) {
+        showForState(data);
+      }).catch(function (err) {
+        setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message) + '</p>');
+      });
     }
 
     function load() {
       setPanel('<p class="bmf-bv-empty">Loading session…</p>');
+
       Promise.all([
         api('/protocol?purpose=' + encodeURIComponent(purpose)),
-        api('/groups?purpose=' + encodeURIComponent(purpose)).catch(function () { return { group: null }; })
+        api('/groups?purpose=' + encodeURIComponent(purpose)).catch(function () {
+          return { group: null };
+        })
       ]).then(function (results) {
+        protocol = results[0];
         const current = results[1];
-        if (current && current.group_id) { showForState(current); return; }
+
+        // get_current_group returns the state object OR { group: null }
+        if (current && current.group_id) {
+          showForState(current);
+          return;
+        }
+
         return api('/groups', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ purpose: purpose })
-        }).then(function (data) { showForState(data); });
+        }).then(function (data) {
+          showForState(data);
+        });
       }).catch(function (err) {
         setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message || 'Failed to load session.') + '</p>');
       });
     }
 
     root.addEventListener('bmf-biovoice-mic-check-passed', function () {
-      if (state && state.group_id) { setMicPass(state.group_id); showForState(state); }
-    });
-    root.addEventListener('bmf-biovoice-saved', function (ev) {
-      const detail = ev.detail || {};
-      if (detail.group) { showForState(detail.group); }
-      else if (state && state.group_id) {
-        api('/groups?purpose=' + encodeURIComponent(purpose)).then(function (data) {
-          if (data && data.group_id) showForState(data);
-        }).catch(function () {});
+      if (state && state.group_id) {
+        setMicPass(state.group_id);
+        showForState(state);
       }
     });
+
+    root.addEventListener('bmf-biovoice-saved', function (ev) {
+      const detail = ev.detail || {};
+      if (detail.group) {
+        showForState(detail.group);
+      } else if (state && state.group_id) {
+        api('/groups?purpose=' + encodeURIComponent(purpose)).then(function (data) {
+          if (data && data.group_id) {
+            showForState(data);
+          }
+        }).catch(function () { /* keep current */ });
+      }
+    });
+
+    // Retake chips (event delegation — chips are re-rendered each step).
+    root.addEventListener('click', function (ev) {
+      const chip = ev.target.closest('[data-retake-task]');
+      if (!chip || !panel.contains(chip)) {
+        return;
+      }
+      ev.preventDefault();
+      if (!canRetakeGroup(state)) {
+        return;
+      }
+      const task = chip.getAttribute('data-retake-task');
+      const title = chip.getAttribute('data-retake-title') || task;
+      if (task) {
+        openRetakeDialog(task, title);
+      }
+    });
+
     load();
   }
 
   function boot() {
     document.querySelectorAll('[data-bmf-biovoice-session]').forEach(initWizard);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 })();
