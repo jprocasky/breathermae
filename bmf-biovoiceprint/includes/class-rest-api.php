@@ -1,6 +1,6 @@
 <?php
 /**
- * BioVoicePrint - REST API endpoints.
+ * BioVoicePrint – REST API endpoints.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -143,7 +143,7 @@ class BMF_BioVoice_REST_API {
 	}
 
 	/**
-	 * POST /groups/{id}/retake - hard-delete take(s) and rewind wizard to that step.
+	 * POST /groups/{id}/retake — hard-delete take(s) and rewind wizard to that step.
 	 * Body: { task_code: string, clear_forward?: bool }
 	 */
 	public static function retake_step( WP_REST_Request $request ) {
@@ -199,6 +199,9 @@ class BMF_BioVoice_REST_API {
 		] );
 	}
 
+	/**
+	 * GET /status — current user, or (with inspect permission) another member.
+	 */
 	public static function get_status( WP_REST_Request $request ) {
 		$current_id  = get_current_user_id();
 		$target_id   = $current_id;

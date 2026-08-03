@@ -1,6 +1,6 @@
 <?php
 /**
- * BioVoicePrint - Session / group business logic.
+ * BioVoicePrint – Session / group business logic.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -105,7 +105,7 @@ class BMF_BioVoice_Session_Service {
 			return new WP_Error( 'bmf_biovoice_forbidden', 'Group not found.', [ 'status' => 404 ] );
 		}
 
-		// Completed groups are locked - no retakes after finalization.
+		// Completed groups are locked — no retakes after finalization.
 		if ( $group['status'] !== 'in_progress' || ! empty( $group['is_final'] ) ) {
 			return new WP_Error(
 				'bmf_biovoice_locked',
@@ -197,7 +197,7 @@ class BMF_BioVoice_Session_Service {
 		$next_step = null;
 		foreach ( $steps as $s ) {
 			$code = $s['task_code'];
-			// mic_check is client-only gate - never stored as a take.
+			// mic_check is client-only gate — never stored as a take.
 			if ( $code === 'mic_check' ) {
 				continue;
 			}
@@ -350,7 +350,7 @@ class BMF_BioVoice_Session_Service {
 				if ( $duration !== null && $min > 0 && $duration + 0.05 < $min ) {
 					return new WP_Error(
 						'bmf_biovoice_too_short',
-						sprintf( 'Recording too short. Minimum is %s seconds - please retake.', $min ),
+						sprintf( 'Recording too short. Minimum is %s seconds — please retake.', $min ),
 						[ 'status' => 400, 'min_seconds' => $min, 'duration_sec' => $duration ]
 					);
 				}
