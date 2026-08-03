@@ -52,6 +52,21 @@ class BMF_BioVoice_REST_API {
 			],
 		] );
 
+		register_rest_route( self::NS, '/groups/(?P<id>\d+)/unlock', [
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => [ __CLASS__, 'unlock_group' ],
+			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+			'args'                => [
+				'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+			],
+		] );
+
+		register_rest_route( self::NS, '/admin/groups', [
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => [ __CLASS__, 'list_admin_groups' ],
+			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+		] );
+
 		register_rest_route( self::NS, '/sessions', [
 			[
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -161,6 +176,67 @@ class BMF_BioVoice_REST_API {
 			return $result;
 		}
 		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * POST /groups/{id}/unlock — admin/staff only (can_inspect_member_sessions).
+	 * Body: { clear_takes?: bool, reason?: string }
+	 */
+	public static function unlock_group( WP_REST_Request $request ) {
+		$group_id    = (int) $request['id'];
+		$clear_takes = (bool) $request->get_param( 'clear_takes' );
+		$reason      = sanitize_textarea_field( (string) $request->get_param( 'reason' ) );
+
+		$result = BMF_BioVoice_Session_Service::admin_unlock_group( $group_id, $clear_takes, $reason );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * GET /admin/groups — list session groups for a member (inspect permission).
+	 * Query: user_id | email, optional purpose, limit.
+	 */
+	public static function list_admin_groups( WP_REST_Request $request ) {
+		if ( ! BMF_BioVoice_Session_Service::can_inspect_member_sessions() ) {
+			return new WP_Error( 'bmf_biovoice_forbidden', 'You cannot inspect member groups.', [ 'status' => 403 ] );
+		}
+
+		$target_id = 0;
+		$req_user  = absint( $request->get_param( 'user_id' ) );
+		$req_email = sanitize_email( (string) $request->get_param( 'email' ) );
+
+		if ( $req_user > 0 ) {
+			$target_id = $req_user;
+		} elseif ( $req_email ) {
+			$user = get_user_by( 'email', $req_email );
+			if ( ! $user ) {
+				return new WP_Error( 'bmf_biovoice_user', 'No user found for that email.', [ 'status' => 404 ] );
+			}
+			$target_id = (int) $user->ID;
+		}
+
+		if ( $target_id < 1 ) {
+			return new WP_Error( 'bmf_biovoice_user', 'user_id or email is required.', [ 'status' => 400 ] );
+		}
+
+		$groups = BMF_BioVoice_Session_Service::list_groups_for_admin( $target_id, [
+			'purpose' => $request->get_param( 'purpose' ),
+			'limit'   => absint( $request->get_param( 'limit' ) ?: 50 ),
+		] );
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
+		}
+
+		$target_user = get_userdata( $target_id );
+		return rest_ensure_response( [
+			'groups'         => $groups,
+			'count'          => count( $groups ),
+			'target_user_id' => $target_id,
+			'target_email'   => $target_user ? $target_user->user_email : null,
+			'target_display' => $target_user ? $target_user->display_name : null,
+		] );
 	}
 
 	public static function create_session( WP_REST_Request $request ) {
@@ -336,8 +412,9 @@ class BMF_BioVoice_REST_API {
 				: rest_url( self::NS . '/sessions/' . (int) $row['id'] . '/play' ),
 		];
 		if ( $with_debug ) {
-			$out['device_info'] = $row['device_info'] ?? null;
-			$out['user_id']     = isset( $row['user_id'] ) ? (int) $row['user_id'] : null;
+			$out['device_info']       = $row['device_info'] ?? null;
+			$out['user_id']           = isset( $row['user_id'] ) ? (int) $row['user_id'] : null;
+			$out['session_group_id']  = isset( $row['session_group_id'] ) ? (int) $row['session_group_id'] : null;
 			if ( ! empty( $row['context_flags_json'] ) ) {
 				$flags = json_decode( $row['context_flags_json'], true );
 				if ( is_array( $flags ) ) {

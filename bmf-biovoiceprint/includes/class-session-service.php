@@ -1,6 +1,6 @@
 <?php
 /**
- * BioVoicePrint – Session / group business logic.
+ * BioVoicePrint - Session / group business logic.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -105,7 +105,7 @@ class BMF_BioVoice_Session_Service {
 			return new WP_Error( 'bmf_biovoice_forbidden', 'Group not found.', [ 'status' => 404 ] );
 		}
 
-		// Completed groups are locked — no retakes after finalization.
+		// Completed groups are locked - no retakes after finalization.
 		if ( $group['status'] !== 'in_progress' || ! empty( $group['is_final'] ) ) {
 			return new WP_Error(
 				'bmf_biovoice_locked',
@@ -182,6 +182,133 @@ class BMF_BioVoice_Session_Service {
 	}
 
 	/**
+	 * Admin/staff: reopen a session group for the member to continue or retake.
+	 *
+	 * - Sets status=in_progress, is_final=0, is_current=1 for this group.
+	 * - Clears is_current on other groups for the same user + purpose.
+	 * - Optional clear_takes: hard-delete every take + audio file in the group.
+	 *
+	 * Requires can_inspect_member_sessions(). Not available to the member themselves
+	 * unless they also have inspect permission.
+	 *
+	 * @param int    $group_id
+	 * @param bool   $clear_takes  When true, wipe all recordings in the group.
+	 * @param string $reason       Optional support note (logged via action).
+	 * @return array|WP_Error
+	 */
+	public static function admin_unlock_group( int $group_id, bool $clear_takes = false, string $reason = '' ) {
+		if ( ! self::can_inspect_member_sessions() ) {
+			return new WP_Error( 'bmf_biovoice_forbidden', 'You cannot unlock member sessions.', [ 'status' => 403 ] );
+		}
+
+		$group = BMF_BioVoice_Repository::get_group( $group_id );
+		if ( ! $group ) {
+			return new WP_Error( 'bmf_biovoice_not_found', 'Group not found.', [ 'status' => 404 ] );
+		}
+
+		$user_id  = (int) $group['user_id'];
+		$purpose  = sanitize_key( (string) $group['purpose'] ) ?: 'baseline';
+		$deleted  = 0;
+
+		if ( $clear_takes ) {
+			$takes = BMF_BioVoice_Repository::get_sessions_for_group( $group_id );
+			foreach ( $takes as $take ) {
+				if ( ! empty( $take['storage_key'] ) ) {
+					BMF_BioVoice_Storage::delete( $take['storage_key'] );
+				}
+				BMF_BioVoice_Repository::delete_session( (int) $take['id'] );
+				$deleted++;
+			}
+		}
+
+		// Only one current in-progress group per purpose.
+		BMF_BioVoice_Repository::clear_current_groups( $user_id, $purpose );
+		BMF_BioVoice_Repository::unlock_group_row( $group_id );
+
+		self::invalidate_list_cache( $user_id );
+
+		$state = self::format_group_state( BMF_BioVoice_Repository::get_group( $group_id ) );
+
+		/**
+		 * Fires after an admin unlocks a BioVoicePrint session group.
+		 *
+		 * @param int    $group_id
+		 * @param int    $user_id   Member who owns the group.
+		 * @param int    $admin_id  Staff user who unlocked.
+		 * @param bool   $clear_takes
+		 * @param string $reason
+		 * @param int    $deleted
+		 */
+		do_action(
+			'bmf_biovoice_admin_unlock_group',
+			$group_id,
+			$user_id,
+			get_current_user_id(),
+			$clear_takes,
+			$reason,
+			$deleted
+		);
+
+		return [
+			'success'     => true,
+			'clear_takes' => $clear_takes,
+			'deleted'     => $deleted,
+			'reason'      => $reason !== '' ? $reason : null,
+			'group'       => $state,
+			'message'     => $clear_takes
+				? sprintf( 'Group unlocked and %d recording(s) cleared. Member can re-record this session.', $deleted )
+				: 'Group unlocked. Member can continue or use step retake in the wizard.',
+		];
+	}
+
+	/**
+	 * Admin/staff: list session groups for a member (ULS inspect panel).
+	 *
+	 * @return array|WP_Error
+	 */
+	public static function list_groups_for_admin( int $target_user_id, array $args = [] ) {
+		if ( ! self::can_inspect_member_sessions() ) {
+			return new WP_Error( 'bmf_biovoice_forbidden', 'You cannot inspect member groups.', [ 'status' => 403 ] );
+		}
+		if ( $target_user_id < 1 ) {
+			return new WP_Error( 'bmf_biovoice_user', 'Invalid user.', [ 'status' => 400 ] );
+		}
+
+		$rows = BMF_BioVoice_Repository::get_groups_for_user( $target_user_id, [
+			'purpose' => isset( $args['purpose'] ) ? sanitize_key( (string) $args['purpose'] ) : '',
+			'limit'   => isset( $args['limit'] ) ? (int) $args['limit'] : 50,
+		] );
+
+		$out = [];
+		foreach ( $rows as $g ) {
+			$takes = BMF_BioVoice_Repository::get_sessions_for_group( (int) $g['id'] );
+			$task_codes = [];
+			foreach ( $takes as $t ) {
+				if ( ! empty( $t['task_code'] ) ) {
+					$task_codes[] = $t['task_code'];
+				}
+			}
+			$out[] = [
+				'group_id'        => (int) $g['id'],
+				'purpose'         => $g['purpose'],
+				'status'          => $g['status'],
+				'is_final'        => (bool) $g['is_final'],
+				'is_current'      => (bool) $g['is_current'],
+				'device_mismatch' => (bool) $g['device_mismatch'],
+				'protocol_version'=> $g['protocol_version'] ?? null,
+				'started_at'      => $g['started_at'] ?? null,
+				'completed_at'    => $g['completed_at'] ?? null,
+				'updated_at'      => $g['updated_at'] ?? null,
+				'take_count'      => count( $takes ),
+				'task_codes'      => $task_codes,
+				'can_unlock'      => ( $g['status'] !== 'in_progress' ) || ! empty( $g['is_final'] ) || ! empty( $g['is_current'] ),
+			];
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Group progress payload for the client.
 	 */
 	public static function format_group_state( array $group ): array {
@@ -197,7 +324,7 @@ class BMF_BioVoice_Session_Service {
 		$next_step = null;
 		foreach ( $steps as $s ) {
 			$code = $s['task_code'];
-			// mic_check is client-only gate — never stored as a take.
+			// mic_check is client-only gate - never stored as a take.
 			if ( $code === 'mic_check' ) {
 				continue;
 			}
@@ -350,7 +477,7 @@ class BMF_BioVoice_Session_Service {
 				if ( $duration !== null && $min > 0 && $duration + 0.05 < $min ) {
 					return new WP_Error(
 						'bmf_biovoice_too_short',
-						sprintf( 'Recording too short. Minimum is %s seconds — please retake.', $min ),
+						sprintf( 'Recording too short. Minimum is %s seconds - please retake.', $min ),
 						[ 'status' => 400, 'min_seconds' => $min, 'duration_sec' => $duration ]
 					);
 				}

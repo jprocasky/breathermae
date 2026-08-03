@@ -260,9 +260,10 @@ class BMF_BioVoice_Shortcodes {
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
 		wp_enqueue_script( 'bmf-biovoice-sessions-admin' );
 		wp_localize_script( 'bmf-biovoice-sessions-admin', 'bmfBioVoiceSessionsAdmin', [
-			'restUrl' => esc_url_raw( rest_url( 'bmf-biovoice/v1/sessions' ) ),
-			'nonce' => wp_create_nonce( 'wp_rest' ),
-			'limit' => absint( $atts['limit'] ) ? absint( $atts['limit'] ) : 50,
+			'restUrl'  => esc_url_raw( rest_url( 'bmf-biovoice/v1/sessions' ) ),
+			'restBase' => esc_url_raw( rest_url( 'bmf-biovoice/v1' ) ),
+			'nonce'    => wp_create_nonce( 'wp_rest' ),
+			'limit'    => absint( $atts['limit'] ) ? absint( $atts['limit'] ) : 50,
 		] );
 		$class = 'bmf-biovoice-sessions bmf-biovoice-sessions--admin' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-sessions-admin><p class="bmf-bv-empty">Select a member to view recordings.</p></div>';
@@ -282,7 +283,7 @@ class BMF_BioVoice_Shortcodes {
 			'comparisonTarget' => $target,
 		] );
 		$class = 'bmf-biovoice-status bmf-biovoice-status--admin' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
-		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-status-admin data-comparison-target="' . esc_attr( (string) $target ) . '">' 
+		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-status-admin data-comparison-target="' . esc_attr( (string) $target ) . '">'
 			. '<p class="bmf-bv-empty" style="color:#94a3b8;margin:0;">Select a member to view BioVoicePrint status.</p>'
 			. '</div>';
 	}

@@ -1,6 +1,7 @@
 <?php
 /**
  * BioVoicePrint – Database tables & low-level access.
+ * Follows the same dbDelta + static style as class-bmf-repository.php.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -10,6 +11,9 @@ class BMF_BioVoice_Repository {
 
 	const DB_VERSION = '0.2.6';
 
+	/**
+	 * Create / upgrade tables. Safe to call repeatedly (dbDelta).
+	 */
 	public static function install_tables() {
 		global $wpdb;
 		$charset = $wpdb->get_charset_collate();
@@ -141,6 +145,8 @@ class BMF_BioVoice_Repository {
 		update_option( 'bmf_biovoice_db_version', self::DB_VERSION );
 	}
 
+	/* ─── Analysis results ────────────────────────────────────── */
+
 	public static function insert_result( array $data ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
@@ -157,9 +163,13 @@ class BMF_BioVoice_Repository {
 	public static function get_result( int $id ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
-		return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE id = %d LIMIT 1", $id ), ARRAY_A );
+		return $db->get_row(
+			$db->prepare( "SELECT * FROM {$t} WHERE id = %d LIMIT 1", $id ),
+			ARRAY_A
+		);
 	}
 
+	/** Latest analysis result for a user (newest analyzed_at / id). */
 	public static function get_latest_result_for_user( int $user_id ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
@@ -172,10 +182,15 @@ class BMF_BioVoice_Repository {
 		);
 	}
 
+	/* ─── Protocols ───────────────────────────────────────────── */
+
 	public static function insert_protocol( array $data ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_protocols' );
-		$data = array_merge( [ 'created_at' => current_time( 'mysql', true ), 'updated_at' => current_time( 'mysql', true ) ], $data );
+		$data = array_merge( [
+			'created_at' => current_time( 'mysql', true ),
+			'updated_at' => current_time( 'mysql', true ),
+		], $data );
 		$ok = $db->insert( $t, $data );
 		return $ok ? (int) $db->insert_id : false;
 	}
@@ -196,7 +211,10 @@ class BMF_BioVoice_Repository {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_protocols' );
 		if ( $purpose ) {
-			return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE is_active = 1 AND purpose = %s ORDER BY id DESC LIMIT 1", sanitize_key( $purpose ) ), ARRAY_A );
+			return $db->get_row(
+				$db->prepare( "SELECT * FROM {$t} WHERE is_active = 1 AND purpose = %s ORDER BY id DESC LIMIT 1", sanitize_key( $purpose ) ),
+				ARRAY_A
+			);
 		}
 		return $db->get_row( "SELECT * FROM {$t} WHERE is_active = 1 ORDER BY id DESC LIMIT 1", ARRAY_A );
 	}
@@ -211,19 +229,37 @@ class BMF_BioVoice_Repository {
 	public static function get_steps_for_protocol( int $protocol_id ): array {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_protocol_steps' );
-		return $db->get_results( $db->prepare( "SELECT * FROM {$t} WHERE protocol_id = %d ORDER BY sort_order ASC, step_number ASC", $protocol_id ), ARRAY_A ) ?: [];
+		return $db->get_results(
+			$db->prepare( "SELECT * FROM {$t} WHERE protocol_id = %d ORDER BY sort_order ASC, step_number ASC", $protocol_id ),
+			ARRAY_A
+		) ?: [];
 	}
 
 	public static function get_step_by_task( int $protocol_id, string $task_code ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_protocol_steps' );
-		return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE protocol_id = %d AND task_code = %s LIMIT 1", $protocol_id, sanitize_key( $task_code ) ), ARRAY_A );
+		return $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE protocol_id = %d AND task_code = %s LIMIT 1",
+				$protocol_id,
+				sanitize_key( $task_code )
+			),
+			ARRAY_A
+		);
 	}
+
+	/* ─── Session groups ──────────────────────────────────────── */
 
 	public static function insert_group( array $data ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
-		$data = array_merge( [ 'status' => 'in_progress', 'is_current' => 1, 'is_final' => 0, 'started_at' => current_time( 'mysql', true ), 'updated_at' => current_time( 'mysql', true ) ], $data );
+		$data = array_merge( [
+			'status'     => 'in_progress',
+			'is_current' => 1,
+			'is_final'   => 0,
+			'started_at' => current_time( 'mysql', true ),
+			'updated_at' => current_time( 'mysql', true ),
+		], $data );
 		$ok = $db->insert( $t, $data );
 		return $ok ? (int) $db->insert_id : false;
 	}
@@ -241,30 +277,71 @@ class BMF_BioVoice_Repository {
 		return false !== $db->update( $t, $data, [ 'id' => $group_id ] );
 	}
 
+	/**
+	 * Admin unlock: reopen group as current in-progress (clears completed_at).
+	 */
+	public static function unlock_group_row( int $group_id ): bool {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		$now = current_time( 'mysql', true );
+		$result = $db->query(
+			$db->prepare(
+				"UPDATE {$t} SET status = 'in_progress', is_final = 0, is_current = 1, completed_at = NULL, updated_at = %s WHERE id = %d",
+				$now,
+				$group_id
+			)
+		);
+		return false !== $result;
+	}
+
 	public static function get_current_group_for_user( int $user_id, string $purpose = '' ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
 		if ( $purpose ) {
-			return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE user_id = %d AND is_current = 1 AND status = 'in_progress' AND purpose = %s ORDER BY id DESC LIMIT 1", $user_id, sanitize_key( $purpose ) ), ARRAY_A );
+			return $db->get_row(
+				$db->prepare(
+					"SELECT * FROM {$t} WHERE user_id = %d AND is_current = 1 AND status = 'in_progress' AND purpose = %s ORDER BY id DESC LIMIT 1",
+					$user_id,
+					sanitize_key( $purpose )
+				),
+				ARRAY_A
+			);
 		}
-		return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE user_id = %d AND is_current = 1 AND status = 'in_progress' ORDER BY id DESC LIMIT 1", $user_id ), ARRAY_A );
+		return $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE user_id = %d AND is_current = 1 AND status = 'in_progress' ORDER BY id DESC LIMIT 1",
+				$user_id
+			),
+			ARRAY_A
+		);
 	}
 
 	public static function count_final_groups( int $user_id, string $purpose = 'baseline' ): int {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
-		return (int) $db->get_var( $db->prepare( "SELECT COUNT(*) FROM {$t} WHERE user_id = %d AND is_final = 1 AND purpose = %s", $user_id, sanitize_key( $purpose ) ) );
+		return (int) $db->get_var(
+			$db->prepare(
+				"SELECT COUNT(*) FROM {$t} WHERE user_id = %d AND is_final = 1 AND purpose = %s",
+				$user_id,
+				sanitize_key( $purpose )
+			)
+		);
 	}
 
+	/**
+	 * Groups for a user (newest first). Optional purpose filter.
+	 *
+	 * @return array<int, array>
+	 */
 	public static function get_groups_for_user( int $user_id, array $args = [] ): array {
-		$db = BMF_BioVoice_DBX::$db;
-		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
-		$purpose = isset( $args['purpose'] ) ? sanitize_key( $args['purpose'] ) : '';
-		$limit = isset( $args['limit'] ) ? max( 1, min( 200, (int) $args['limit'] ) ) : 50;
-		$sql = "SELECT * FROM {$t} WHERE user_id = %d";
-		$params = [ $user_id ];
+		$db       = BMF_BioVoice_DBX::$db;
+		$t        = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		$purpose  = isset( $args['purpose'] ) ? sanitize_key( $args['purpose'] ) : '';
+		$limit    = isset( $args['limit'] ) ? max( 1, min( 200, (int) $args['limit'] ) ) : 50;
+		$sql      = "SELECT * FROM {$t} WHERE user_id = %d";
+		$params   = [ $user_id ];
 		if ( $purpose ) {
-			$sql .= ' AND purpose = %s';
+			$sql   .= ' AND purpose = %s';
 			$params[] = $purpose;
 		}
 		$sql .= ' ORDER BY id DESC LIMIT %d';
@@ -272,55 +349,113 @@ class BMF_BioVoice_Repository {
 		return $db->get_results( $db->prepare( $sql, $params ), ARRAY_A ) ?: [];
 	}
 
+	/** Count groups flagged device_mismatch for user (any purpose). */
 	public static function count_device_mismatch_groups( int $user_id ): int {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
-		return (int) $db->get_var( $db->prepare( "SELECT COUNT(*) FROM {$t} WHERE user_id = %d AND device_mismatch = 1", $user_id ) );
+		return (int) $db->get_var(
+			$db->prepare(
+				"SELECT COUNT(*) FROM {$t} WHERE user_id = %d AND device_mismatch = 1",
+				$user_id
+			)
+		);
 	}
 
 	public static function clear_current_groups( int $user_id, string $purpose = '' ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
 		if ( $purpose ) {
-			$db->query( $db->prepare( "UPDATE {$t} SET is_current = 0 WHERE user_id = %d AND purpose = %s AND is_current = 1", $user_id, sanitize_key( $purpose ) ) );
+			$db->query(
+				$db->prepare(
+					"UPDATE {$t} SET is_current = 0 WHERE user_id = %d AND purpose = %s AND is_current = 1",
+					$user_id,
+					sanitize_key( $purpose )
+				)
+			);
 		} else {
-			$db->query( $db->prepare( "UPDATE {$t} SET is_current = 0 WHERE user_id = %d AND is_current = 1", $user_id ) );
+			$db->query(
+				$db->prepare(
+					"UPDATE {$t} SET is_current = 0 WHERE user_id = %d AND is_current = 1",
+					$user_id
+				)
+			);
 		}
 	}
 
 	public static function get_sessions_for_group( int $group_id ): array {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_sessions' );
-		return $db->get_results( $db->prepare( "SELECT * FROM {$t} WHERE session_group_id = %d ORDER BY step_number ASC, id ASC", $group_id ), ARRAY_A ) ?: [];
+		return $db->get_results(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE session_group_id = %d ORDER BY step_number ASC, id ASC",
+				$group_id
+			),
+			ARRAY_A
+		) ?: [];
 	}
+
+	/* ─── Sessions (takes) ────────────────────────────────────── */
 
 	public static function insert_session( array $data ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_sessions' );
-		$data = array_merge( [ 'session_type' => 'comparison', 'status' => 'recorded', 'created_at' => current_time( 'mysql', true ), 'updated_at' => current_time( 'mysql', true ) ], $data );
+
+		$defaults = [
+			'session_type' => 'comparison',
+			'status'       => 'recorded',
+			'created_at'   => current_time( 'mysql', true ),
+			'updated_at'   => current_time( 'mysql', true ),
+		];
+		$data = array_merge( $defaults, $data );
+
 		$ok = $db->insert( $t, $data );
-		return $ok ? (int) $db->insert_id : false;
+		if ( ! $ok ) {
+			return false;
+		}
+		return (int) $db->insert_id;
 	}
 
 	public static function get_session( int $session_id ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_sessions' );
-		return $db->get_row( $db->prepare( "SELECT * FROM {$t} WHERE id = %d LIMIT 1", $session_id ), ARRAY_A );
+		return $db->get_row(
+			$db->prepare( "SELECT * FROM {$t} WHERE id = %d LIMIT 1", $session_id ),
+			ARRAY_A
+		);
 	}
 
 	public static function get_sessions_for_user( int $user_id, array $args = [] ) {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_sessions' );
+
 		$limit  = isset( $args['limit'] ) ? max( 1, (int) $args['limit'] ) : 50;
 		$offset = isset( $args['offset'] ) ? max( 0, (int) $args['offset'] ) : 0;
+
 		$where  = [ 'user_id = %d' ];
 		$params = [ $user_id ];
-		if ( ! empty( $args['session_type'] ) ) { $where[] = 'session_type = %s'; $params[] = sanitize_key( $args['session_type'] ); }
-		if ( ! empty( $args['status'] ) ) { $where[] = 'status = %s'; $params[] = sanitize_key( $args['status'] ); }
-		if ( ! empty( $args['session_group_id'] ) ) { $where[] = 'session_group_id = %d'; $params[] = (int) $args['session_group_id']; }
-		if ( ! empty( $args['task_code'] ) ) { $where[] = 'task_code = %s'; $params[] = sanitize_key( $args['task_code'] ); }
-		$sql = "SELECT * FROM {$t} WHERE " . implode( ' AND ', $where ) . " ORDER BY created_at DESC LIMIT %d OFFSET %d";
-		$params[] = $limit; $params[] = $offset;
+
+		if ( ! empty( $args['session_type'] ) ) {
+			$where[]  = 'session_type = %s';
+			$params[] = sanitize_key( $args['session_type'] );
+		}
+		if ( ! empty( $args['status'] ) ) {
+			$where[]  = 'status = %s';
+			$params[] = sanitize_key( $args['status'] );
+		}
+		if ( ! empty( $args['session_group_id'] ) ) {
+			$where[]  = 'session_group_id = %d';
+			$params[] = (int) $args['session_group_id'];
+		}
+		if ( ! empty( $args['task_code'] ) ) {
+			$where[]  = 'task_code = %s';
+			$params[] = sanitize_key( $args['task_code'] );
+		}
+
+		$sql = "SELECT * FROM {$t} WHERE " . implode( ' AND ', $where ) .
+			" ORDER BY created_at DESC LIMIT %d OFFSET %d";
+		$params[] = $limit;
+		$params[] = $offset;
+
 		return $db->get_results( $db->prepare( $sql, $params ), ARRAY_A ) ?: [];
 	}
 

@@ -162,12 +162,13 @@
     }
 
     function canRetakeGroup(group) {
+      // Admin unlock may reopen a full group (all takes still present).
+      // Allow chips whenever the group is open and not finalized.
       return !!(
         group &&
         group.group_id &&
         group.status === 'in_progress' &&
-        !group.is_final &&
-        !group.is_group_complete
+        !group.is_final
       );
     }
 

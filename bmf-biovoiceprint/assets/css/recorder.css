@@ -1040,3 +1040,101 @@
 .bmf-biovoice-status--admin .bmf-bv-empty--error {
   color: #fca5a5 !important;
 }
+
+/* Admin sessions – group unlock (ULS) */
+.bmf-bv-admin-groups {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.bmf-bv-admin-groups-title,
+.bmf-bv-admin-recordings-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 0.65rem;
+}
+.bmf-bv-admin-recordings-title { margin-top: 0.25rem; }
+.bmf-bv-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.bmf-bv-group-item {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+.bmf-bv-group-item.is-locked {
+  border-left: 3px solid #94a3b8;
+}
+.bmf-bv-group-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+.bmf-bv-group-id {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.bmf-bv-group-purpose {
+  text-transform: capitalize;
+  font-weight: 600;
+  color: #0369a1;
+}
+.bmf-bv-group-status { color: #475569; }
+.bmf-bv-group-tasks {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  margin-bottom: 0.5rem;
+  word-break: break-word;
+}
+.bmf-bv-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.bmf-bv-btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+}
+.bmf-bv-btn-unlock {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+.bmf-bv-btn-unlock:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+.bmf-bv-btn-unlock-clear {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+}
+.bmf-bv-btn-unlock-clear:hover:not(:disabled) {
+  background: #ffedd5;
+}
+.bmf-bv-admin-groups-hint {
+  margin: 0.65rem 0 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+.bmf-bv-session-group {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
