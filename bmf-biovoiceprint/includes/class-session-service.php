@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <?php
 /**
  * BioVoicePrint - Session / group business logic.
@@ -622,3 +623,6 @@ class BMF_BioVoice_Session_Service {
 		];
 	}
 }
+=======
+PLACEHOLDER_REPLACE_WITH_FULL_CONTENT
+>>>>>>> a3a6c58872922f7c8db86d47408c4506536c7e56

@@ -1,6 +1,6 @@
 <?php
 /**
- * BioVoicePrint – REST API endpoints.
+ * BioVoicePrint - REST API endpoints.
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -37,6 +37,15 @@ class BMF_BioVoice_REST_API {
 		register_rest_route( self::NS, '/groups/(?P<id>\d+)/wellness', [
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => [ __CLASS__, 'save_wellness' ],
+			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+			'args'                => [
+				'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+			],
+		] );
+
+		register_rest_route( self::NS, '/groups/(?P<id>\d+)/retake', [
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => [ __CLASS__, 'retake_step' ],
 			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
 			'args'                => [
 				'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
@@ -133,6 +142,27 @@ class BMF_BioVoice_REST_API {
 		return rest_ensure_response( $result );
 	}
 
+	/**
+	 * POST /groups/{id}/retake - hard-delete take(s) and rewind wizard to that step.
+	 * Body: { task_code: string, clear_forward?: bool }
+	 */
+	public static function retake_step( WP_REST_Request $request ) {
+		$user_id  = get_current_user_id();
+		$group_id = (int) $request['id'];
+		$task     = sanitize_key( (string) $request->get_param( 'task_code' ) );
+		$forward  = (bool) $request->get_param( 'clear_forward' );
+
+		if ( ! $task ) {
+			return new WP_Error( 'bmf_biovoice_task', 'task_code is required.', [ 'status' => 400 ] );
+		}
+
+		$result = BMF_BioVoice_Session_Service::retake_from_step( $user_id, $group_id, $task, $forward );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return rest_ensure_response( $result );
+	}
+
 	public static function create_session( WP_REST_Request $request ) {
 		$user_id = get_current_user_id();
 		$files   = $request->get_file_params();
@@ -169,9 +199,6 @@ class BMF_BioVoice_REST_API {
 		] );
 	}
 
-	/**
-	 * GET /status — current user, or (with inspect permission) another member.
-	 */
 	public static function get_status( WP_REST_Request $request ) {
 		$current_id  = get_current_user_id();
 		$target_id   = $current_id;
