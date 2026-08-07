@@ -10,6 +10,7 @@ and loads wellness JSON for non-interactive runs.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -303,6 +304,16 @@ def _wellness_override_block(wellness_module_import: str, include_comparison_hel
     return "\n".join(lines)
 
 
+def _replace_function_with_stub(source: str, func_name: str, stub_body: str) -> str:
+    """Replace an entire top-level function definition with a short stub."""
+    pattern = rf"(^def {re.escape(func_name)}\(.*?
+)(.*?)(?=^def |\Z)"
+    match = re.search(pattern, source, flags=re.MULTILINE | re.DOTALL)
+    if not match:
+        return source
+    return source[: match.start()] + stub_body + source[match.end() :]
+
+
 def patch_script_config(
     original_script: Path,
     patched_script: Path,
@@ -373,13 +384,12 @@ def patch_script_config(
             inject = _wellness_override_block(wellness_module_import, include_comparison_helper=False)
             patched = patched.replace(anchor, inject + anchor, 1)
 
-        patched = patched.replace(
-            "def load_existing_csv_rows(csv_path):",
+        # Force fresh processing of staged sessions (no resume from prior CSVs).
+        stub = (
             "def load_existing_csv_rows(csv_path):\n"
-            "    return []  # CLI: always process staged sessions fresh\n"
-            "    def _cli_disabled_original_load(csv_path):",
-            1,
+            "    return []  # CLI: always process staged sessions fresh\n\n"
         )
+        patched = _replace_function_with_stub(patched, "load_existing_csv_rows", stub)
     else:
         if not comparison_folder_line or not baseline_reference_line:
             raise ValueError("comparison_folder_line and baseline_reference_line required")
