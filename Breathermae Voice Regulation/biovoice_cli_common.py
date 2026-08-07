@@ -306,8 +306,12 @@ def _wellness_override_block(wellness_module_import: str, include_comparison_hel
 
 def _replace_function_with_stub(source: str, func_name: str, stub_body: str) -> str:
     """Replace an entire top-level function definition with a short stub."""
-    pattern = rf"(^def {re.escape(func_name)}\(.*?
-)(.*?)(?=^def |\Z)"
+    # Match from "def name(" through the end of that function (next top-level def or EOF).
+    pattern = (
+        r"^def "
+        + re.escape(func_name)
+        + r"\(.*?(?=^def |\Z)"
+    )
     match = re.search(pattern, source, flags=re.MULTILINE | re.DOTALL)
     if not match:
         return source
