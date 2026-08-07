@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.6.2
+ * Version: 1.7.0
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -39,6 +39,7 @@ class ULS_Members_Plugin {
         // Shortcodes
         add_shortcode( 'uls_members_table', [ $this, 'shortcode_members_table' ] );
         add_shortcode( 'uls_selected_user', [ $this, 'shortcode_selected_user' ] );
+        add_shortcode( 'uls_member_tag_admin', [ $this, 'shortcode_member_tag_admin' ] );
 
         // Front-end assets
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
@@ -54,6 +55,12 @@ class ULS_Members_Plugin {
         [ $this, 'ajax_toggle_file_visibility_scope' ]
         );   
         add_action( 'wp_ajax_uls_update_user_tags', [ $this, 'ajax_update_user_tags' ] );
+
+        // Tag admin (INTERNAL / Sales / Subscriptions)
+        add_action( 'wp_ajax_uls_get_tag_admin_status', [ $this, 'ajax_get_tag_admin_status' ] );
+        add_action( 'wp_ajax_uls_toggle_simple_tag',    [ $this, 'ajax_toggle_simple_tag' ] );
+        add_action( 'wp_ajax_uls_make_sales_person',    [ $this, 'ajax_make_sales_person' ] );
+        add_action( 'wp_ajax_uls_remove_sales_person',  [ $this, 'ajax_remove_sales_person' ] );
 
         add_action( 'init', [ $this, 'handle_csv_export' ] );        
         
@@ -245,11 +252,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.6.2' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.7.0' );
         wp_enqueue_style( 'uls-members-css' );
 
-        // JS for row selection + AJAX + pagination
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.6.2', true );
+        // JS for row selection + AJAX + pagination + tag admin
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.7.0', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -1348,6 +1355,327 @@ class ULS_Members_Plugin {
         wp_send_json_success( [ 'user_id' => $user_id, 'tags' => $new_tags ] );
     }
 
+    /* ------------------------------------------------------------------
+     * Tag Admin helpers + AJAX (INTERNAL / Sales / Subscriptions)
+     * ------------------------------------------------------------------ */
+
+    /** Allowed simple (toggle) tags and their friendly labels. */
+    private function get_simple_tag_map() {
+        return [
+            'INTERNAL' => 'INTERNAL (Employee access)',
+            'ART'      => 'Art of Wellness',
+            'S360'     => '360 Health Intelligence',
+        ];
+    }
+
+    /** True if the user currently has the given tag *label*. */
+    private function user_has_tag_label( $user_id, $label ) {
+        $labels = $this->get_user_wpf_tag_labels( $user_id );
+        foreach ( $labels as $l ) {
+            if ( strcasecmp( trim( $l ), trim( $label ) ) === 0 ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return the next available sales code (SA###) based on the
+     * uls_parent_child_tags table (source of truth).
+     */
+    private function get_next_sales_code() {
+        global $wpdb;
+        $parents = $wpdb->get_col(
+            "SELECT parent_tag FROM `{$this->table_rel}` WHERE parent_tag REGEXP '^[Ss][Aa][0-9]+$'"
+        );
+        $max = 0;
+        foreach ( (array) $parents as $p ) {
+            if ( preg_match( '/^SA(\d+)$/i', trim( $p ), $m ) ) {
+                $n = (int) $m[1];
+                if ( $n > $max ) {
+                    $max = $n;
+                }
+            }
+        }
+        return 'SA' . ( $max + 1 );
+    }
+
+    /**
+     * Which of the user's current tags are registered as parent_tags
+     * in uls_parent_child_tags?  Those are the "sales person" codes.
+     */
+    private function get_user_sales_parent_codes( $user_id ) {
+        $labels = $this->get_user_wpf_tag_labels( $user_id );
+        $sa_labels = [];
+        foreach ( $labels as $l ) {
+            $l = trim( $l );
+            if ( preg_match( '/^SA\d+$/i', $l ) ) {
+                $sa_labels[] = $l;
+            }
+        }
+        if ( empty( $sa_labels ) ) {
+            return [];
+        }
+
+        global $wpdb;
+        $placeholders = implode( ',', array_fill( 0, count( $sa_labels ), '%s' ) );
+        $sql = "SELECT parent_tag FROM `{$this->table_rel}` WHERE parent_tag IN ($placeholders)";
+        $existing = $wpdb->get_col( $wpdb->prepare( $sql, $sa_labels ) );
+        return array_values( array_unique( array_map( 'trim', (array) $existing ) ) );
+    }
+
+    /**
+     * Build the status payload used by the tag-admin UI.
+     */
+    private function build_tag_admin_status( $user_id ) {
+        $user = get_user_by( 'id', $user_id );
+        if ( ! $user ) {
+            return null;
+        }
+
+        $simple = [];
+        foreach ( $this->get_simple_tag_map() as $tag => $label ) {
+            $simple[ $tag ] = [
+                'label'   => $label,
+                'has_tag' => $this->user_has_tag_label( $user_id, $tag ),
+            ];
+        }
+
+        $sales_codes = $this->get_user_sales_parent_codes( $user_id );
+        $is_sales    = ! empty( $sales_codes );
+
+        return [
+            'user_id'      => (int) $user_id,
+            'email'        => $user->user_email,
+            'display_name' => $user->display_name,
+            'simple'       => $simple,
+            'sales'        => [
+                'is_sales'    => $is_sales,
+                'codes'       => $sales_codes,               // current parent SA### tags
+                'next_code'   => $is_sales ? null : $this->get_next_sales_code(),
+            ],
+            'all_tags'     => $this->get_user_wpf_tag_labels( $user_id ),
+        ];
+    }
+
+    /** AJAX: return tag-admin status for a user_id (or the currently selected member). */
+    public function ajax_get_tag_admin_status() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+
+        $user_id = (int) ( $_POST['user_id'] ?? 0 );
+        if ( ! $user_id ) {
+            // Fall back to the persisted selection for the current admin
+            $user_id = (int) get_user_meta( get_current_user_id(), 'uls_selected_user_id', true );
+        }
+        if ( ! $user_id ) {
+            wp_send_json_error( [ 'message' => 'No member selected' ], 400 );
+        }
+
+        $status = $this->build_tag_admin_status( $user_id );
+        if ( ! $status ) {
+            wp_send_json_error( [ 'message' => 'User not found' ], 404 );
+        }
+        wp_send_json_success( $status );
+    }
+
+    /**
+     * AJAX: add or remove a simple tag (INTERNAL, ART, S360).
+     * POST: user_id, tag, action_type = add|remove
+     */
+    public function ajax_toggle_simple_tag() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+        if ( ! function_exists( 'wp_fusion' ) ) {
+            wp_send_json_error( [ 'message' => 'WP Fusion not available' ], 500 );
+        }
+
+        $user_id     = (int) ( $_POST['user_id'] ?? 0 );
+        $tag         = sanitize_text_field( wp_unslash( $_POST['tag'] ?? '' ) );
+        $action_type = sanitize_key( $_POST['action_type'] ?? '' );
+
+        $allowed = array_keys( $this->get_simple_tag_map() );
+        if ( ! $user_id || ! in_array( $tag, $allowed, true ) || ! in_array( $action_type, [ 'add', 'remove' ], true ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid request' ], 400 );
+        }
+
+        if ( $action_type === 'add' ) {
+            wp_fusion()->user->apply_tags( [ $tag ], $user_id );
+            do_action( 'wpf_apply_tags', [ $tag ], $user_id );
+            bm_log( "Tag admin: added {$tag} to user {$user_id}" );
+        } else {
+            wp_fusion()->user->remove_tags( [ $tag ], $user_id );
+            bm_log( "Tag admin: removed {$tag} from user {$user_id}" );
+        }
+
+        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+    }
+
+    /**
+     * AJAX: promote the selected user to a sales person.
+     * - Assigns next SA### + INTERNAL
+     * - Inserts row into uls_parent_child_tags (parent_tag, child_pattern = parent*)
+     */
+    public function ajax_make_sales_person() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+        if ( ! function_exists( 'wp_fusion' ) ) {
+            wp_send_json_error( [ 'message' => 'WP Fusion not available' ], 500 );
+        }
+
+        $user_id = (int) ( $_POST['user_id'] ?? 0 );
+        if ( ! $user_id || ! get_user_by( 'id', $user_id ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid user' ], 400 );
+        }
+
+        // Already a sales parent?
+        $existing = $this->get_user_sales_parent_codes( $user_id );
+        if ( ! empty( $existing ) ) {
+            wp_send_json_error( [ 'message' => 'User is already a sales person (' . implode( ', ', $existing ) . ')' ], 400 );
+        }
+
+        $next = $this->get_next_sales_code();
+
+        // Apply tags
+        $tags_to_apply = [ $next, 'INTERNAL' ];
+        wp_fusion()->user->apply_tags( $tags_to_apply, $user_id );
+        do_action( 'wpf_apply_tags', $tags_to_apply, $user_id );
+
+        // Relation row
+        global $wpdb;
+        $inserted = $wpdb->insert(
+            $this->table_rel,
+            [
+                'parent_tag'    => $next,
+                'child_pattern' => $next . '*',
+                'created_at'    => current_time( 'mysql' ),
+            ],
+            [ '%s', '%s', '%s' ]
+        );
+
+        if ( false === $inserted ) {
+            bm_log( "Tag admin: failed to insert parent_child row for {$next} – " . $wpdb->last_error );
+            // Tags were still applied; surface the warning
+            wp_send_json_error( [
+                'message' => 'Tags applied but relation table insert failed: ' . $wpdb->last_error,
+                'status'  => $this->build_tag_admin_status( $user_id ),
+            ], 500 );
+        }
+
+        bm_log( "Tag admin: made user {$user_id} sales person {$next}" );
+
+        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+    }
+
+    /**
+     * AJAX: remove sales-person status.
+     * - Removes the SA### parent tag(s) from the user
+     * - Deletes the matching row(s) from uls_parent_child_tags
+     * - Does NOT touch INTERNAL or any other tags
+     */
+    public function ajax_remove_sales_person() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+        if ( ! function_exists( 'wp_fusion' ) ) {
+            wp_send_json_error( [ 'message' => 'WP Fusion not available' ], 500 );
+        }
+
+        $user_id = (int) ( $_POST['user_id'] ?? 0 );
+        if ( ! $user_id ) {
+            wp_send_json_error( [ 'message' => 'Invalid user' ], 400 );
+        }
+
+        $codes = $this->get_user_sales_parent_codes( $user_id );
+        if ( empty( $codes ) ) {
+            wp_send_json_error( [ 'message' => 'User is not a sales person' ], 400 );
+        }
+
+        // Remove the tag(s)
+        wp_fusion()->user->remove_tags( $codes, $user_id );
+
+        // Delete relation rows
+        global $wpdb;
+        foreach ( $codes as $code ) {
+            $wpdb->delete( $this->table_rel, [ 'parent_tag' => $code ], [ '%s' ] );
+        }
+
+        bm_log( "Tag admin: removed sales codes " . implode( ',', $codes ) . " from user {$user_id}" );
+
+        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+    }
+
+    /**
+     * Shortcode: [uls_member_tag_admin]
+     * Renders the administrative tag panel for the currently selected member.
+     * Listens to the uls:selected-member event and also hydrates from the
+     * persisted selection on page load.
+     */
+    public function shortcode_member_tag_admin( $atts ) {
+        if ( ! is_user_logged_in() ) {
+            return '';
+        }
+
+        $atts = shortcode_atts( [], $atts, 'uls_member_tag_admin' );
+
+        // Always start blank. Panel only populates after an explicit row click
+        // (uls:selected-member). Do not hydrate from the persisted selection.
+        ob_start();
+        ?>
+        <div class="uls-tag-admin" id="uls-tag-admin"
+             data-user-id=""
+             data-email="">
+            <div class="uls-tag-admin__header">
+                <h4 class="uls-tag-admin__title">Member Tags</h4>
+                <div class="uls-tag-admin__member">
+                    <span class="uls-tag-admin__name">Select a member</span>
+                    <span class="uls-tag-admin__email"></span>
+                </div>
+            </div>
+
+            <div class="uls-tag-admin__body">
+                <p class="uls-tag-admin__placeholder">Select a member from the list above to manage tags.</p>
+
+                <div class="uls-tag-admin__content" style="display:none;">
+                    <!-- Simple toggles -->
+                    <div class="uls-tag-admin__section">
+                        <h5>Access &amp; Subscriptions</h5>
+                        <div class="uls-tag-admin__toggles">
+                            <?php foreach ( $this->get_simple_tag_map() as $tag => $label ) : ?>
+                                <label class="uls-tag-admin__toggle">
+                                    <input type="checkbox"
+                                           class="uls-tag-toggle"
+                                           data-tag="<?php echo esc_attr( $tag ); ?>"
+                                           disabled>
+                                    <span><?php echo esc_html( $label ); ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- Sales -->
+                    <div class="uls-tag-admin__section uls-tag-admin__sales">
+                        <h5>Sales Person</h5>
+                        <div class="uls-tag-admin__sales-status">
+                            <!-- filled by JS -->
+                        </div>
+                    </div>
+
+                    <div class="uls-tag-admin__message" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
     /**
      * AJAX: persist the selected user (by email) for the current logged-in user.
      * Stores:
@@ -1628,7 +1956,148 @@ add_action( 'wp_head', function() {
 
     .uls-members__search-clear:hover {
         color: #000;
-    }    
+    }
+
+    /* ---- Tag Admin panel ---- */
+    .uls-tag-admin {
+        margin: 1rem 0;
+        padding: 1rem 1.25rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        max-width: 520px;
+    }
+    .uls-tag-admin__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: .5rem 1rem;
+        margin-bottom: .75rem;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: .5rem;
+    }
+    .uls-tag-admin__title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .uls-tag-admin__member {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+    .uls-tag-admin__name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .uls-tag-admin__email {
+        font-size: .8rem;
+        color: #64748b;
+    }
+    .uls-tag-admin__placeholder {
+        color: #94a3b8;
+        font-style: italic;
+        margin: .5rem 0;
+    }
+    .uls-tag-admin__section {
+        margin-bottom: 1rem;
+    }
+    .uls-tag-admin__section h5 {
+        margin: 0 0 .4rem;
+        font-size: .85rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: #64748b;
+    }
+    .uls-tag-admin__toggles {
+        display: flex;
+        flex-direction: column;
+        gap: .35rem;
+    }
+    .uls-tag-admin__toggle {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        cursor: pointer;
+        font-size: .95rem;
+        user-select: none;
+    }
+    .uls-tag-admin__toggle input[type="checkbox"] {
+        width: 1.1em;
+        height: 1.1em;
+        accent-color: #FD5A38;
+    }
+    .uls-tag-admin__sales-status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .6rem;
+    }
+    .uls-tag-admin__sales-code {
+        font-weight: 600;
+        font-family: ui-monospace, monospace;
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: .2rem .55rem;
+        border-radius: 4px;
+        font-size: .9rem;
+    }
+    .uls-tag-admin__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .35rem .75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #fff;
+        font-size: .85rem;
+        cursor: pointer;
+        transition: background .15s, border-color .15s;
+    }
+    .uls-tag-admin__btn:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+    }
+    .uls-tag-admin__btn--primary {
+        background: #FD5A38;
+        border-color: #FD5A38;
+        color: #fff;
+    }
+    .uls-tag-admin__btn--primary:hover {
+        background: #e04e2f;
+        border-color: #e04e2f;
+    }
+    .uls-tag-admin__btn--danger {
+        background: #fff;
+        border-color: #fca5a5;
+        color: #b91c1c;
+    }
+    .uls-tag-admin__btn--danger:hover {
+        background: #fef2f2;
+    }
+    .uls-tag-admin__btn:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+    .uls-tag-admin__message {
+        margin-top: .5rem;
+        padding: .4rem .6rem;
+        border-radius: 4px;
+        font-size: .85rem;
+    }
+    .uls-tag-admin__message.is-success {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+    .uls-tag-admin__message.is-error {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+    .uls-tag-admin.is-loading .uls-tag-admin__content {
+        opacity: .55;
+        pointer-events: none;
+    }
 
     </style>
     <?php

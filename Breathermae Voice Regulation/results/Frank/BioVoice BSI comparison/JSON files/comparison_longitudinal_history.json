@@ -1,0 +1,12 @@
+[
+  {
+    "session_id": "Frank Comparison Session 1",
+    "timestamp": "2026-07-14 17:19:27",
+    "comparison_model_version": "bsi_comparison_zscore_range_v4_reliability_flags",
+    "rdi_score_0_100": 21.807777,
+    "overall_voice_pattern_shift": 19.767495,
+    "regulation_consistency_shift": 14.414765,
+    "return_to_baseline_window_shift": 17.271882,
+    "adaptive_transition_pattern_shift": 11.474358
+  }
+]

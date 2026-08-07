@@ -1,0 +1,408 @@
+{
+  "baseline_summary": {
+    "timestamp": "2026-07-14 16:49:15",
+    "baseline_run_timestamp": "2026-07-14 16:49:15",
+    "session_processed_timestamps": [
+      "2026-07-06 16:55:55",
+      "2026-07-06 16:57:16",
+      "2026-07-06 16:58:57"
+    ],
+    "participant_id_tokenized": "db605e8f7191",
+    "device_type": "MacBook Microphone",
+    "baseline_session_count": 3,
+    "minimum_sessions_needed": 3,
+    "baseline_ready_for_comparison": true,
+    "new_sessions_processed_this_run": 0,
+    "baseline_status": "early personal baseline reference",
+    "client_message": "Your early personal baseline has been created. Accuracy and personalization improve as more sessions are added.",
+    "baseline_growth_note": "Three sessions create an early working baseline; every additional uploaded session is included and recalculates the personal reference range.",
+    "purpose": "Creates a personal acoustic reference from neutral baseline recordings only.",
+    "interpretation_note": "No comparison, scoring, or internal-state inference is performed in this baseline builder.",
+    "future_comparison_note": "Stored domain weights are reserved for a later comparison script and are not applied here.",
+    "pipeline_position": "Stages 1-3 plus baseline reference build. Stage 4 begins only in the future comparison script."
+  },
+  "pre_recording_assessment": {
+    "scale": "1 to 5",
+    "question_scale_note": "Each question includes its own 1-to-5 anchor labels so lower and higher responses are clear.",
+    "responses_by_session": [
+      {
+        "balanced_centered": "4",
+        "mental_clarity_focus": "4",
+        "physical_energy": "3",
+        "recording_comfort_readiness": "5",
+        "restored_recovered": "4",
+        "session_id": "Frank Session 1",
+        "session_processed_timestamp": "2026-07-06 16:55:55",
+        "wellness_anchor_band": "Generally Steady Subjective Wellness",
+        "wellness_anchor_direction": "higher = stronger self-reported pre-recording wellness",
+        "wellness_anchor_score_0_100": 80.0,
+        "wellness_anchor_total_score": 20
+      },
+      {
+        "balanced_centered": "4",
+        "mental_clarity_focus": "4",
+        "physical_energy": "3",
+        "recording_comfort_readiness": "5",
+        "restored_recovered": "3",
+        "session_id": "Frank Session 2",
+        "session_processed_timestamp": "2026-07-06 16:57:16",
+        "wellness_anchor_band": "Generally Steady Subjective Wellness",
+        "wellness_anchor_direction": "higher = stronger self-reported pre-recording wellness",
+        "wellness_anchor_score_0_100": 76.0,
+        "wellness_anchor_total_score": 19
+      },
+      {
+        "balanced_centered": "5",
+        "mental_clarity_focus": "5",
+        "physical_energy": "4",
+        "recording_comfort_readiness": "5",
+        "restored_recovered": "5",
+        "session_id": "Frank Session 3",
+        "session_processed_timestamp": "2026-07-06 16:58:57",
+        "wellness_anchor_band": "Strong Subjective Wellness",
+        "wellness_anchor_direction": "higher = stronger self-reported pre-recording wellness",
+        "wellness_anchor_score_0_100": 96.0,
+        "wellness_anchor_total_score": 24
+      }
+    ],
+    "reference_summary": {
+      "balanced_centered": {
+        "question": "How balanced or centered do you feel right now?",
+        "scale": "1 = Very Unbalanced, 5 = Very Balanced",
+        "mean_response": 4.333333,
+        "mean_normalized_score_0_100": 86.666667,
+        "standard_deviation": 0.471405,
+        "response_range": [
+          4,
+          5
+        ],
+        "normalized_score_range_0_100": [
+          80.0,
+          100.0
+        ],
+        "n_sessions": 3
+      },
+      "mental_clarity_focus": {
+        "question": "How mentally clear and focused do you feel at this moment?",
+        "scale": "1 = Very Unclear, 5 = Very Clear",
+        "mean_response": 4.333333,
+        "mean_normalized_score_0_100": 86.666667,
+        "standard_deviation": 0.471405,
+        "response_range": [
+          4,
+          5
+        ],
+        "normalized_score_range_0_100": [
+          80.0,
+          100.0
+        ],
+        "n_sessions": 3
+      },
+      "physical_energy": {
+        "question": "How physically energized do you feel right now?",
+        "scale": "1 = Very Low Energy, 5 = Very High Energy",
+        "mean_response": 3.333333,
+        "mean_normalized_score_0_100": 66.666667,
+        "standard_deviation": 0.471405,
+        "response_range": [
+          3,
+          4
+        ],
+        "normalized_score_range_0_100": [
+          60.0,
+          80.0
+        ],
+        "n_sessions": 3
+      },
+      "recording_comfort_readiness": {
+        "question": "How comfortable and ready do you feel for this recording?",
+        "scale": "1 = Not Comfortable/Ready, 5 = Very Comfortable/Ready",
+        "mean_response": 5.0,
+        "mean_normalized_score_0_100": 100.0,
+        "standard_deviation": 0.0,
+        "response_range": [
+          5,
+          5
+        ],
+        "normalized_score_range_0_100": [
+          100.0,
+          100.0
+        ],
+        "n_sessions": 3
+      },
+      "restored_recovered": {
+        "question": "How restored or recovered do you feel today overall?",
+        "scale": "1 = Not Restored, 5 = Fully Restored",
+        "mean_response": 4.0,
+        "mean_normalized_score_0_100": 80.0,
+        "standard_deviation": 0.816497,
+        "response_range": [
+          3,
+          5
+        ],
+        "normalized_score_range_0_100": [
+          60.0,
+          100.0
+        ],
+        "n_sessions": 3
+      }
+    },
+    "wellness_anchor_reference": {
+      "baseline_wellness_anchor_score_0_100": 84.0,
+      "baseline_wellness_anchor_band": "Generally Steady Subjective Wellness",
+      "standard_deviation": 8.640988,
+      "score_range": [
+        76.0,
+        96.0
+      ],
+      "n_sessions": 3,
+      "score_direction": "higher = stronger self-reported pre-recording wellness",
+      "interpretation_note": "This is the person's self-reported baseline wellness anchor. It does not score or change the BioVoicePrint acoustic baseline."
+    }
+  },
+  "baseline_acoustic_reference": {
+    "f0_mean_hz": {
+      "task_source": [
+        "step2_sustained_phonation",
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 102.495898,
+      "std": 8.179046,
+      "min": 89.452333,
+      "max": 118.230563,
+      "n_observations": 12,
+      "valid_for_scoring": true
+    },
+    "hnr_db": {
+      "task_source": [
+        "step2_sustained_phonation",
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 1.838957,
+      "std": 3.406826,
+      "min": -2.5168,
+      "max": 8.745197,
+      "n_observations": 12,
+      "valid_for_scoring": true
+    },
+    "spectral_centroid_hz": {
+      "task_source": [
+        "step2_sustained_phonation",
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 532.98053,
+      "std": 135.184331,
+      "min": 352.068907,
+      "max": 718.359771,
+      "n_observations": 12,
+      "valid_for_scoring": true
+    },
+    "spectral_bandwidth_hz": {
+      "task_source": [
+        "step2_sustained_phonation",
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 535.895749,
+      "std": 84.380041,
+      "min": 405.04665,
+      "max": 669.002793,
+      "n_observations": 12,
+      "valid_for_scoring": true
+    },
+    "jitter_local": {
+      "task_source": [
+        "step2_sustained_phonation"
+      ],
+      "mean": 0.003535,
+      "std": 0.000368,
+      "min": 0.003026,
+      "max": 0.003884,
+      "n_observations": 3,
+      "valid_for_scoring": true
+    },
+    "shimmer_local": {
+      "task_source": [
+        "step2_sustained_phonation"
+      ],
+      "mean": 0.646962,
+      "std": 0.044894,
+      "min": 0.60334,
+      "max": 0.708724,
+      "n_observations": 3,
+      "valid_for_scoring": true
+    },
+    "zero_crossing_rate": {
+      "task_source": [
+        "step2_sustained_phonation",
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 0.05062,
+      "std": 0.015687,
+      "min": 0.035458,
+      "max": 0.086698,
+      "n_observations": 12,
+      "valid_for_scoring": true
+    },
+    "envelope_variance": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 0.00956,
+      "std": 0.003299,
+      "min": 0.005725,
+      "max": 0.017514,
+      "n_observations": 9,
+      "valid_for_scoring": true
+    },
+    "tremor_band_power_3_12hz": {
+      "task_source": [
+        "step2_sustained_phonation"
+      ],
+      "mean": 1925553.957365,
+      "std": 1257306.371923,
+      "min": 475835.540161,
+      "max": 3542022.022155,
+      "n_observations": 3,
+      "valid_for_scoring": true
+    },
+    "approximate_entropy": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 0.928159,
+      "std": 0.487825,
+      "min": 0.06144,
+      "max": 1.364,
+      "n_observations": 9,
+      "valid_for_scoring": true
+    },
+    "sample_entropy": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 1.178028,
+      "std": 0.813393,
+      "min": 0.01218,
+      "max": 2.084284,
+      "n_observations": 9,
+      "valid_for_scoring": true
+    },
+    "fractal_dimension": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": -3.998252,
+      "std": 4.50792,
+      "min": -14.78435,
+      "max": -1.1638,
+      "n_observations": 9,
+      "valid_for_scoring": true
+    },
+    "lyapunov_proxy": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 0.008098,
+      "std": 0.005319,
+      "min": 0.000807,
+      "max": 0.016327,
+      "n_observations": 9,
+      "valid_for_scoring": true
+    },
+    "resp_sync_lag_sec": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 0.021048,
+      "std": 0.038274,
+      "min": 0.000181,
+      "max": 0.097528,
+      "n_observations": 5,
+      "valid_for_scoring": true
+    },
+    "resp_amp_variance": {
+      "task_source": [
+        "step3a_counting_natural",
+        "step3b_counting_slow",
+        "step4_reading"
+      ],
+      "mean": 0.003197,
+      "std": 0.000947,
+      "min": 0.001849,
+      "max": 0.005083,
+      "n_observations": 9,
+      "valid_for_scoring": true
+    },
+    "phonation_stability_exhalation": {
+      "task_source": [
+        "step2_sustained_phonation"
+      ],
+      "mean": 0.030698,
+      "std": 0.006213,
+      "min": 0.022061,
+      "max": 0.036413,
+      "n_observations": 3,
+      "valid_for_scoring": true
+    }
+  },
+  "baseline_biovoiceprint": {
+    "mean_rdi_score_0_100": 15.76835,
+    "rdi_standard_deviation": 3.865182,
+    "rdi_score_range": [
+      12.424992,
+      21.185148
+    ],
+    "n_sessions": 3,
+    "session_rdi_scores": [
+      {
+        "session_id": "Frank Session 2",
+        "rdi_score_0_100": 12.424992
+      },
+      {
+        "session_id": "Frank Session 3",
+        "rdi_score_0_100": 21.185148
+      },
+      {
+        "session_id": "Frank Session 1",
+        "rdi_score_0_100": 13.69491
+      }
+    ],
+    "score_direction": "higher = greater baseline-relative voice-pattern shift",
+    "interpretation_note": "This summarizes how much neutral baseline sessions vary around the personal BioVoicePrint reference. It supports future baseline-relative congruence comparison."
+  },
+  "future_comparison_domain_weights": {
+    "variability_consistency": 0.2,
+    "harmonic_structure_consistency": 0.15,
+    "transition_continuity": 0.15,
+    "micro_modulation_consistency": 0.15,
+    "signal_clarity": 0.1,
+    "distribution_balance": 0.1,
+    "sustained_phonation_consistency": 0.15
+  },
+  "language_guardrails": {
+    "foundational_disclaimer": "Voice regulation analysis evaluates acoustic and regulatory patterns within recorded speech and does not diagnose medical, psychological, or neurological conditions.",
+    "use_for": "Awareness, pattern recognition, and longitudinal comparison only."
+  }
+}

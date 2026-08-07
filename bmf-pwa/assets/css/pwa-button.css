@@ -1,0 +1,42 @@
+/* Default Install button styling – easy to override with Elementor or custom CSS */
+
+.bmf-pwa-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff;
+  background: #0f172a;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+}
+
+.bmf-pwa-install-btn:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+}
+
+.bmf-pwa-install-btn:active {
+  transform: translateY(0);
+}
+
+.bmf-pwa-install-btn__icon {
+  display: flex;
+  align-items: center;
+}
+
+.bmf-pwa-install-btn__icon svg {
+  display: block;
+}
+
+/* When the browser is ready to install, you can add extra visual cues if desired */
+.bmf-pwa-install-btn--ready {
+  /* already visible via JS */
+}

@@ -402,9 +402,12 @@ function updateScopedResultsLink(memberId) {
       }
 
 
-      // Notify other modules (e.g., notes) which email is selected
+      // Notify other modules (e.g., notes, tag admin) which member is selected
       try {
-        document.dispatchEvent(new CustomEvent('uls:selected-member', { detail: { email: email } }));
+        var rowUserId = parseInt($tr.data('user-id'), 10) || memberId || 0;
+        document.dispatchEvent(new CustomEvent('uls:selected-member', {
+          detail: { email: email, user_id: rowUserId }
+        }));
       } catch (e) {
         console.warn('[uls-members] dispatch uls:selected-member failed', e);
       }
@@ -583,6 +586,9 @@ function updateScopedResultsLink(memberId) {
 
       // Hierarchy / Drill-down support
       initHierarchy();
+
+      // Tag admin panel
+      initTagAdmin();
   }
 
   $(bindAll);
@@ -624,5 +630,205 @@ function updateScopedResultsLink(memberId) {
 
         console.info('[uls-members] Hierarchy toggle initialized (data-user-id + data-parent-id)');
     }
+
+  // ==================== TAG ADMIN PANEL ====================
+  function initTagAdmin() {
+    var $panel = $('#uls-tag-admin');
+    if (!$panel.length) return;
+
+    var currentUserId = parseInt($panel.data('user-id'), 10) || 0;
+
+    function showMessage(text, isError) {
+      var $msg = $panel.find('.uls-tag-admin__message');
+      $msg.removeClass('is-success is-error')
+          .addClass(isError ? 'is-error' : 'is-success')
+          .text(text)
+          .show();
+      setTimeout(function(){ $msg.fadeOut(300); }, 3500);
+    }
+
+    function setLoading(on) {
+      $panel.toggleClass('is-loading', !!on);
+    }
+
+    function renderStatus(status) {
+      if (!status || !status.user_id) {
+        $panel.find('.uls-tag-admin__placeholder').show();
+        $panel.find('.uls-tag-admin__content').hide();
+        $panel.find('.uls-tag-admin__name').text('Select a member');
+        $panel.find('.uls-tag-admin__email').text('');
+        return;
+      }
+
+      currentUserId = status.user_id;
+      $panel.data('user-id', status.user_id);
+      $panel.find('.uls-tag-admin__name').text(status.display_name || '');
+      $panel.find('.uls-tag-admin__email').text(status.email || '');
+      $panel.find('.uls-tag-admin__placeholder').hide();
+      $panel.find('.uls-tag-admin__content').show();
+
+      // Simple toggles
+      $panel.find('.uls-tag-toggle').each(function() {
+        var $cb = $(this);
+        var tag = $cb.data('tag');
+        var info = status.simple && status.simple[tag];
+        $cb.prop('disabled', false);
+        $cb.prop('checked', !!(info && info.has_tag));
+      });
+
+      // Sales section
+      var $sales = $panel.find('.uls-tag-admin__sales-status').empty();
+      if (status.sales && status.sales.is_sales) {
+        (status.sales.codes || []).forEach(function(code) {
+          $sales.append(
+            $('<span class="uls-tag-admin__sales-code"></span>').text(code)
+          );
+        });
+        $sales.append(
+          $('<button type="button" class="uls-tag-admin__btn uls-tag-admin__btn--danger uls-tag-remove-sales"></button>')
+            .text('Remove Sales Person')
+        );
+      } else {
+        var next = (status.sales && status.sales.next_code) || 'SA???';
+        $sales.append(
+          $('<span class="uls-tag-admin__sales-code"></span>').text(next)
+        );
+        $sales.append(
+          $('<button type="button" class="uls-tag-admin__btn uls-tag-admin__btn--primary uls-tag-make-sales"></button>')
+            .text('Make Sales Person')
+        );
+      }
+
+      // Optionally refresh the All Tags cell in the members table
+      if (status.all_tags && status.user_id) {
+        var tagsText = (status.all_tags || []).slice().sort(function(a,b){
+          return a.toLowerCase().localeCompare(b.toLowerCase());
+        }).join(', ');
+        $('td[data-col="all_tags"][data-user-id="' + status.user_id + '"]').text(tagsText);
+      }
+    }
+
+    function fetchStatus(userId) {
+      if (!userId) {
+        renderStatus(null);
+        return;
+      }
+      setLoading(true);
+      $.post(W.ajaxurl, {
+        action: 'uls_get_tag_admin_status',
+        nonce: W.nonce,
+        user_id: userId
+      }).done(function(resp) {
+        if (resp && resp.success) {
+          renderStatus(resp.data);
+        } else {
+          showMessage((resp && resp.data && resp.data.message) || 'Failed to load tag status', true);
+        }
+      }).fail(function() {
+        showMessage('AJAX error loading tag status', true);
+      }).always(function() {
+        setLoading(false);
+      });
+    }
+
+    // Toggle simple tags
+    $panel.off('change.ulsTag', '.uls-tag-toggle').on('change.ulsTag', '.uls-tag-toggle', function() {
+      var $cb = $(this);
+      var tag = $cb.data('tag');
+      var wantAdd = $cb.is(':checked');
+      if (!currentUserId || !tag) return;
+
+      setLoading(true);
+      $.post(W.ajaxurl, {
+        action: 'uls_toggle_simple_tag',
+        nonce: W.nonce,
+        user_id: currentUserId,
+        tag: tag,
+        action_type: wantAdd ? 'add' : 'remove'
+      }).done(function(resp) {
+        if (resp && resp.success) {
+          renderStatus(resp.data);
+          showMessage((wantAdd ? 'Added' : 'Removed') + ' ' + tag);
+        } else {
+          // Revert checkbox
+          $cb.prop('checked', !wantAdd);
+          showMessage((resp && resp.data && resp.data.message) || 'Update failed', true);
+        }
+      }).fail(function() {
+        $cb.prop('checked', !wantAdd);
+        showMessage('AJAX error', true);
+      }).always(function() {
+        setLoading(false);
+      });
+    });
+
+    // Make sales person
+    $panel.off('click.ulsTag', '.uls-tag-make-sales').on('click.ulsTag', '.uls-tag-make-sales', function() {
+      if (!currentUserId) return;
+      if (!confirm('Assign the next sales code and INTERNAL tag to this member?')) return;
+
+      setLoading(true);
+      $.post(W.ajaxurl, {
+        action: 'uls_make_sales_person',
+        nonce: W.nonce,
+        user_id: currentUserId
+      }).done(function(resp) {
+        if (resp && resp.success) {
+          renderStatus(resp.data);
+          showMessage('Sales person created: ' + ((resp.data.sales && resp.data.sales.codes) || []).join(', '));
+        } else {
+          showMessage((resp && resp.data && resp.data.message) || 'Failed to make sales person', true);
+          if (resp && resp.data && resp.data.status) renderStatus(resp.data.status);
+        }
+      }).fail(function() {
+        showMessage('AJAX error', true);
+      }).always(function() {
+        setLoading(false);
+      });
+    });
+
+    // Remove sales person
+    $panel.off('click.ulsTag', '.uls-tag-remove-sales').on('click.ulsTag', '.uls-tag-remove-sales', function() {
+      if (!currentUserId) return;
+      if (!confirm('Remove sales-person status (SA tag + relation row)? INTERNAL tag will be left unchanged.')) return;
+
+      setLoading(true);
+      $.post(W.ajaxurl, {
+        action: 'uls_remove_sales_person',
+        nonce: W.nonce,
+        user_id: currentUserId
+      }).done(function(resp) {
+        if (resp && resp.success) {
+          renderStatus(resp.data);
+          showMessage('Sales person status removed');
+        } else {
+          showMessage((resp && resp.data && resp.data.message) || 'Failed to remove sales person', true);
+        }
+      }).fail(function() {
+        showMessage('AJAX error', true);
+      }).always(function() {
+        setLoading(false);
+      });
+    });
+
+    // React to member selection (from the main table).
+    // Panel stays blank until an explicit row click.
+    document.addEventListener('uls:selected-member', function(ev) {
+      var uid = parseInt((ev.detail && ev.detail.user_id) || 0, 10);
+      if (!uid) {
+        // Fallback: look at the selected row
+        var $sel = $('.uls-members__row.is-selected').first();
+        uid = parseInt($sel.data('user-id'), 10) || 0;
+      }
+      if (uid) {
+        fetchStatus(uid);
+      }
+    });
+
+    // Do NOT auto-hydrate from a previous session's persisted selection.
+    // Start blank; wait for the user to click a row.
+
+    console.info('[uls-members] Tag admin panel initialized (blank until selection)');
+  }
 
 })(jQuery, window.ULS_MEMBERS || {});

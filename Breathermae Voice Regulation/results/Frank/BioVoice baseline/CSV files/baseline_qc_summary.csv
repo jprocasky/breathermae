@@ -1,0 +1,19 @@
+ambient_noise_acceptable,baseline_run_timestamp,clipping_detected,duration_sec,noise_floor,peak_amplitude,recording_key,sample_rate_hz,session_id,session_processed_timestamp
+True,2026-07-06 16:55:55,False,11.54,0.00168227,0.0291748,step1_silence_pre,44100,Frank Session 1,2026-07-06 16:55:55
+True,2026-07-06 16:55:55,False,24.68,0.00360163,0.64309692,step2_sustained_phonation,44100,Frank Session 1,2026-07-06 16:55:55
+True,2026-07-06 16:55:55,False,13.67,0.00241822,0.81234741,step3a_counting_natural,44100,Frank Session 1,2026-07-06 16:55:55
+True,2026-07-06 16:55:55,False,14.27,0.0010489,0.60501099,step3b_counting_slow,44100,Frank Session 1,2026-07-06 16:55:55
+True,2026-07-06 16:55:55,False,36.12,0.00343928,0.63961792,step4_reading,44100,Frank Session 1,2026-07-06 16:55:55
+True,2026-07-06 16:55:55,False,11.45,0.00122922,0.01800537,step5_silence_post,44100,Frank Session 1,2026-07-06 16:55:55
+True,2026-07-06 16:55:55,False,11.54,0.00066332,0.02902222,step1_silence_pre,44100,Frank Session 2,2026-07-06 16:57:16
+True,2026-07-06 16:55:55,False,18.54,0.00081537,0.71817017,step2_sustained_phonation,44100,Frank Session 2,2026-07-06 16:57:16
+True,2026-07-06 16:55:55,False,9.92,0.00098962,0.55386353,step3a_counting_natural,44100,Frank Session 2,2026-07-06 16:57:16
+True,2026-07-06 16:55:55,False,13.08,0.00084534,0.59124756,step3b_counting_slow,44100,Frank Session 2,2026-07-06 16:57:16
+True,2026-07-06 16:55:55,False,37.05,0.00122443,0.82333374,step4_reading,44100,Frank Session 2,2026-07-06 16:57:16
+True,2026-07-06 16:55:55,False,11.11,0.00072303,0.03759766,step5_silence_post,44100,Frank Session 2,2026-07-06 16:57:16
+True,2026-07-06 16:55:55,False,11.03,0.00053356,0.01119995,step1_silence_pre,44100,Frank Session 3,2026-07-06 16:58:57
+True,2026-07-06 16:55:55,False,20.67,0.00141629,0.80526733,step2_sustained_phonation,44100,Frank Session 3,2026-07-06 16:58:57
+True,2026-07-06 16:55:55,False,10.35,0.00087195,0.32061768,step3a_counting_natural,44100,Frank Session 3,2026-07-06 16:58:57
+True,2026-07-06 16:55:55,False,12.82,0.00122477,0.50460815,step3b_counting_slow,44100,Frank Session 3,2026-07-06 16:58:57
+True,2026-07-06 16:55:55,False,36.03,0.00223939,0.75183105,step4_reading,44100,Frank Session 3,2026-07-06 16:58:57
+True,2026-07-06 16:55:55,False,11.03,0.00077402,0.03707886,step5_silence_post,44100,Frank Session 3,2026-07-06 16:58:57

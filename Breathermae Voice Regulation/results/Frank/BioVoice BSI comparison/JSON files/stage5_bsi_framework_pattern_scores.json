@@ -1,0 +1,11 @@
+{
+  "activation_pattern_variability": 28.767314,
+  "regulation_consistency_shift": 14.414765,
+  "flexibility_range_shift": 31.073955,
+  "return_to_baseline_window_shift": 17.271882,
+  "adaptive_transition_pattern_shift": 11.474358,
+  "overall_voice_pattern_shift": 19.767495,
+  "overall_voice_pattern_band": "Minimal Shift",
+  "overall_voice_pattern_color": "light_green",
+  "score_direction": "higher = greater baseline-relative pattern shift"
+}

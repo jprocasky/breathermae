@@ -1,0 +1,7 @@
+session_id,comparison_run_timestamp,session_processed_timestamp,recording_key,sample_rate_hz,duration_sec,noise_floor,ambient_noise_acceptable,peak_amplitude,clipping_detected
+Frank Comparison Session 1,2026-07-14 17:18:19,2026-07-14 17:18:19,step1_silence_pre,44100,10.94,0.00168226,True,0.03460693,False
+Frank Comparison Session 1,2026-07-14 17:18:19,2026-07-14 17:18:19,step2_sustained_phonation,44100,23.66,0.00201939,True,0.60772705,False
+Frank Comparison Session 1,2026-07-14 17:18:19,2026-07-14 17:18:19,step3a_counting_natural,44100,8.64,0.00176825,True,0.64764404,False
+Frank Comparison Session 1,2026-07-14 17:18:19,2026-07-14 17:18:19,step3b_counting_slow,44100,12.91,0.00217667,True,0.4994812,False
+Frank Comparison Session 1,2026-07-14 17:18:19,2026-07-14 17:18:19,step4_reading,44100,31.59,0.00320094,True,0.8949585,False
+Frank Comparison Session 1,2026-07-14 17:18:19,2026-07-14 17:18:19,step5_silence_post,44100,10.86,0.00122579,True,0.02401733,False
