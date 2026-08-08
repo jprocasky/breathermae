@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BMF_BioVoice_Repository {
 
-	const DB_VERSION = '0.2.19';
+	const DB_VERSION = '0.2.20';
 
 	/**
 	 * Create / upgrade tables. Safe to call repeatedly (dbDelta).
@@ -829,5 +829,50 @@ class BMF_BioVoice_Repository {
 			}
 		}
 		return $locked;
+	}
+
+	/**
+	 * All scripts (active + inactive), newest language/sort first.
+	 *
+	 * @return array<int, array>
+	 */
+	public static function get_all_scripts(): array {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_scripts' );
+		return $db->get_results(
+			"SELECT * FROM {$t} ORDER BY language ASC, sort_order ASC, id ASC",
+			ARRAY_A
+		) ?: [];
+	}
+
+	/**
+	 * Update a script. script_code is not changed here.
+	 *
+	 * @return bool
+	 */
+	public static function update_script( int $id, array $data ): bool {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_scripts' );
+		unset( $data['id'], $data['script_code'], $data['created_at'] );
+		$data['updated_at'] = current_time( 'mysql', true );
+		return false !== $db->update( $t, $data, [ 'id' => $id ] );
+	}
+
+	/**
+	 * Set is_active flag.
+	 */
+	public static function set_script_active( int $id, bool $active ): bool {
+		return self::update_script( $id, [ 'is_active' => $active ? 1 : 0 ] );
+	}
+
+	/**
+	 * How many user locks reference this script.
+	 */
+	public static function count_locks_for_script( int $script_id ): int {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_user_script' );
+		return (int) $db->get_var(
+			$db->prepare( "SELECT COUNT(*) FROM {$t} WHERE script_id = %d", $script_id )
+		);
 	}
 }

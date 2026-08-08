@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.19-poc
+ * Version:           0.2.20-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.19-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.20-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
@@ -73,6 +73,7 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-play.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-report.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes-scores.php';
+require_once BMF_BIOVOICE_PATH . 'includes/class-admin-scripts.php';
 
 /**
  * Activation: tables + storage + protocol seed.
@@ -101,6 +102,9 @@ add_action( 'plugins_loaded', function () {
 	BMF_BioVoice_Shortcodes_Scores::init();
 	BMF_BioVoice_REST_API::init();
 	BMF_BioVoice_Play::init();
+	if ( is_admin() ) {
+		BMF_BioVoice_Admin_Scripts::init();
+	}
 } );
 
 add_action( 'admin_notices', function () {
