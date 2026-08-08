@@ -405,19 +405,20 @@ class BMF_BioVoice_Session_Service {
 			'steps'             => $formatted_steps,
 			'is_group_complete' => $complete,
 			// Back-compat for older wizard builds (always baseline framing).
+			// Cap complete_groups so excess baseline groups never display as 4/3.
 			'baseline_progress' => [
-				'complete_groups' => $baseline_n,
+				'complete_groups' => min( $baseline_n, $baseline_required ),
 				'required'        => $baseline_required,
 			],
 			// Phase-aware progress for the current group purpose + overall pipeline.
 			'progress'          => [
 				'purpose'              => $purpose,
-				'complete_groups'      => $progress_n,
+				'complete_groups'      => $purpose_target ? min( $progress_n, (int) $purpose_target ) : $progress_n,
 				'target'               => $purpose_target,
-				'baseline_done'        => $baseline_n,
+				'baseline_done'        => min( $baseline_n, $baseline_required ),
 				'baseline_required'    => $baseline_required,
 				'baseline_complete'    => $baseline_complete,
-				'comparison_done'      => $comparison_n,
+				'comparison_done'      => min( $comparison_n, $comparison_target ),
 				'comparison_target'    => $comparison_target,
 				'ongoing_done'         => $ongoing_n,
 				'recommended_purpose'  => $recommended_purpose,
@@ -748,16 +749,21 @@ class BMF_BioVoice_Session_Service {
 			$current_state = self::format_group_state( $current );
 		}
 
-		$baseline_pct   = min( 100, (int) round( ( $baseline_done / max( 1, $baseline_required ) ) * 100 ) );
-		$comparison_pct = min( 100, (int) round( ( $comparison_done / max( 1, $comparison_target ) ) * 100 ) );
+		// Cap display counts at phase targets so excess baseline groups (from the
+		// pre-auto-purpose bug) never render as "Baseline 4 / 3".
+		$baseline_done_display   = min( $baseline_done, $baseline_required );
+		$comparison_done_display = min( $comparison_done, $comparison_target );
+
+		$baseline_pct   = min( 100, (int) round( ( $baseline_done_display / max( 1, $baseline_required ) ) * 100 ) );
+		$comparison_pct = min( 100, (int) round( ( $comparison_done_display / max( 1, $comparison_target ) ) * 100 ) );
 
 		$headline = 'Get started';
 		if ( $phase === 'baseline' ) {
 			$headline = $baseline_done >= $baseline_required
 				? 'Baseline complete'
-				: sprintf( 'Baseline in progress · %d of %d', $baseline_done, $baseline_required );
+				: sprintf( 'Baseline in progress · %d of %d', $baseline_done_display, $baseline_required );
 		} elseif ( $phase === 'comparison' ) {
-			$headline = sprintf( 'Comparison series · %d of %d', $comparison_done, $comparison_target );
+			$headline = sprintf( 'Comparison series · %d of %d', $comparison_done_display, $comparison_target );
 		} else {
 			$headline = $ongoing_done > 0
 				? sprintf( 'Ongoing · %d session%s', $ongoing_done, $ongoing_done === 1 ? '' : 's' )
@@ -773,7 +779,9 @@ class BMF_BioVoice_Session_Service {
 			if ( $phase === 'baseline' && $baseline_done < $baseline_required ) {
 				$next_label = 'Start next baseline session';
 			} elseif ( $phase === 'comparison' ) {
-				$next_label = 'Start next comparison session';
+				$next_label = $comparison_done < 1
+					? 'Start first comparison session'
+					: 'Start next comparison session';
 			} else {
 				$next_label = 'Start an ongoing session';
 			}
@@ -784,16 +792,20 @@ class BMF_BioVoice_Session_Service {
 			'headline'           => $headline,
 			'next_label'         => $next_label,
 			'baseline'           => [
-				'done'     => $baseline_done,
+				// UI count never exceeds required (avoids "4 / 3").
+				'done'     => $baseline_done_display,
 				'required' => $baseline_required,
 				'pct'      => $baseline_pct,
 				'complete' => $baseline_done >= $baseline_required,
+				// Raw DB count may be higher after the old locked-purpose bug.
+				'done_raw' => $baseline_done,
 			],
 			'comparison'         => [
-				'done'     => $comparison_done,
+				'done'     => $comparison_done_display,
 				'target'   => $comparison_target,
 				'pct'      => $comparison_pct,
 				'complete' => $comparison_done >= $comparison_target,
+				'done_raw' => $comparison_done,
 			],
 			'ongoing'            => [
 				'done' => $ongoing_done,
