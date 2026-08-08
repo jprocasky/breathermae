@@ -9,6 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BMF_BioVoice_Results_Service {
 
+	/**
+	 * Map engine color tokens → CSS modifier class.
+	 *
+	 * @param string $color
+	 * @return string
+	 */
 	public static function color_class( string $color ): string {
 		$color = strtolower( trim( $color ) );
 		$map   = [
@@ -25,6 +31,11 @@ class BMF_BioVoice_Results_Service {
 		return $map[ $color ] ?? 'is-muted';
 	}
 
+	/**
+	 * Load bundled stage-7 sample plain-language report.
+	 *
+	 * @return array|null
+	 */
 	public static function load_fixture_plain_report(): ?array {
 		$path = BMF_BIOVOICE_PATH . 'fixtures/sample_plain_language_report.json';
 		if ( ! is_readable( $path ) ) {
@@ -34,6 +45,11 @@ class BMF_BioVoice_Results_Service {
 		return is_array( $data ) ? $data : null;
 	}
 
+	/**
+	 * Load bundled stage-7 sample BSI pattern payload.
+	 *
+	 * @return array|null
+	 */
 	public static function load_fixture_pattern_payload(): ?array {
 		$path = BMF_BIOVOICE_PATH . 'fixtures/sample_bsi_pattern_payload.json';
 		if ( ! is_readable( $path ) ) {
@@ -44,8 +60,14 @@ class BMF_BioVoice_Results_Service {
 	}
 
 	/**
-	 * Priority: fixture → latest DB result for user.
+	 * Resolve plain-language report for display.
 	 *
+	 * Priority:
+	 * 1. fixture=1 → bundled sample
+	 * 2. latest DB result for user (plain_report_json)
+	 *
+	 * @param int  $user_id
+	 * @param bool $use_fixture
 	 * @return array{report: array, meta: array}|null
 	 */
 	public static function resolve_plain_report( int $user_id, bool $use_fixture = false ): ?array {
@@ -57,10 +79,10 @@ class BMF_BioVoice_Results_Service {
 			return [
 				'report' => $report,
 				'meta'   => [
-					'source'      => 'fixture',
-					'result_id'   => 0,
-					'analyzed_at' => null,
-					'is_fixture'  => true,
+					'source'     => 'fixture',
+					'result_id'  => 0,
+					'analyzed_at'=> null,
+					'is_fixture' => true,
 				],
 			];
 		}
@@ -92,8 +114,13 @@ class BMF_BioVoice_Results_Service {
 
 	/**
 	 * Resolve BSI pattern payload for scores UI.
-	 * Priority: fixture → latest DB pattern_payload_json.
 	 *
+	 * Priority:
+	 * 1. fixture=1 → bundled sample
+	 * 2. latest DB result for user (pattern_payload_json)
+	 *
+	 * @param int  $user_id
+	 * @param bool $use_fixture
 	 * @return array{payload: array, meta: array}|null
 	 */
 	public static function resolve_pattern_payload( int $user_id, bool $use_fixture = false ): ?array {
@@ -105,10 +132,10 @@ class BMF_BioVoice_Results_Service {
 			return [
 				'payload' => $payload,
 				'meta'    => [
-					'source'      => 'fixture',
-					'result_id'   => 0,
-					'analyzed_at' => null,
-					'is_fixture'  => true,
+					'source'     => 'fixture',
+					'result_id'  => 0,
+					'analyzed_at'=> null,
+					'is_fixture' => true,
 				],
 			];
 		}
@@ -138,6 +165,13 @@ class BMF_BioVoice_Results_Service {
 		];
 	}
 
+	/**
+	 * Persist a result row (engine or admin import).
+	 *
+	 * @param int   $user_id
+	 * @param array $args
+	 * @return int|false Result id
+	 */
 	public static function store_result( int $user_id, array $args ) {
 		$user = get_userdata( $user_id );
 		$plain = isset( $args['plain_report'] ) && is_array( $args['plain_report'] )
@@ -158,20 +192,20 @@ class BMF_BioVoice_Results_Service {
 		}
 
 		$row = [
-			'user_id'               => $user_id,
-			'user_email'            => $user ? $user->user_email : null,
-			'session_group_id'      => isset( $args['session_group_id'] ) ? absint( $args['session_group_id'] ) : null,
-			'comparison_session_id' => isset( $args['comparison_session_id'] )
+			'user_id'                => $user_id,
+			'user_email'             => $user ? $user->user_email : null,
+			'session_group_id'       => isset( $args['session_group_id'] ) ? absint( $args['session_group_id'] ) : null,
+			'comparison_session_id'  => isset( $args['comparison_session_id'] )
 				? sanitize_text_field( $args['comparison_session_id'] )
 				: ( $plain['comparison_session_id'] ?? null ),
-			'schema_version'        => isset( $args['schema_version'] ) ? sanitize_text_field( $args['schema_version'] ) : 'stage7',
-			'source'                => isset( $args['source'] ) ? sanitize_key( $args['source'] ) : 'engine',
-			'rdi_score'             => $rdi_score,
-			'rdi_band'              => $rdi_band,
-			'rdi_color'             => $rdi_color,
-			'plain_report_json'     => $plain ? wp_json_encode( $plain ) : null,
-			'pattern_payload_json'  => $pattern ? wp_json_encode( $pattern ) : null,
-			'analyzed_at'           => isset( $args['analyzed_at'] )
+			'schema_version'         => isset( $args['schema_version'] ) ? sanitize_text_field( $args['schema_version'] ) : 'stage7',
+			'source'                 => isset( $args['source'] ) ? sanitize_key( $args['source'] ) : 'engine',
+			'rdi_score'              => $rdi_score,
+			'rdi_band'               => $rdi_band,
+			'rdi_color'              => $rdi_color,
+			'plain_report_json'      => $plain ? wp_json_encode( $plain ) : null,
+			'pattern_payload_json'   => $pattern ? wp_json_encode( $pattern ) : null,
+			'analyzed_at'            => isset( $args['analyzed_at'] )
 				? $args['analyzed_at']
 				: current_time( 'mysql', true ),
 		];

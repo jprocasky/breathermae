@@ -164,8 +164,13 @@ class BMF_BioVoice_Shortcodes {
 		if ( ! is_user_logged_in() ) {
 			return '<p class="bmf-biovoice-login-required">Please log in to start a BioVoicePrint session.</p>';
 		}
-		$atts = shortcode_atts( [ 'purpose' => 'baseline', 'class' => '' ], $atts, 'bmf_biovoice_session' );
-		$purpose = sanitize_key( $atts['purpose'] ) ?: 'baseline';
+		// purpose="auto" (default) picks baseline → comparison → ongoing from server status.
+		// Explicit purpose still allowed for testing or dedicated pages.
+		$atts = shortcode_atts( [ 'purpose' => 'auto', 'class' => '' ], $atts, 'bmf_biovoice_session' );
+		$purpose = sanitize_key( $atts['purpose'] ) ?: 'auto';
+		if ( ! in_array( $purpose, [ 'auto', 'baseline', 'comparison', 'ongoing' ], true ) ) {
+			$purpose = 'auto';
+		}
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
 		wp_enqueue_script( 'bmf-biovoice-recorder' );
 		wp_enqueue_script( 'bmf-biovoice-session-wizard' );
@@ -175,6 +180,8 @@ class BMF_BioVoice_Shortcodes {
 			'nonce' => wp_create_nonce( 'wp_rest' ),
 			'purpose' => $purpose,
 			'userId' => get_current_user_id(),
+			'baselineRequired' => (int) BMF_BioVoice_Session_Service::BASELINE_REQUIRED,
+			'comparisonTarget' => (int) BMF_BioVoice_Session_Service::COMPARISON_TARGET_DEFAULT,
 		] );
 		$class = 'bmf-biovoice-session' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-session data-purpose="' . esc_attr( $purpose ) . '"><div data-wizard-panel><p class="bmf-bv-empty">Loading session…</p></div></div>';

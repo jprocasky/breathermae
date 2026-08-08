@@ -152,13 +152,50 @@
   }
 
   function initWizard(root) {
-    const purpose = root.getAttribute('data-purpose') || cfg.purpose || 'baseline';
+    // "auto" = derive baseline → comparison → ongoing from GET /status.
+    const purposeAttr = root.getAttribute('data-purpose') || cfg.purpose || 'auto';
     const panel = root.querySelector('[data-wizard-panel]');
     let state = null;
     let protocol = null;
+    let purpose = purposeAttr === 'auto' ? 'baseline' : purposeAttr;
+    let statusSummary = null;
 
     function setPanel(html) {
       panel.innerHTML = html;
+    }
+
+    function resolvePurposeFromStatus(summary) {
+      if (purposeAttr && purposeAttr !== 'auto') {
+        return purposeAttr;
+      }
+      if (summary && summary.phase) {
+        return summary.phase;
+      }
+      return 'baseline';
+    }
+
+    function purposeLabel(p) {
+      if (p === 'comparison') return 'Comparison';
+      if (p === 'ongoing') return 'Ongoing';
+      return 'Baseline';
+    }
+
+    function progressMetaLabel(group) {
+      const p = (group && group.purpose) || purpose;
+      const prog = (group && group.progress) || {};
+      if (p === 'comparison') {
+        const done = prog.comparison_done != null ? prog.comparison_done : 0;
+        const target = prog.comparison_target != null ? prog.comparison_target : (cfg.comparisonTarget || 6);
+        return 'Comparison sessions: ' + done + ' / ' + target;
+      }
+      if (p === 'ongoing') {
+        const done = prog.ongoing_done != null ? prog.ongoing_done : 0;
+        return 'Ongoing sessions: ' + done;
+      }
+      const bp = (group && group.baseline_progress) || {};
+      const done = prog.baseline_done != null ? prog.baseline_done : (bp.complete_groups || 0);
+      const req = prog.baseline_required != null ? prog.baseline_required : (bp.required || cfg.baselineRequired || 3);
+      return 'Baseline sessions: ' + done + ' / ' + req;
     }
 
     function canRetakeGroup(group) {
@@ -173,7 +210,6 @@
     }
 
     function progressHtml(group) {
-      const bp = group.baseline_progress || { complete_groups: 0, required: 3 };
       const steps = (group.steps || []).filter(function (s) {
         return s.task_code !== 'mic_check';
       });
@@ -208,7 +244,7 @@
         '<div class="bmf-bv-progress">' +
         '<div class="bmf-bv-progress-meta">' +
         '<span>Session steps: ' + doneCount + ' / ' + total + '</span>' +
-        '<span>Baseline groups: ' + bp.complete_groups + ' / ' + bp.required + '</span>' +
+        '<span>' + escapeHtml(progressMetaLabel(group)) + '</span>' +
         '</div>' +
         '<div class="bmf-bv-progress-bar"><div class="bmf-bv-progress-fill" style="width:' + pct + '%"></div></div>' +
         '<div class="bmf-bv-chips">' + chips + '</div>' +
@@ -337,20 +373,63 @@
     }
 
     function completeHtml(group) {
+      const prog = group.progress || {};
       const bp = group.baseline_progress || { complete_groups: 0, required: 3 };
-      const done = bp.complete_groups >= bp.required;
+      const baselineDone = prog.baseline_done != null ? prog.baseline_done : (bp.complete_groups || 0);
+      const baselineReq = prog.baseline_required != null ? prog.baseline_required : (bp.required || cfg.baselineRequired || 3);
+      const comparisonDone = prog.comparison_done != null ? prog.comparison_done : 0;
+      const comparisonTarget = prog.comparison_target != null ? prog.comparison_target : (cfg.comparisonTarget || 6);
+      const nextPurpose = prog.recommended_purpose || resolvePurposeFromStatus(statusSummary);
+      const finishedPurpose = group.purpose || purpose;
+
+      let note = '';
+      let btnLabel = 'Start next session';
+
+      if (finishedPurpose === 'baseline' && baselineDone < baselineReq) {
+        note =
+          '<p class="bmf-bv-lead">You still need ' +
+          (baselineReq - baselineDone) +
+          ' more full session(s) for baseline.</p>';
+        btnLabel = 'Start next baseline session';
+      } else if (finishedPurpose === 'baseline' && baselineDone >= baselineReq) {
+        note =
+          '<p class="bmf-bv-success-note">Baseline complete (' +
+          baselineReq +
+          ' sessions). You can start the comparison series.</p>';
+        btnLabel = 'Start first comparison session';
+      } else if (finishedPurpose === 'comparison' && comparisonDone < comparisonTarget) {
+        note =
+          '<p class="bmf-bv-lead">Comparison progress: ' +
+          comparisonDone +
+          ' of ' +
+          comparisonTarget +
+          ' sessions.</p>';
+        btnLabel = 'Start next comparison session';
+      } else if (finishedPurpose === 'comparison') {
+        note =
+          '<p class="bmf-bv-success-note">Comparison series target reached (' +
+          comparisonTarget +
+          '). You can continue with ongoing sessions.</p>';
+        btnLabel = 'Start ongoing session';
+      } else {
+        note = '<p class="bmf-bv-lead">Session saved. You can record another whenever you like.</p>';
+        btnLabel = 'Start another session';
+      }
+
       return (
         '<div class="bmf-bv-complete">' +
         '<h3 class="bmf-bv-heading">Session complete</h3>' +
-        '<p class="bmf-bv-lead">All steps for this session are saved.</p>' +
+        '<p class="bmf-bv-lead">All steps for this ' +
+        escapeHtml(purposeLabel(finishedPurpose).toLowerCase()) +
+        ' session are saved.</p>' +
         progressHtml(group) +
-        (done
-          ? '<p class="bmf-bv-success-note">Baseline complete (' + bp.required + ' sessions).</p>'
-          : '<p class="bmf-bv-lead">You still need ' +
-            (bp.required - bp.complete_groups) +
-            ' more full session(s) for baseline.</p>' +
-            '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start-next-group">' +
-            'Start next session</button>') +
+        note +
+        '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-action="start-next-group"' +
+        ' data-next-purpose="' +
+        escapeAttr(nextPurpose) +
+        '">' +
+        escapeHtml(btnLabel) +
+        '</button>' +
         '</div>'
       );
     }
@@ -406,7 +485,8 @@
         const btn = panel.querySelector('[data-action="start-next-group"]');
         if (btn) {
           btn.addEventListener('click', function () {
-            startFreshGroup();
+            const next = btn.getAttribute('data-next-purpose') || purpose;
+            startFreshGroup(next);
           });
         }
         return;
@@ -470,8 +550,11 @@
       });
     }
 
-    function startFreshGroup() {
-      setPanel('<p class="bmf-bv-empty">Starting next session…</p>');
+    function startFreshGroup(nextPurpose) {
+      if (nextPurpose) {
+        purpose = nextPurpose;
+      }
+      setPanel('<p class="bmf-bv-empty">Starting next ' + escapeHtml(purposeLabel(purpose).toLowerCase()) + ' session…</p>');
       api('/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -486,31 +569,47 @@
     function load() {
       setPanel('<p class="bmf-bv-empty">Loading session…</p>');
 
-      Promise.all([
-        api('/protocol?purpose=' + encodeURIComponent(purpose)),
-        api('/groups?purpose=' + encodeURIComponent(purpose)).catch(function () {
-          return { group: null };
+      // Resolve phase first so purpose=auto does not keep creating extra baseline groups.
+      api('/status')
+        .catch(function () {
+          return null;
         })
-      ]).then(function (results) {
-        protocol = results[0];
-        const current = results[1];
+        .then(function (summary) {
+          statusSummary = summary;
+          purpose = resolvePurposeFromStatus(summary);
 
-        // get_current_group returns the state object OR { group: null }
-        if (current && current.group_id) {
-          showForState(current);
-          return;
-        }
+          return Promise.all([
+            api('/protocol?purpose=' + encodeURIComponent(purpose)),
+            api('/groups?purpose=' + encodeURIComponent(purpose)).catch(function () {
+              return { group: null };
+            })
+          ]);
+        })
+        .then(function (results) {
+          if (!results) {
+            return;
+          }
+          protocol = results[0];
+          const current = results[1];
 
-        return api('/groups', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ purpose: purpose })
-        }).then(function (data) {
-          showForState(data);
+          // Resume in-progress group for the active phase.
+          if (current && current.group_id) {
+            showForState(current);
+            return;
+          }
+
+          // No open group for this phase — create one.
+          return api('/groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ purpose: purpose })
+          }).then(function (data) {
+            showForState(data);
+          });
+        })
+        .catch(function (err) {
+          setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message || 'Failed to load session.') + '</p>');
         });
-      }).catch(function (err) {
-        setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message || 'Failed to load session.') + '</p>');
-      });
     }
 
     root.addEventListener('bmf-biovoice-mic-check-passed', function () {

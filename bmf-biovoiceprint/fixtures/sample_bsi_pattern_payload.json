@@ -1,1 +1,489 @@
-{"api_request":{"endpoint":"POST /biovoice-bsi-comparison","timestamp":"2026-07-14 17:19:27","local_simulation_only":true},"voice_engine":{"tokenized_user_id":"db605e8f7191","participant_label":"Frank","device_type":"MacBook Microphone","comparison_session_id":"Frank Comparison Session 1","recording_count":6,"feature_vector_source":"comparison_session_stage3_feature_vectors"},"pre_recording_context":{"balanced_centered":"4","mental_clarity_focus":"4","physical_energy":"4","recording_comfort_readiness":"5","restored_recovered":"4","session_id":"Frank Comparison Session 1","session_processed_timestamp":"2026-07-12 10:14:42","wellness_anchor_band":"Generally Steady Subjective Wellness","wellness_anchor_direction":"higher = stronger self-reported pre-recording wellness","wellness_anchor_score_0_100":84.0,"wellness_anchor_total_score":21},"subjective_objective_alignment":{"section_title":"Wellness Congruence","current_session_wellness_anchor":{"score_0_100":84.0,"raw_total_0_25":21,"band":"Generally Steady Subjective Wellness","items":{"balanced_centered":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"mental_clarity_focus":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"physical_energy":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"recording_comfort_readiness":{"raw_score_1_5":5,"normalized_score_0_100":100.0},"restored_recovered":{"raw_score_1_5":4,"normalized_score_0_100":80.0}},"item_pattern":[{"item":"balanced_centered","question":"How balanced or centered do you feel right now?","current_score_0_100":80.0,"baseline_mean_0_100":86.666667,"change_from_baseline":-6.666667},{"item":"mental_clarity_focus","question":"How mentally clear and focused do you feel at this moment?","current_score_0_100":80.0,"baseline_mean_0_100":86.666667,"change_from_baseline":-6.666667},{"item":"recording_comfort_readiness","question":"How comfortable and ready do you feel for this recording?","current_score_0_100":100.0,"baseline_mean_0_100":100.0,"change_from_baseline":0.0},{"item":"restored_recovered","question":"How restored or recovered do you feel today overall?","current_score_0_100":80.0,"baseline_mean_0_100":80.0,"change_from_baseline":0.0},{"item":"physical_energy","question":"How physically energized do you feel right now?","current_score_0_100":80.0,"baseline_mean_0_100":66.666667,"change_from_baseline":13.333333}]},"baseline_wellness_anchor":{"score_0_100":84.0,"standard_deviation":8.640988,"band":"Generally Steady Subjective Wellness","score_range":[76.0,96.0],"n_sessions":3},"current_biovoiceprint":{"rdi_score_0_100":21.807777,"rdi_band":"Minimal Shift","baseline_alignment_score_0_100":78.192223},"baseline_biovoiceprint":{"mean_rdi_score_0_100":15.76835,"rdi_standard_deviation":3.865182,"rdi_score_range":[12.424992,21.185148],"n_sessions":3},"baseline_relative_comparison":{"subjective_change_points":0.0,"objective_rdi_change_points":6.039427,"subjective_strain_z":0.0,"objective_shift_z":1.56,"comparison_direction":"Positive standardized values represent greater baseline-relative strain or voice-pattern shift."},"descriptive_index_comparison":{"index_gap":5.807777,"interpretation_limit":"The Wellness Anchor and BioVoicePrint alignment scores are different constructs. Their raw difference is descriptive only and is not treated as a physiological mismatch."},"comparison_metrics":{"subjective_change_from_baseline":0.0,"objective_rdi_change_from_baseline":6.039427,"subjective_objective_gap":5.807777,"descriptive_index_gap":5.807777},"alignment_type":{"code":"VOICE_PATTERN_LEADING","label":"Voice-Pattern Shift With Stable Self-Report","meaning":"The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence."},"comparison_strength":{"level":"Preliminary","reason":"The comparison is based on a limited number of paired sessions and should be used for awareness only."},"session_quality":{"recording_quality_passed":true,"noise_floor_passed":true,"microphone_consistency_passed":true,"protocol_completion_passed":true,"vocal_discomfort_reported":false,"acute_context_flags":[],"available_context_flags":["recent_strenuous_exercise","high_vocal_use","dehydration_possible","poor_sleep","caffeine_recent","respiratory_symptoms","different_recording_device","unusual_environment"],"interpretation_allowed":true,"quality_note":"Context flags do not automatically change the score. They explain conditions that may affect interpretation."},"longitudinal_alignment":{"paired_sessions_available":1,"trend_status":"Not Yet Established","subjective_trend":"Not Yet Established","biovoiceprint_trend":"Not Yet Established","alignment_pattern":"Voice-Pattern Shift With Stable Self-Report","voice_pattern_shift_with_stable_self_report_count":1,"self_report_shift_with_stable_voice_pattern_count":0,"minimum_sessions_for_trend":5,"trend_note":"Do not interpret a single mismatch as physiology preceding awareness. That can only become a testable hypothesis after repeated paired sessions."},"summary":"Your wellness check-in was 84.0 compared with your usual baseline of 84.0. Your BioVoicePrint RDI was 21.8 compared with your usual baseline RDI of 15.8. The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence. This comparison is preliminary and becomes more meaningful when the same directional pattern repeats across valid paired sessions.","monitoring_note":"Because both the wellness check-in and BioVoicePrint are compared with their own baselines first, this result strengthens future interpretation without treating the two 0-100 scores as equivalent.","boundary":"This section compares a self-reported wellness snapshot with a baseline-relative voice-pattern signal. It does not diagnose stress, autonomic dysfunction, disease, or a medical or mental health condition, and it does not assign a cause to either measurement."},"baseline_relative_pattern_comparison":{"rdi_score":{"score":21.807777,"band":"Minimal Shift","color":"light_green","direction":"higher = greater baseline-relative pattern shift"},"stage4_metrics":{"variability_pattern_shift":26.830649,"harmonic_structure_shift":15.051121,"transition_continuity_shift":11.962023,"micro_modulation_shift":39.608326,"signal_clarity_shift":16.688561,"distribution_balance_shift":22.994884,"sustained_phonation_shift":16.533881,"rdi_score_0_100":21.807777,"rdi_band":"Minimal Shift","rdi_color":"light_green","score_direction":"higher = greater baseline-relative pattern shift"},"stage5_bsi_framework_scores":{"activation_pattern_variability":{"score":28.767314,"band":"Mild Pattern Shift","color":"yellow","direction":"higher = greater baseline-relative pattern shift"},"regulation_consistency_shift":{"score":14.414765,"band":"Minimal Shift","color":"light_green","direction":"higher = greater baseline-relative pattern shift"},"flexibility_range_shift":{"score":31.073955,"band":"Mild Pattern Shift","color":"yellow","direction":"higher = greater baseline-relative pattern shift"},"return_to_baseline_window_shift":{"score":17.271882,"band":"Minimal Shift","color":"light_green","direction":"higher = greater baseline-relative pattern shift"},"adaptive_transition_pattern_shift":{"score":11.474358,"band":"Baseline Consistent","color":"green","direction":"higher = greater baseline-relative pattern shift"},"overall_voice_pattern_shift":{"score":19.767495,"band":"Minimal Shift","color":"light_green","direction":"higher = greater baseline-relative pattern shift"}},"score_direction":"higher = greater baseline-relative pattern shift"},"longitudinal_pattern_tracking":{"comparison_session_count":1,"comparison_model_version":"bsi_comparison_zscore_range_v4_reliability_flags","rdi_trend_slope":0.0,"overall_pattern_shift_slope":0.0,"regulation_consistency_shift_slope":0.0,"return_to_baseline_window_shift_slope":0.0,"adaptive_transition_pattern_shift_slope":0.0,"stability_window_status":"provisional","variability_cluster":"insufficient_comparison_history","trend_note":"Trend values become more meaningful after several comparison sessions."},"customer_facing_biovoiceprint":{"regulation_stability":{"score":81.43397,"label":"Stable","source_shift_score":18.56603,"direction":"higher = closer to personal baseline"},"adaptive_capacity":{"score":77.058896,"label":"Watch","source_shift_score":22.941104,"direction":"higher = more baseline-consistent adaptive voice-pattern behavior"},"recovery_consistency":{"score":84.505576,"label":"Stable","source_shift_score":15.494424,"direction":"higher = more baseline-consistent return-to-baseline voice behavior"},"voice_pattern_stability":{"score":80.232505,"label":"Stable","source_shift_score":19.767495,"source_shift_band":"Minimal Shift","source_shift_color":"light_green","direction":"higher = closer to personal baseline"},"baseline_alignment":{"score":78.192223,"label":"Watch","source_shift_score":21.807777,"source_shift_band":"Minimal Shift","source_shift_color":"light_green","direction":"higher = closer to personal baseline"},"trend_direction":"Not enough sessions yet","plain_language_interpretation":"Your recorded voice patterns stayed close to your personal baseline. Small variations may be present; this result is for awareness and longitudinal comparison only."},"dashboard_push":{"member_app":{"display_score":81.43397,"display_label":"Watch","display_color":"light_green","display_language":"BioVoiceprint comparison to your personal baseline.","regulation_stability":{"score":81.43397,"label":"Stable","source_shift_score":18.56603,"direction":"higher = closer to personal baseline"},"adaptive_capacity":{"score":77.058896,"label":"Watch","source_shift_score":22.941104,"direction":"higher = more baseline-consistent adaptive voice-pattern behavior"},"recovery_consistency":{"score":84.505576,"label":"Stable","source_shift_score":15.494424,"direction":"higher = more baseline-consistent return-to-baseline voice behavior"},"voice_pattern_stability":{"score":80.232505,"label":"Stable","source_shift_score":19.767495,"source_shift_band":"Minimal Shift","source_shift_color":"light_green","direction":"higher = closer to personal baseline"},"plain_language_interpretation":"Your recorded voice patterns stayed close to your personal baseline. Small variations may be present; this result is for awareness and longitudinal comparison only.","subjective_objective_alignment":{"section_title":"Wellness Congruence","current_session_wellness_anchor":{"score_0_100":84.0,"raw_total_0_25":21,"band":"Generally Steady Subjective Wellness","items":{"balanced_centered":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"mental_clarity_focus":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"physical_energy":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"recording_comfort_readiness":{"raw_score_1_5":5,"normalized_score_0_100":100.0},"restored_recovered":{"raw_score_1_5":4,"normalized_score_0_100":80.0}},"item_pattern":[{"item":"balanced_centered","question":"How balanced or centered do you feel right now?","current_score_0_100":80.0,"baseline_mean_0_100":86.666667,"change_from_baseline":-6.666667},{"item":"mental_clarity_focus","question":"How mentally clear and focused do you feel at this moment?","current_score_0_100":80.0,"baseline_mean_0_100":86.666667,"change_from_baseline":-6.666667},{"item":"recording_comfort_readiness","question":"How comfortable and ready do you feel for this recording?","current_score_0_100":100.0,"baseline_mean_0_100":100.0,"change_from_baseline":0.0},{"item":"restored_recovered","question":"How restored or recovered do you feel today overall?","current_score_0_100":80.0,"baseline_mean_0_100":80.0,"change_from_baseline":0.0},{"item":"physical_energy","question":"How physically energized do you feel right now?","current_score_0_100":80.0,"baseline_mean_0_100":66.666667,"change_from_baseline":13.333333}]},"baseline_wellness_anchor":{"score_0_100":84.0,"standard_deviation":8.640988,"band":"Generally Steady Subjective Wellness","score_range":[76.0,96.0],"n_sessions":3},"current_biovoiceprint":{"rdi_score_0_100":21.807777,"rdi_band":"Minimal Shift","baseline_alignment_score_0_100":78.192223},"baseline_biovoiceprint":{"mean_rdi_score_0_100":15.76835,"rdi_standard_deviation":3.865182,"rdi_score_range":[12.424992,21.185148],"n_sessions":3},"baseline_relative_comparison":{"subjective_change_points":0.0,"objective_rdi_change_points":6.039427,"subjective_strain_z":0.0,"objective_shift_z":1.56,"comparison_direction":"Positive standardized values represent greater baseline-relative strain or voice-pattern shift."},"descriptive_index_comparison":{"index_gap":5.807777,"interpretation_limit":"The Wellness Anchor and BioVoicePrint alignment scores are different constructs. Their raw difference is descriptive only and is not treated as a physiological mismatch."},"comparison_metrics":{"subjective_change_from_baseline":0.0,"objective_rdi_change_from_baseline":6.039427,"subjective_objective_gap":5.807777,"descriptive_index_gap":5.807777},"alignment_type":{"code":"VOICE_PATTERN_LEADING","label":"Voice-Pattern Shift With Stable Self-Report","meaning":"The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence."},"comparison_strength":{"level":"Preliminary","reason":"The comparison is based on a limited number of paired sessions and should be used for awareness only."},"session_quality":{"recording_quality_passed":true,"noise_floor_passed":true,"microphone_consistency_passed":true,"protocol_completion_passed":true,"vocal_discomfort_reported":false,"acute_context_flags":[],"available_context_flags":["recent_strenuous_exercise","high_vocal_use","dehydration_possible","poor_sleep","caffeine_recent","respiratory_symptoms","different_recording_device","unusual_environment"],"interpretation_allowed":true,"quality_note":"Context flags do not automatically change the score. They explain conditions that may affect interpretation."},"longitudinal_alignment":{"paired_sessions_available":1,"trend_status":"Not Yet Established","subjective_trend":"Not Yet Established","biovoiceprint_trend":"Not Yet Established","alignment_pattern":"Voice-Pattern Shift With Stable Self-Report","voice_pattern_shift_with_stable_self_report_count":1,"self_report_shift_with_stable_voice_pattern_count":0,"minimum_sessions_for_trend":5,"trend_note":"Do not interpret a single mismatch as physiology preceding awareness. That can only become a testable hypothesis after repeated paired sessions."},"summary":"Your wellness check-in was 84.0 compared with your usual baseline of 84.0. Your BioVoicePrint RDI was 21.8 compared with your usual baseline RDI of 15.8. The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence. This comparison is preliminary and becomes more meaningful when the same directional pattern repeats across valid paired sessions.","monitoring_note":"Because both the wellness check-in and BioVoicePrint are compared with their own baselines first, this result strengthens future interpretation without treating the two 0-100 scores as equivalent.","boundary":"This section compares a self-reported wellness snapshot with a baseline-relative voice-pattern signal. It does not diagnose stress, autonomic dysfunction, disease, or a medical or mental health condition, and it does not assign a cause to either measurement."}},"provider_dashboard":{"rdi_score_0_100":21.807777,"overall_voice_pattern_shift":19.767495,"comparison_session_count":1,"trend_status":"provisional","subjective_objective_alignment_type":"VOICE_PATTERN_LEADING","subjective_objective_alignment_label":"Voice-Pattern Shift With Stable Self-Report","subjective_objective_gap":5.807777}},"language_guardrails":{"foundational_disclaimer":"Voice regulation analysis evaluates acoustic and regulatory patterns within recorded speech and does not diagnose medical, psychological, or neurological conditions.","interpretation_boundary":"Scores describe baseline-relative voice-pattern shifts only; they do not directly determine emotional, digestive, inflammatory, metabolic, or recovery states.","use_for":"Awareness, pattern recognition, and longitudinal comparison only."}}
+{
+  "api_request": {
+    "endpoint": "POST /biovoice-bsi-comparison",
+    "timestamp": "2026-07-14 17:19:27",
+    "local_simulation_only": true
+  },
+  "voice_engine": {
+    "tokenized_user_id": "db605e8f7191",
+    "participant_label": "Frank",
+    "device_type": "MacBook Microphone",
+    "comparison_session_id": "Frank Comparison Session 1",
+    "recording_count": 6,
+    "feature_vector_source": "comparison_session_stage3_feature_vectors"
+  },
+  "pre_recording_context": {
+    "balanced_centered": "4",
+    "mental_clarity_focus": "4",
+    "physical_energy": "4",
+    "recording_comfort_readiness": "5",
+    "restored_recovered": "4",
+    "session_id": "Frank Comparison Session 1",
+    "session_processed_timestamp": "2026-07-12 10:14:42",
+    "wellness_anchor_band": "Generally Steady Subjective Wellness",
+    "wellness_anchor_direction": "higher = stronger self-reported pre-recording wellness",
+    "wellness_anchor_score_0_100": 84.0,
+    "wellness_anchor_total_score": 21
+  },
+  "subjective_objective_alignment": {
+    "section_title": "Wellness Congruence",
+    "current_session_wellness_anchor": {
+      "score_0_100": 84.0,
+      "raw_total_0_25": 21,
+      "band": "Generally Steady Subjective Wellness",
+      "items": {
+        "balanced_centered": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        },
+        "mental_clarity_focus": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        },
+        "physical_energy": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        },
+        "recording_comfort_readiness": {
+          "raw_score_1_5": 5,
+          "normalized_score_0_100": 100.0
+        },
+        "restored_recovered": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        }
+      },
+      "item_pattern": [
+        {
+          "item": "balanced_centered",
+          "question": "How balanced or centered do you feel right now?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 86.666667,
+          "change_from_baseline": -6.666667
+        },
+        {
+          "item": "mental_clarity_focus",
+          "question": "How mentally clear and focused do you feel at this moment?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 86.666667,
+          "change_from_baseline": -6.666667
+        },
+        {
+          "item": "recording_comfort_readiness",
+          "question": "How comfortable and ready do you feel for this recording?",
+          "current_score_0_100": 100.0,
+          "baseline_mean_0_100": 100.0,
+          "change_from_baseline": 0.0
+        },
+        {
+          "item": "restored_recovered",
+          "question": "How restored or recovered do you feel today overall?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 80.0,
+          "change_from_baseline": 0.0
+        },
+        {
+          "item": "physical_energy",
+          "question": "How physically energized do you feel right now?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 66.666667,
+          "change_from_baseline": 13.333333
+        }
+      ]
+    },
+    "baseline_wellness_anchor": {
+      "score_0_100": 84.0,
+      "standard_deviation": 8.640988,
+      "band": "Generally Steady Subjective Wellness",
+      "score_range": [
+        76.0,
+        96.0
+      ],
+      "n_sessions": 3
+    },
+    "current_biovoiceprint": {
+      "rdi_score_0_100": 21.807777,
+      "rdi_band": "Minimal Shift",
+      "baseline_alignment_score_0_100": 78.192223
+    },
+    "baseline_biovoiceprint": {
+      "mean_rdi_score_0_100": 15.76835,
+      "rdi_standard_deviation": 3.865182,
+      "rdi_score_range": [
+        12.424992,
+        21.185148
+      ],
+      "n_sessions": 3
+    },
+    "baseline_relative_comparison": {
+      "subjective_change_points": 0.0,
+      "objective_rdi_change_points": 6.039427,
+      "subjective_strain_z": 0.0,
+      "objective_shift_z": 1.56,
+      "comparison_direction": "Positive standardized values represent greater baseline-relative strain or voice-pattern shift."
+    },
+    "descriptive_index_comparison": {
+      "index_gap": 5.807777,
+      "interpretation_limit": "The Wellness Anchor and BioVoicePrint alignment scores are different constructs. Their raw difference is descriptive only and is not treated as a physiological mismatch."
+    },
+    "comparison_metrics": {
+      "subjective_change_from_baseline": 0.0,
+      "objective_rdi_change_from_baseline": 6.039427,
+      "subjective_objective_gap": 5.807777,
+      "descriptive_index_gap": 5.807777
+    },
+    "alignment_type": {
+      "code": "VOICE_PATTERN_LEADING",
+      "label": "Voice-Pattern Shift With Stable Self-Report",
+      "meaning": "The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence."
+    },
+    "comparison_strength": {
+      "level": "Preliminary",
+      "reason": "The comparison is based on a limited number of paired sessions and should be used for awareness only."
+    },
+    "session_quality": {
+      "recording_quality_passed": true,
+      "noise_floor_passed": true,
+      "microphone_consistency_passed": true,
+      "protocol_completion_passed": true,
+      "vocal_discomfort_reported": false,
+      "acute_context_flags": [],
+      "available_context_flags": [
+        "recent_strenuous_exercise",
+        "high_vocal_use",
+        "dehydration_possible",
+        "poor_sleep",
+        "caffeine_recent",
+        "respiratory_symptoms",
+        "different_recording_device",
+        "unusual_environment"
+      ],
+      "interpretation_allowed": true,
+      "quality_note": "Context flags do not automatically change the score. They explain conditions that may affect interpretation."
+    },
+    "longitudinal_alignment": {
+      "paired_sessions_available": 1,
+      "trend_status": "Not Yet Established",
+      "subjective_trend": "Not Yet Established",
+      "biovoiceprint_trend": "Not Yet Established",
+      "alignment_pattern": "Voice-Pattern Shift With Stable Self-Report",
+      "voice_pattern_shift_with_stable_self_report_count": 1,
+      "self_report_shift_with_stable_voice_pattern_count": 0,
+      "minimum_sessions_for_trend": 5,
+      "trend_note": "Do not interpret a single mismatch as physiology preceding awareness. That can only become a testable hypothesis after repeated paired sessions."
+    },
+    "summary": "Your wellness check-in was 84.0 compared with your usual baseline of 84.0. Your BioVoicePrint RDI was 21.8 compared with your usual baseline RDI of 15.8. The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence. This comparison is preliminary and becomes more meaningful when the same directional pattern repeats across valid paired sessions.",
+    "monitoring_note": "Because both the wellness check-in and BioVoicePrint are compared with their own baselines first, this result strengthens future interpretation without treating the two 0-100 scores as equivalent.",
+    "boundary": "This section compares a self-reported wellness snapshot with a baseline-relative voice-pattern signal. It does not diagnose stress, autonomic dysfunction, disease, or a medical or mental health condition, and it does not assign a cause to either measurement."
+  },
+  "baseline_relative_pattern_comparison": {
+    "rdi_score": {
+      "score": 21.807777,
+      "band": "Minimal Shift",
+      "color": "light_green",
+      "direction": "higher = greater baseline-relative pattern shift"
+    },
+    "stage4_metrics": {
+      "variability_pattern_shift": 26.830649,
+      "harmonic_structure_shift": 15.051121,
+      "transition_continuity_shift": 11.962023,
+      "micro_modulation_shift": 39.608326,
+      "signal_clarity_shift": 16.688561,
+      "distribution_balance_shift": 22.994884,
+      "sustained_phonation_shift": 16.533881,
+      "rdi_score_0_100": 21.807777,
+      "rdi_band": "Minimal Shift",
+      "rdi_color": "light_green",
+      "score_direction": "higher = greater baseline-relative pattern shift"
+    },
+    "stage5_bsi_framework_scores": {
+      "activation_pattern_variability": {
+        "score": 28.767314,
+        "band": "Mild Pattern Shift",
+        "color": "yellow",
+        "direction": "higher = greater baseline-relative pattern shift"
+      },
+      "regulation_consistency_shift": {
+        "score": 14.414765,
+        "band": "Minimal Shift",
+        "color": "light_green",
+        "direction": "higher = greater baseline-relative pattern shift"
+      },
+      "flexibility_range_shift": {
+        "score": 31.073955,
+        "band": "Mild Pattern Shift",
+        "color": "yellow",
+        "direction": "higher = greater baseline-relative pattern shift"
+      },
+      "return_to_baseline_window_shift": {
+        "score": 17.271882,
+        "band": "Minimal Shift",
+        "color": "light_green",
+        "direction": "higher = greater baseline-relative pattern shift"
+      },
+      "adaptive_transition_pattern_shift": {
+        "score": 11.474358,
+        "band": "Baseline Consistent",
+        "color": "green",
+        "direction": "higher = greater baseline-relative pattern shift"
+      },
+      "overall_voice_pattern_shift": {
+        "score": 19.767495,
+        "band": "Minimal Shift",
+        "color": "light_green",
+        "direction": "higher = greater baseline-relative pattern shift"
+      }
+    },
+    "score_direction": "higher = greater baseline-relative pattern shift"
+  },
+  "longitudinal_pattern_tracking": {
+    "comparison_session_count": 1,
+    "comparison_model_version": "bsi_comparison_zscore_range_v4_reliability_flags",
+    "rdi_trend_slope": 0.0,
+    "overall_pattern_shift_slope": 0.0,
+    "regulation_consistency_shift_slope": 0.0,
+    "return_to_baseline_window_shift_slope": 0.0,
+    "adaptive_transition_pattern_shift_slope": 0.0,
+    "stability_window_status": "provisional",
+    "variability_cluster": "insufficient_comparison_history",
+    "trend_note": "Trend values become more meaningful after several comparison sessions."
+  },
+  "customer_facing_biovoiceprint": {
+    "regulation_stability": {
+      "score": 81.43397,
+      "label": "Stable",
+      "source_shift_score": 18.56603,
+      "direction": "higher = closer to personal baseline"
+    },
+    "adaptive_capacity": {
+      "score": 77.058896,
+      "label": "Watch",
+      "source_shift_score": 22.941104,
+      "direction": "higher = more baseline-consistent adaptive voice-pattern behavior"
+    },
+    "recovery_consistency": {
+      "score": 84.505576,
+      "label": "Stable",
+      "source_shift_score": 15.494424,
+      "direction": "higher = more baseline-consistent return-to-baseline voice behavior"
+    },
+    "voice_pattern_stability": {
+      "score": 80.232505,
+      "label": "Stable",
+      "source_shift_score": 19.767495,
+      "source_shift_band": "Minimal Shift",
+      "source_shift_color": "light_green",
+      "direction": "higher = closer to personal baseline"
+    },
+    "baseline_alignment": {
+      "score": 78.192223,
+      "label": "Watch",
+      "source_shift_score": 21.807777,
+      "source_shift_band": "Minimal Shift",
+      "source_shift_color": "light_green",
+      "direction": "higher = closer to personal baseline"
+    },
+    "trend_direction": "Not enough sessions yet",
+    "plain_language_interpretation": "Your recorded voice patterns stayed close to your personal baseline. Small variations may be present; this result is for awareness and longitudinal comparison only."
+  },
+  "dashboard_push": {
+    "member_app": {
+      "display_score": 81.43397,
+      "display_label": "Watch",
+      "display_color": "light_green",
+      "display_language": "BioVoiceprint comparison to your personal baseline.",
+      "regulation_stability": {
+        "score": 81.43397,
+        "label": "Stable",
+        "source_shift_score": 18.56603,
+        "direction": "higher = closer to personal baseline"
+      },
+      "adaptive_capacity": {
+        "score": 77.058896,
+        "label": "Watch",
+        "source_shift_score": 22.941104,
+        "direction": "higher = more baseline-consistent adaptive voice-pattern behavior"
+      },
+      "recovery_consistency": {
+        "score": 84.505576,
+        "label": "Stable",
+        "source_shift_score": 15.494424,
+        "direction": "higher = more baseline-consistent return-to-baseline voice behavior"
+      },
+      "voice_pattern_stability": {
+        "score": 80.232505,
+        "label": "Stable",
+        "source_shift_score": 19.767495,
+        "source_shift_band": "Minimal Shift",
+        "source_shift_color": "light_green",
+        "direction": "higher = closer to personal baseline"
+      },
+      "plain_language_interpretation": "Your recorded voice patterns stayed close to your personal baseline. Small variations may be present; this result is for awareness and longitudinal comparison only.",
+      "subjective_objective_alignment": {
+        "section_title": "Wellness Congruence",
+        "current_session_wellness_anchor": {
+          "score_0_100": 84.0,
+          "raw_total_0_25": 21,
+          "band": "Generally Steady Subjective Wellness",
+          "items": {
+            "balanced_centered": {
+              "raw_score_1_5": 4,
+              "normalized_score_0_100": 80.0
+            },
+            "mental_clarity_focus": {
+              "raw_score_1_5": 4,
+              "normalized_score_0_100": 80.0
+            },
+            "physical_energy": {
+              "raw_score_1_5": 4,
+              "normalized_score_0_100": 80.0
+            },
+            "recording_comfort_readiness": {
+              "raw_score_1_5": 5,
+              "normalized_score_0_100": 100.0
+            },
+            "restored_recovered": {
+              "raw_score_1_5": 4,
+              "normalized_score_0_100": 80.0
+            }
+          },
+          "item_pattern": [
+            {
+              "item": "balanced_centered",
+              "question": "How balanced or centered do you feel right now?",
+              "current_score_0_100": 80.0,
+              "baseline_mean_0_100": 86.666667,
+              "change_from_baseline": -6.666667
+            },
+            {
+              "item": "mental_clarity_focus",
+              "question": "How mentally clear and focused do you feel at this moment?",
+              "current_score_0_100": 80.0,
+              "baseline_mean_0_100": 86.666667,
+              "change_from_baseline": -6.666667
+            },
+            {
+              "item": "recording_comfort_readiness",
+              "question": "How comfortable and ready do you feel for this recording?",
+              "current_score_0_100": 100.0,
+              "baseline_mean_0_100": 100.0,
+              "change_from_baseline": 0.0
+            },
+            {
+              "item": "restored_recovered",
+              "question": "How restored or recovered do you feel today overall?",
+              "current_score_0_100": 80.0,
+              "baseline_mean_0_100": 80.0,
+              "change_from_baseline": 0.0
+            },
+            {
+              "item": "physical_energy",
+              "question": "How physically energized do you feel right now?",
+              "current_score_0_100": 80.0,
+              "baseline_mean_0_100": 66.666667,
+              "change_from_baseline": 13.333333
+            }
+          ]
+        },
+        "baseline_wellness_anchor": {
+          "score_0_100": 84.0,
+          "standard_deviation": 8.640988,
+          "band": "Generally Steady Subjective Wellness",
+          "score_range": [
+            76.0,
+            96.0
+          ],
+          "n_sessions": 3
+        },
+        "current_biovoiceprint": {
+          "rdi_score_0_100": 21.807777,
+          "rdi_band": "Minimal Shift",
+          "baseline_alignment_score_0_100": 78.192223
+        },
+        "baseline_biovoiceprint": {
+          "mean_rdi_score_0_100": 15.76835,
+          "rdi_standard_deviation": 3.865182,
+          "rdi_score_range": [
+            12.424992,
+            21.185148
+          ],
+          "n_sessions": 3
+        },
+        "baseline_relative_comparison": {
+          "subjective_change_points": 0.0,
+          "objective_rdi_change_points": 6.039427,
+          "subjective_strain_z": 0.0,
+          "objective_shift_z": 1.56,
+          "comparison_direction": "Positive standardized values represent greater baseline-relative strain or voice-pattern shift."
+        },
+        "descriptive_index_comparison": {
+          "index_gap": 5.807777,
+          "interpretation_limit": "The Wellness Anchor and BioVoicePrint alignment scores are different constructs. Their raw difference is descriptive only and is not treated as a physiological mismatch."
+        },
+        "comparison_metrics": {
+          "subjective_change_from_baseline": 0.0,
+          "objective_rdi_change_from_baseline": 6.039427,
+          "subjective_objective_gap": 5.807777,
+          "descriptive_index_gap": 5.807777
+        },
+        "alignment_type": {
+          "code": "VOICE_PATTERN_LEADING",
+          "label": "Voice-Pattern Shift With Stable Self-Report",
+          "meaning": "The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence."
+        },
+        "comparison_strength": {
+          "level": "Preliminary",
+          "reason": "The comparison is based on a limited number of paired sessions and should be used for awareness only."
+        },
+        "session_quality": {
+          "recording_quality_passed": true,
+          "noise_floor_passed": true,
+          "microphone_consistency_passed": true,
+          "protocol_completion_passed": true,
+          "vocal_discomfort_reported": false,
+          "acute_context_flags": [],
+          "available_context_flags": [
+            "recent_strenuous_exercise",
+            "high_vocal_use",
+            "dehydration_possible",
+            "poor_sleep",
+            "caffeine_recent",
+            "respiratory_symptoms",
+            "different_recording_device",
+            "unusual_environment"
+          ],
+          "interpretation_allowed": true,
+          "quality_note": "Context flags do not automatically change the score. They explain conditions that may affect interpretation."
+        },
+        "longitudinal_alignment": {
+          "paired_sessions_available": 1,
+          "trend_status": "Not Yet Established",
+          "subjective_trend": "Not Yet Established",
+          "biovoiceprint_trend": "Not Yet Established",
+          "alignment_pattern": "Voice-Pattern Shift With Stable Self-Report",
+          "voice_pattern_shift_with_stable_self_report_count": 1,
+          "self_report_shift_with_stable_voice_pattern_count": 0,
+          "minimum_sessions_for_trend": 5,
+          "trend_note": "Do not interpret a single mismatch as physiology preceding awareness. That can only become a testable hypothesis after repeated paired sessions."
+        },
+        "summary": "Your wellness check-in was 84.0 compared with your usual baseline of 84.0. Your BioVoicePrint RDI was 21.8 compared with your usual baseline RDI of 15.8. The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence. This comparison is preliminary and becomes more meaningful when the same directional pattern repeats across valid paired sessions.",
+        "monitoring_note": "Because both the wellness check-in and BioVoicePrint are compared with their own baselines first, this result strengthens future interpretation without treating the two 0-100 scores as equivalent.",
+        "boundary": "This section compares a self-reported wellness snapshot with a baseline-relative voice-pattern signal. It does not diagnose stress, autonomic dysfunction, disease, or a medical or mental health condition, and it does not assign a cause to either measurement."
+      }
+    },
+    "provider_dashboard": {
+      "rdi_score_0_100": 21.807777,
+      "overall_voice_pattern_shift": 19.767495,
+      "comparison_session_count": 1,
+      "trend_status": "provisional",
+      "subjective_objective_alignment_type": "VOICE_PATTERN_LEADING",
+      "subjective_objective_alignment_label": "Voice-Pattern Shift With Stable Self-Report",
+      "subjective_objective_gap": 5.807777
+    }
+  },
+  "language_guardrails": {
+    "foundational_disclaimer": "Voice regulation analysis evaluates acoustic and regulatory patterns within recorded speech and does not diagnose medical, psychological, or neurological conditions.",
+    "interpretation_boundary": "Scores describe baseline-relative voice-pattern shifts only; they do not directly determine emotional, digestive, inflammatory, metabolic, or recovery states.",
+    "use_for": "Awareness, pattern recognition, and longitudinal comparison only."
+  }
+}

@@ -1,1 +1,303 @@
-{"report_title":"BioVoicePrint Performance and Wellness Insights","participant_label":"Frank","comparison_session_id":"Frank Comparison Session 1","overall_result":{"rdi_score_0_100":21.8,"rdi_band":"Minimal Shift","rdi_color":"light_green","score_direction":"Higher score = greater shift from personal baseline","plain_language_summary":"Frank's BioVoicePrint shows stable overall pattern with small localized shifts. The current RDI is 21.8/100, which falls in the Minimal Shift range."},"overall_biovoiceprint_summary":"The overall voice pattern remains close to baseline, though a few markers may be moving more than usual.","vocal_readiness_and_performance":"The voice appears generally ready, with possible benefit from a brief warm-up and steady pacing. Localized shifts may reflect normal variation, vocal use, hydration, workload, fatigue, or recording context.","what_your_voice_is_telling_you":"This reflects how widely voice energy spreads across frequencies. A shift may show a different vocal strategy or a temporary change in vocal demand.","key_findings":{"baseline_consistent_markers":6,"minimal_shift_markers":3,"mild_shift_markers":1,"moderate_shift_markers":5,"significant_shift_markers":0,"extreme_shift_markers":0,"outside_personal_range_markers":4,"strongest_pattern_area":"The strongest pattern area was micro-modulation, which reflects tiny voice fluctuations worth monitoring with fatigue, hydration, workload, and vocal-use context. Score: 39.6/100.","most_shifted_markers":[{"feature_name":"spectral_bandwidth_hz","display_name":"frequency spread","score_0_100":48.3,"z_score":1.93,"band":"Moderate Pattern Shift","color":"orange","direction":"higher than baseline","common_language_meaning":"This reflects how widely voice energy spreads across frequencies. A shift may show a different vocal strategy or a temporary change in vocal demand."},{"feature_name":"shimmer_local","display_name":"tiny volume variation","score_0_100":45.4,"z_score":1.82,"band":"Moderate Pattern Shift","color":"orange","direction":"higher than baseline","common_language_meaning":"This reflects tiny volume variations during sustained voice. A shift may suggest the voice used slightly more effort to stay smooth."},{"feature_name":"approximate_entropy","display_name":"voice pattern complexity","score_0_100":40.9,"z_score":-1.63,"band":"Moderate Pattern Shift","color":"orange","direction":"lower than baseline","common_language_meaning":"This reflects how predictable or irregular the voice pattern appears. A shift may show a change in pattern complexity."},{"feature_name":"tremor_band_power_3_12hz","display_name":"micro-modulation activity","score_0_100":39.9,"z_score":1.6,"band":"Moderate Pattern Shift","color":"orange","direction":"higher than baseline","common_language_meaning":"This reflects subtle micro-modulation in the voice. A shift may be useful to watch alongside fatigue, hydration, workload, and vocal-use context."},{"feature_name":"lyapunov_proxy","display_name":"dynamic voice stability","score_0_100":39.0,"z_score":1.56,"band":"Moderate Pattern Shift","color":"orange","direction":"higher than baseline","common_language_meaning":"This reflects dynamic voice stability. A shift may show a change in how steadily the voice pattern is maintained over short windows."}]},"before_you_speak_or_present":[{"title":"Hydrate before speaking","explanation":"Sip water consistently before speaking so hydration is already in place before the presentation begins."},{"title":"Use slow breath pacing","explanation":"Take several slow breaths before beginning, letting the shoulders and jaw soften while the breath expands through the ribs."},{"title":"Warm up gently","explanation":"Use gentle humming, lip trills, or comfortable vowel sounds for a few minutes, focusing on ease rather than volume."},{"title":"Start slightly slower","explanation":"Starting a little slower can help breath, voice, and pacing settle before speaking demand increases."},{"title":"Reduce vocal effort","explanation":"Because small pitch or volume variations shifted, avoid forcing volume and use breath-supported projection."}],"performance_readiness_summary":"The voice is ready overall; a few minutes of preparation may support ease, steadiness, and projection.","preventive_wellness_insight":{"summary":"This result suggests stable overall voice-pattern regulation with a few early shift signals.","context":"These shifts may be useful to review alongside sleep, hydration, workload, vocal use, and recovery context."},"subjective_objective_alignment":{"section_title":"Wellness Congruence","current_session_wellness_anchor":{"score_0_100":84.0,"raw_total_0_25":21,"band":"Generally Steady Subjective Wellness","items":{"balanced_centered":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"mental_clarity_focus":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"physical_energy":{"raw_score_1_5":4,"normalized_score_0_100":80.0},"recording_comfort_readiness":{"raw_score_1_5":5,"normalized_score_0_100":100.0},"restored_recovered":{"raw_score_1_5":4,"normalized_score_0_100":80.0}},"item_pattern":[{"item":"balanced_centered","question":"How balanced or centered do you feel right now?","current_score_0_100":80.0,"baseline_mean_0_100":86.666667,"change_from_baseline":-6.666667},{"item":"mental_clarity_focus","question":"How mentally clear and focused do you feel at this moment?","current_score_0_100":80.0,"baseline_mean_0_100":86.666667,"change_from_baseline":-6.666667},{"item":"recording_comfort_readiness","question":"How comfortable and ready do you feel for this recording?","current_score_0_100":100.0,"baseline_mean_0_100":100.0,"change_from_baseline":0.0},{"item":"restored_recovered","question":"How restored or recovered do you feel today overall?","current_score_0_100":80.0,"baseline_mean_0_100":80.0,"change_from_baseline":0.0},{"item":"physical_energy","question":"How physically energized do you feel right now?","current_score_0_100":80.0,"baseline_mean_0_100":66.666667,"change_from_baseline":13.333333}]},"baseline_wellness_anchor":{"score_0_100":84.0,"standard_deviation":8.640988,"band":"Generally Steady Subjective Wellness","score_range":[76.0,96.0],"n_sessions":3},"current_biovoiceprint":{"rdi_score_0_100":21.807777,"rdi_band":"Minimal Shift","baseline_alignment_score_0_100":78.192223},"baseline_biovoiceprint":{"mean_rdi_score_0_100":15.76835,"rdi_standard_deviation":3.865182,"rdi_score_range":[12.424992,21.185148],"n_sessions":3},"baseline_relative_comparison":{"subjective_change_points":0.0,"objective_rdi_change_points":6.039427,"subjective_strain_z":0.0,"objective_shift_z":1.56,"comparison_direction":"Positive standardized values represent greater baseline-relative strain or voice-pattern shift."},"descriptive_index_comparison":{"index_gap":5.807777,"interpretation_limit":"The Wellness Anchor and BioVoicePrint alignment scores are different constructs. Their raw difference is descriptive only and is not treated as a physiological mismatch."},"comparison_metrics":{"subjective_change_from_baseline":0.0,"objective_rdi_change_from_baseline":6.039427,"subjective_objective_gap":5.807777,"descriptive_index_gap":5.807777},"alignment_type":{"code":"VOICE_PATTERN_LEADING","label":"Voice-Pattern Shift With Stable Self-Report","meaning":"The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence."},"comparison_strength":{"level":"Preliminary","reason":"The comparison is based on a limited number of paired sessions and should be used for awareness only."},"session_quality":{"recording_quality_passed":true,"noise_floor_passed":true,"microphone_consistency_passed":true,"protocol_completion_passed":true,"vocal_discomfort_reported":false,"acute_context_flags":[],"available_context_flags":["recent_strenuous_exercise","high_vocal_use","dehydration_possible","poor_sleep","caffeine_recent","respiratory_symptoms","different_recording_device","unusual_environment"],"interpretation_allowed":true,"quality_note":"Context flags do not automatically change the score. They explain conditions that may affect interpretation."},"longitudinal_alignment":{"paired_sessions_available":1,"trend_status":"Not Yet Established","subjective_trend":"Not Yet Established","biovoiceprint_trend":"Not Yet Established","alignment_pattern":"Voice-Pattern Shift With Stable Self-Report","voice_pattern_shift_with_stable_self_report_count":1,"self_report_shift_with_stable_voice_pattern_count":0,"minimum_sessions_for_trend":5,"trend_note":"Do not interpret a single mismatch as physiology preceding awareness. That can only become a testable hypothesis after repeated paired sessions."},"summary":"Your wellness check-in was 84.0 compared with your usual baseline of 84.0. Your BioVoicePrint RDI was 21.8 compared with your usual baseline RDI of 15.8. The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence. This comparison is preliminary and becomes more meaningful when the same directional pattern repeats across valid paired sessions.","monitoring_note":"Because both the wellness check-in and BioVoicePrint are compared with their own baselines first, this result strengthens future interpretation without treating the two 0-100 scores as equivalent.","boundary":"This section compares a self-reported wellness snapshot with a baseline-relative voice-pattern signal. It does not diagnose stress, autonomic dysfunction, disease, or a medical or mental health condition, and it does not assign a cause to either measurement."},"what_to_watch_over_time":{"summary":"This recording is a point-in-time snapshot. Trend interpretation becomes more useful after several comparison sessions.","tracking_recommendations":["Repeat recordings under similar conditions.","Compare changes with sleep quality, hydration, workload, vocal use, fatigue, and recovery context.","Look for repeated patterns rather than reacting to one isolated reading.","Watch whether shifted markers return to baseline, remain similar, or continue increasing."]},"customer_facing_scores":{"regulation_stability":{"score":81.43397,"label":"Stable","source_shift_score":18.56603,"direction":"higher = closer to personal baseline"},"adaptive_capacity":{"score":77.058896,"label":"Watch","source_shift_score":22.941104,"direction":"higher = more baseline-consistent adaptive voice-pattern behavior"},"recovery_consistency":{"score":84.505576,"label":"Stable","source_shift_score":15.494424,"direction":"higher = more baseline-consistent return-to-baseline voice behavior"},"voice_pattern_stability":{"score":80.232505,"label":"Stable","source_shift_score":19.767495,"source_shift_band":"Minimal Shift","source_shift_color":"light_green","direction":"higher = closer to personal baseline"},"baseline_alignment":{"score":78.192223,"label":"Watch","source_shift_score":21.807777,"source_shift_band":"Minimal Shift","source_shift_color":"light_green","direction":"higher = closer to personal baseline"},"trend_direction":"Not enough sessions yet","plain_language_interpretation":"Your recorded voice patterns stayed close to your personal baseline. Small variations may be present; this result is for awareness and longitudinal comparison only."},"safe_disclaimer":"BioVoicePrint is a non-diagnostic wellness and performance signal. It does not diagnose disease, emotional states, anxiety, depression, PTSD, or any medical or mental health condition. It reflects voice-derived patterns compared with the individual's own baseline and should be interpreted alongside other wellness inputs."}
+{
+  "report_title": "BioVoicePrint Performance and Wellness Insights",
+  "participant_label": "Frank",
+  "comparison_session_id": "Frank Comparison Session 1",
+  "overall_result": {
+    "rdi_score_0_100": 21.8,
+    "rdi_band": "Minimal Shift",
+    "rdi_color": "light_green",
+    "score_direction": "Higher score = greater shift from personal baseline",
+    "plain_language_summary": "Frank's BioVoicePrint shows stable overall pattern with small localized shifts. The current RDI is 21.8/100, which falls in the Minimal Shift range."
+  },
+  "overall_biovoiceprint_summary": "The overall voice pattern remains close to baseline, though a few markers may be moving more than usual.",
+  "vocal_readiness_and_performance": "The voice appears generally ready, with possible benefit from a brief warm-up and steady pacing. Localized shifts may reflect normal variation, vocal use, hydration, workload, fatigue, or recording context.",
+  "what_your_voice_is_telling_you": "This reflects how widely voice energy spreads across frequencies. A shift may show a different vocal strategy or a temporary change in vocal demand.",
+  "key_findings": {
+    "baseline_consistent_markers": 6,
+    "minimal_shift_markers": 3,
+    "mild_shift_markers": 1,
+    "moderate_shift_markers": 5,
+    "significant_shift_markers": 0,
+    "extreme_shift_markers": 0,
+    "outside_personal_range_markers": 4,
+    "strongest_pattern_area": "The strongest pattern area was micro-modulation, which reflects tiny voice fluctuations worth monitoring with fatigue, hydration, workload, and vocal-use context. Score: 39.6/100.",
+    "most_shifted_markers": [
+      {
+        "feature_name": "spectral_bandwidth_hz",
+        "display_name": "frequency spread",
+        "score_0_100": 48.3,
+        "z_score": 1.93,
+        "band": "Moderate Pattern Shift",
+        "color": "orange",
+        "direction": "higher than baseline",
+        "common_language_meaning": "This reflects how widely voice energy spreads across frequencies. A shift may show a different vocal strategy or a temporary change in vocal demand."
+      },
+      {
+        "feature_name": "shimmer_local",
+        "display_name": "tiny volume variation",
+        "score_0_100": 45.4,
+        "z_score": 1.82,
+        "band": "Moderate Pattern Shift",
+        "color": "orange",
+        "direction": "higher than baseline",
+        "common_language_meaning": "This reflects tiny volume variations during sustained voice. A shift may suggest the voice used slightly more effort to stay smooth."
+      },
+      {
+        "feature_name": "approximate_entropy",
+        "display_name": "voice pattern complexity",
+        "score_0_100": 40.9,
+        "z_score": -1.63,
+        "band": "Moderate Pattern Shift",
+        "color": "orange",
+        "direction": "lower than baseline",
+        "common_language_meaning": "This reflects how predictable or irregular the voice pattern appears. A shift may show a change in pattern complexity."
+      },
+      {
+        "feature_name": "tremor_band_power_3_12hz",
+        "display_name": "micro-modulation activity",
+        "score_0_100": 39.9,
+        "z_score": 1.6,
+        "band": "Moderate Pattern Shift",
+        "color": "orange",
+        "direction": "higher than baseline",
+        "common_language_meaning": "This reflects subtle micro-modulation in the voice. A shift may be useful to watch alongside fatigue, hydration, workload, and vocal-use context."
+      },
+      {
+        "feature_name": "lyapunov_proxy",
+        "display_name": "dynamic voice stability",
+        "score_0_100": 39.0,
+        "z_score": 1.56,
+        "band": "Moderate Pattern Shift",
+        "color": "orange",
+        "direction": "higher than baseline",
+        "common_language_meaning": "This reflects dynamic voice stability. A shift may show a change in how steadily the voice pattern is maintained over short windows."
+      }
+    ]
+  },
+  "before_you_speak_or_present": [
+    {
+      "title": "Hydrate before speaking",
+      "explanation": "Sip water consistently before speaking so hydration is already in place before the presentation begins."
+    },
+    {
+      "title": "Use slow breath pacing",
+      "explanation": "Take several slow breaths before beginning, letting the shoulders and jaw soften while the breath expands through the ribs."
+    },
+    {
+      "title": "Warm up gently",
+      "explanation": "Use gentle humming, lip trills, or comfortable vowel sounds for a few minutes, focusing on ease rather than volume."
+    },
+    {
+      "title": "Start slightly slower",
+      "explanation": "Starting a little slower can help breath, voice, and pacing settle before speaking demand increases."
+    },
+    {
+      "title": "Reduce vocal effort",
+      "explanation": "Because small pitch or volume variations shifted, avoid forcing volume and use breath-supported projection."
+    }
+  ],
+  "performance_readiness_summary": "The voice is ready overall; a few minutes of preparation may support ease, steadiness, and projection.",
+  "preventive_wellness_insight": {
+    "summary": "This result suggests stable overall voice-pattern regulation with a few early shift signals.",
+    "context": "These shifts may be useful to review alongside sleep, hydration, workload, vocal use, and recovery context."
+  },
+  "subjective_objective_alignment": {
+    "section_title": "Wellness Congruence",
+    "current_session_wellness_anchor": {
+      "score_0_100": 84.0,
+      "raw_total_0_25": 21,
+      "band": "Generally Steady Subjective Wellness",
+      "items": {
+        "balanced_centered": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        },
+        "mental_clarity_focus": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        },
+        "physical_energy": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        },
+        "recording_comfort_readiness": {
+          "raw_score_1_5": 5,
+          "normalized_score_0_100": 100.0
+        },
+        "restored_recovered": {
+          "raw_score_1_5": 4,
+          "normalized_score_0_100": 80.0
+        }
+      },
+      "item_pattern": [
+        {
+          "item": "balanced_centered",
+          "question": "How balanced or centered do you feel right now?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 86.666667,
+          "change_from_baseline": -6.666667
+        },
+        {
+          "item": "mental_clarity_focus",
+          "question": "How mentally clear and focused do you feel at this moment?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 86.666667,
+          "change_from_baseline": -6.666667
+        },
+        {
+          "item": "recording_comfort_readiness",
+          "question": "How comfortable and ready do you feel for this recording?",
+          "current_score_0_100": 100.0,
+          "baseline_mean_0_100": 100.0,
+          "change_from_baseline": 0.0
+        },
+        {
+          "item": "restored_recovered",
+          "question": "How restored or recovered do you feel today overall?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 80.0,
+          "change_from_baseline": 0.0
+        },
+        {
+          "item": "physical_energy",
+          "question": "How physically energized do you feel right now?",
+          "current_score_0_100": 80.0,
+          "baseline_mean_0_100": 66.666667,
+          "change_from_baseline": 13.333333
+        }
+      ]
+    },
+    "baseline_wellness_anchor": {
+      "score_0_100": 84.0,
+      "standard_deviation": 8.640988,
+      "band": "Generally Steady Subjective Wellness",
+      "score_range": [
+        76.0,
+        96.0
+      ],
+      "n_sessions": 3
+    },
+    "current_biovoiceprint": {
+      "rdi_score_0_100": 21.807777,
+      "rdi_band": "Minimal Shift",
+      "baseline_alignment_score_0_100": 78.192223
+    },
+    "baseline_biovoiceprint": {
+      "mean_rdi_score_0_100": 15.76835,
+      "rdi_standard_deviation": 3.865182,
+      "rdi_score_range": [
+        12.424992,
+        21.185148
+      ],
+      "n_sessions": 3
+    },
+    "baseline_relative_comparison": {
+      "subjective_change_points": 0.0,
+      "objective_rdi_change_points": 6.039427,
+      "subjective_strain_z": 0.0,
+      "objective_shift_z": 1.56,
+      "comparison_direction": "Positive standardized values represent greater baseline-relative strain or voice-pattern shift."
+    },
+    "descriptive_index_comparison": {
+      "index_gap": 5.807777,
+      "interpretation_limit": "The Wellness Anchor and BioVoicePrint alignment scores are different constructs. Their raw difference is descriptive only and is not treated as a physiological mismatch."
+    },
+    "comparison_metrics": {
+      "subjective_change_from_baseline": 0.0,
+      "objective_rdi_change_from_baseline": 6.039427,
+      "subjective_objective_gap": 5.807777,
+      "descriptive_index_gap": 5.807777
+    },
+    "alignment_type": {
+      "code": "VOICE_PATTERN_LEADING",
+      "label": "Voice-Pattern Shift With Stable Self-Report",
+      "meaning": "The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence."
+    },
+    "comparison_strength": {
+      "level": "Preliminary",
+      "reason": "The comparison is based on a limited number of paired sessions and should be used for awareness only."
+    },
+    "session_quality": {
+      "recording_quality_passed": true,
+      "noise_floor_passed": true,
+      "microphone_consistency_passed": true,
+      "protocol_completion_passed": true,
+      "vocal_discomfort_reported": false,
+      "acute_context_flags": [],
+      "available_context_flags": [
+        "recent_strenuous_exercise",
+        "high_vocal_use",
+        "dehydration_possible",
+        "poor_sleep",
+        "caffeine_recent",
+        "respiratory_symptoms",
+        "different_recording_device",
+        "unusual_environment"
+      ],
+      "interpretation_allowed": true,
+      "quality_note": "Context flags do not automatically change the score. They explain conditions that may affect interpretation."
+    },
+    "longitudinal_alignment": {
+      "paired_sessions_available": 1,
+      "trend_status": "Not Yet Established",
+      "subjective_trend": "Not Yet Established",
+      "biovoiceprint_trend": "Not Yet Established",
+      "alignment_pattern": "Voice-Pattern Shift With Stable Self-Report",
+      "voice_pattern_shift_with_stable_self_report_count": 1,
+      "self_report_shift_with_stable_voice_pattern_count": 0,
+      "minimum_sessions_for_trend": 5,
+      "trend_note": "Do not interpret a single mismatch as physiology preceding awareness. That can only become a testable hypothesis after repeated paired sessions."
+    },
+    "summary": "Your wellness check-in was 84.0 compared with your usual baseline of 84.0. Your BioVoicePrint RDI was 21.8 compared with your usual baseline RDI of 15.8. The person feels close to their usual state, while the voice pattern shows greater-than-usual change. This may reflect early variation, recording context, vocal use, hydration, fatigue, or another unassigned influence. This comparison is preliminary and becomes more meaningful when the same directional pattern repeats across valid paired sessions.",
+    "monitoring_note": "Because both the wellness check-in and BioVoicePrint are compared with their own baselines first, this result strengthens future interpretation without treating the two 0-100 scores as equivalent.",
+    "boundary": "This section compares a self-reported wellness snapshot with a baseline-relative voice-pattern signal. It does not diagnose stress, autonomic dysfunction, disease, or a medical or mental health condition, and it does not assign a cause to either measurement."
+  },
+  "what_to_watch_over_time": {
+    "summary": "This recording is a point-in-time snapshot. Trend interpretation becomes more useful after several comparison sessions.",
+    "tracking_recommendations": [
+      "Repeat recordings under similar conditions.",
+      "Compare changes with sleep quality, hydration, workload, vocal use, fatigue, and recovery context.",
+      "Look for repeated patterns rather than reacting to one isolated reading.",
+      "Watch whether shifted markers return to baseline, remain similar, or continue increasing."
+    ]
+  },
+  "customer_facing_scores": {
+    "regulation_stability": {
+      "score": 81.43397,
+      "label": "Stable",
+      "source_shift_score": 18.56603,
+      "direction": "higher = closer to personal baseline"
+    },
+    "adaptive_capacity": {
+      "score": 77.058896,
+      "label": "Watch",
+      "source_shift_score": 22.941104,
+      "direction": "higher = more baseline-consistent adaptive voice-pattern behavior"
+    },
+    "recovery_consistency": {
+      "score": 84.505576,
+      "label": "Stable",
+      "source_shift_score": 15.494424,
+      "direction": "higher = more baseline-consistent return-to-baseline voice behavior"
+    },
+    "voice_pattern_stability": {
+      "score": 80.232505,
+      "label": "Stable",
+      "source_shift_score": 19.767495,
+      "source_shift_band": "Minimal Shift",
+      "source_shift_color": "light_green",
+      "direction": "higher = closer to personal baseline"
+    },
+    "baseline_alignment": {
+      "score": 78.192223,
+      "label": "Watch",
+      "source_shift_score": 21.807777,
+      "source_shift_band": "Minimal Shift",
+      "source_shift_color": "light_green",
+      "direction": "higher = closer to personal baseline"
+    },
+    "trend_direction": "Not enough sessions yet",
+    "plain_language_interpretation": "Your recorded voice patterns stayed close to your personal baseline. Small variations may be present; this result is for awareness and longitudinal comparison only."
+  },
+  "safe_disclaimer": "BioVoicePrint is a non-diagnostic wellness and performance signal. It does not diagnose disease, emotional states, anxiety, depression, PTSD, or any medical or mental health condition. It reflects voice-derived patterns compared with the individual's own baseline and should be interpreted alongside other wellness inputs."
+}

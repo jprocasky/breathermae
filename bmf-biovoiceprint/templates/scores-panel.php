@@ -1,6 +1,20 @@
 <?php
 /**
  * Scores dashboard markup. Variables set by BMF_BioVoice_Shortcodes_Scores::shortcode_scores().
+ *
+ * @var string $class
+ * @var array  $meta
+ * @var float|null $rdi_score
+ * @var string $rdi_band
+ * @var string $rdi_color
+ * @var array  $rdi
+ * @var array  $customer
+ * @var bool   $has_customer
+ * @var array  $customer_score_keys
+ * @var array  $stage5
+ * @var array  $framework_keys
+ * @var array  $radar_labels
+ * @var string $chart_id
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

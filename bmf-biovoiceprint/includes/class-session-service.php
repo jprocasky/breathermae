@@ -335,12 +335,53 @@ class BMF_BioVoice_Session_Service {
 		}
 
 		$complete = ( $next_step === null && ! empty( $steps ) );
-		$final_n  = BMF_BioVoice_Repository::count_final_groups( (int) $group['user_id'], $group['purpose'] );
+		$user_id  = (int) $group['user_id'];
+		$purpose  = sanitize_key( (string) ( $group['purpose'] ?? 'baseline' ) ) ?: 'baseline';
 
-		// Include final status in progress count once this group is finalized.
+		$baseline_final   = BMF_BioVoice_Repository::count_final_groups( $user_id, 'baseline' );
+		$comparison_final = BMF_BioVoice_Repository::count_final_groups( $user_id, 'comparison' );
+		$ongoing_final    = BMF_BioVoice_Repository::count_final_groups( $user_id, 'ongoing' );
+
+		$final_n = BMF_BioVoice_Repository::count_final_groups( $user_id, $purpose );
+
+		// Include this group in the purpose count once its steps are done (even before is_final flip).
 		$progress_n = $final_n;
 		if ( $complete && empty( $group['is_final'] ) ) {
 			$progress_n = $final_n + 1;
+		}
+
+		// Effective counts for UI after this group completes (if applicable).
+		$baseline_n   = $baseline_final;
+		$comparison_n = $comparison_final;
+		$ongoing_n    = $ongoing_final;
+		if ( $complete && empty( $group['is_final'] ) ) {
+			if ( $purpose === 'baseline' ) {
+				$baseline_n = $baseline_final + 1;
+			} elseif ( $purpose === 'comparison' ) {
+				$comparison_n = $comparison_final + 1;
+			} elseif ( $purpose === 'ongoing' ) {
+				$ongoing_n = $ongoing_final + 1;
+			}
+		}
+
+		$baseline_required  = self::BASELINE_REQUIRED;
+		$comparison_target  = self::COMPARISON_TARGET_DEFAULT;
+		$baseline_complete  = $baseline_n >= $baseline_required;
+
+		// Next purpose the wizard should open after this group.
+		if ( ! $baseline_complete ) {
+			$recommended_purpose = 'baseline';
+		} elseif ( $comparison_n < $comparison_target ) {
+			$recommended_purpose = 'comparison';
+		} else {
+			$recommended_purpose = 'ongoing';
+		}
+
+		$purpose_target = null;
+		if ( $purpose === 'baseline' ) {
+			$purpose_target = $baseline_required;
+		} elseif ( $purpose === 'comparison' ) {
+			$purpose_target = $comparison_target;
 		}
 
 		$formatted_steps = [];
@@ -352,7 +393,7 @@ class BMF_BioVoice_Session_Service {
 			'group_id'          => (int) $group['id'],
 			'protocol_id'       => (int) $group['protocol_id'],
 			'protocol_version'  => $group['protocol_version'],
-			'purpose'           => $group['purpose'],
+			'purpose'           => $purpose,
 			'status'            => $group['status'],
 			'is_final'          => (bool) $group['is_final'],
 			'device_mismatch'   => (bool) $group['device_mismatch'],
@@ -363,9 +404,23 @@ class BMF_BioVoice_Session_Service {
 			'next_step'         => $next_step,
 			'steps'             => $formatted_steps,
 			'is_group_complete' => $complete,
+			// Back-compat for older wizard builds (always baseline framing).
 			'baseline_progress' => [
-				'complete_groups' => $progress_n,
-				'required'        => 3,
+				'complete_groups' => $baseline_n,
+				'required'        => $baseline_required,
+			],
+			// Phase-aware progress for the current group purpose + overall pipeline.
+			'progress'          => [
+				'purpose'              => $purpose,
+				'complete_groups'      => $progress_n,
+				'target'               => $purpose_target,
+				'baseline_done'        => $baseline_n,
+				'baseline_required'    => $baseline_required,
+				'baseline_complete'    => $baseline_complete,
+				'comparison_done'      => $comparison_n,
+				'comparison_target'    => $comparison_target,
+				'ongoing_done'         => $ongoing_n,
+				'recommended_purpose'  => $recommended_purpose,
 			],
 			'started_at'        => $group['started_at'],
 			'updated_at'        => $group['updated_at'],

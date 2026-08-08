@@ -73,7 +73,7 @@ class BMF_BioVoice_Shortcodes_Scores {
 
 		if ( ! $resolved ) {
 			return '<div class="bmf-biovoice-scores bmf-biovoice-scores--empty">'
-				. '<p class="bmf-bv-empty">No score data yet. Complete comparison analysis, or use <code>fixture="1"</code> to preview the sample dashboard.</p>'
+				. '<p class="bmf-bv-empty">No score data yet. Complete comparison analysis, or use <code>fixture=&quot;1&quot;</code> to preview the sample dashboard.</p>'
 				. '</div>';
 		}
 
