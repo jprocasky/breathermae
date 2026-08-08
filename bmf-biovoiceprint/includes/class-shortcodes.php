@@ -119,7 +119,12 @@ class BMF_BioVoice_Shortcodes {
 		if ( ! is_user_logged_in() ) {
 			return '<p class="bmf-biovoice-login-required">Please log in to view your recordings.</p>';
 		}
-		$atts = shortcode_atts( [ 'limit' => 20, 'class' => '', 'admin' => '0' ], $atts, 'bmf_biovoice_sessions' );
+		$atts = shortcode_atts( [
+			'limit'        => 20,
+			'groups_limit' => 0, // 0 = same as limit
+			'class'        => '',
+			'admin'        => '0',
+		], $atts, 'bmf_biovoice_sessions' );
 		if ( in_array( strtolower( (string) $atts['admin'] ), [ '1', 'true', 'yes' ], true ) ) {
 			return self::render_admin_sessions_panel( $atts );
 		}
@@ -266,11 +271,14 @@ class BMF_BioVoice_Shortcodes {
 		}
 		wp_enqueue_style( 'bmf-biovoice-recorder' );
 		wp_enqueue_script( 'bmf-biovoice-sessions-admin' );
+		$limit        = absint( $atts['limit'] ) ? absint( $atts['limit'] ) : 20;
+		$groups_limit = absint( $atts['groups_limit'] ) ? absint( $atts['groups_limit'] ) : $limit;
 		wp_localize_script( 'bmf-biovoice-sessions-admin', 'bmfBioVoiceSessionsAdmin', [
-			'restUrl'  => esc_url_raw( rest_url( 'bmf-biovoice/v1/sessions' ) ),
-			'restBase' => esc_url_raw( rest_url( 'bmf-biovoice/v1' ) ),
-			'nonce'    => wp_create_nonce( 'wp_rest' ),
-			'limit'    => absint( $atts['limit'] ) ? absint( $atts['limit'] ) : 50,
+			'restUrl'     => esc_url_raw( rest_url( 'bmf-biovoice/v1/sessions' ) ),
+			'restBase'    => esc_url_raw( rest_url( 'bmf-biovoice/v1' ) ),
+			'nonce'       => wp_create_nonce( 'wp_rest' ),
+			'limit'       => $limit,
+			'groupsLimit' => $groups_limit,
 		] );
 		$class = 'bmf-biovoice-sessions bmf-biovoice-sessions--admin' . ( $atts['class'] ? ' ' . sanitize_html_class( $atts['class'] ) : '' );
 		return '<div class="' . esc_attr( $class ) . '" data-bmf-biovoice-sessions-admin><p class="bmf-bv-empty">Select a member to view recordings.</p></div>';

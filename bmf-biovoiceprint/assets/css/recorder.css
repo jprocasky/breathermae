@@ -1138,3 +1138,37 @@
   color: #64748b;
   font-variant-numeric: tabular-nums;
 }
+
+/* Admin sessions / groups pager */
+.bmf-bv-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0.75rem;
+}
+.bmf-bv-pager-meta {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+.bmf-bv-pager .bmf-bv-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.bmf-bv-group-analysis-failed {
+  font-size: 0.72rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+.bmf-bv-group-analysis-ok {
+  font-size: 0.72rem;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}

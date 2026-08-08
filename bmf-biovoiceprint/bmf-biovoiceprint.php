@@ -3,7 +3,7 @@
  * Plugin Name:       Breathermae BioVoicePrint
  * Plugin URI:        https://breathermae.com
  * Description:       BioVoicePrint voice recording, protocol steps, session groups, and private storage. Scoring UI later.
- * Version:           0.2.12-poc
+ * Version:           0.2.18-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_BIOVOICE_VERSION', '0.2.12-poc' );
+define( 'BMF_BIOVOICE_VERSION', '0.2.18-poc' );
 define( 'BMF_BIOVOICE_FILE', __FILE__ );
 define( 'BMF_BIOVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_BIOVOICE_URL', plugin_dir_url( __FILE__ ) );
@@ -67,6 +67,7 @@ require_once BMF_BIOVOICE_PATH . 'includes/class-storage.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-protocol-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-session-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-results-service.php';
+require_once BMF_BIOVOICE_PATH . 'includes/class-worker-service.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-rest-api.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-play.php';
 require_once BMF_BIOVOICE_PATH . 'includes/class-shortcodes.php';
@@ -80,6 +81,7 @@ register_activation_hook( __FILE__, function () {
 	BMF_BioVoice_Repository::install_tables();
 	BMF_BioVoice_Storage::ensure_directory();
 	BMF_BioVoice_Protocol_Service::seed_v1_if_needed();
+	BMF_BioVoice_Worker_Service::ensure_worker_api_key();
 	flush_rewrite_rules();
 } );
 
@@ -90,6 +92,10 @@ register_deactivation_hook( __FILE__, function () {
 add_action( 'plugins_loaded', function () {
 	BMF_BioVoice_DBX::init();
 	BMF_BioVoice_Protocol_Service::maybe_upgrade();
+	// Ensure worker API key exists even without re-activation.
+	if ( class_exists( 'BMF_BioVoice_Worker_Service' ) ) {
+		BMF_BioVoice_Worker_Service::ensure_worker_api_key();
+	}
 	BMF_BioVoice_Shortcodes::init();
 	BMF_BioVoice_Shortcodes_Report::init();
 	BMF_BioVoice_Shortcodes_Scores::init();

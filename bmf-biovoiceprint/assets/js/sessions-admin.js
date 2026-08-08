@@ -1,10 +1,10 @@
 /**
  * BioVoicePrint – admin sessions panel (ULS members).
- * Listens for ULS member selection; loads groups + recordings.
+ * Listens for ULS member selection; loads groups + recordings with paging.
  * Staff can unlock a completed group (optional clear takes).
  *
  * Expects:
- *   window.bmfBioVoiceSessionsAdmin = { restUrl, restBase, nonce, limit }
+ *   window.bmfBioVoiceSessionsAdmin = { restUrl, restBase, nonce, limit, groupsLimit }
  *   container: [data-bmf-biovoice-sessions-admin]
  *
  * Event (from uls-members):
@@ -20,6 +20,8 @@
   const cfg = window.bmfBioVoiceSessionsAdmin;
   const restBase = (cfg.restBase || '').replace(/\/$/, '') ||
     String(cfg.restUrl || '').replace(/\/sessions\/?$/, '');
+  const sessionsPerPage = Math.max(1, parseInt(cfg.limit, 10) || 20);
+  const groupsPerPage = Math.max(1, parseInt(cfg.groupsLimit, 10) || sessionsPerPage);
 
   function formatBytes(n) {
     if (!n || n < 1) return '';
@@ -57,13 +59,37 @@
     return g.status || '—';
   }
 
-  function renderGroups(groups) {
+  function renderPager(kind, page, pages, total, perPage) {
+    page = Math.max(1, page || 1);
+    pages = Math.max(1, pages || 1);
+    total = total || 0;
+    if (total <= perPage && pages <= 1) {
+      return '<div class="bmf-bv-pager bmf-bv-pager--' + kind + '">' +
+        '<span class="bmf-bv-pager-meta">' + total + ' total</span></div>';
+    }
+    const prevDisabled = page <= 1 ? ' disabled' : '';
+    const nextDisabled = page >= pages ? ' disabled' : '';
+    return (
+      '<div class="bmf-bv-pager bmf-bv-pager--' + kind + '" data-pager="' + kind + '">' +
+        '<button type="button" class="bmf-bv-btn bmf-bv-btn-sm bmf-bv-pager-prev"' +
+          ' data-pager-kind="' + kind + '" data-pager-dir="-1"' + prevDisabled + '>Prev</button>' +
+        '<span class="bmf-bv-pager-meta">Page ' + page + ' / ' + pages +
+          ' · ' + total + ' total</span>' +
+        '<button type="button" class="bmf-bv-btn bmf-bv-btn-sm bmf-bv-pager-next"' +
+          ' data-pager-kind="' + kind + '" data-pager-dir="1"' + nextDisabled + '>Next</button>' +
+      '</div>'
+    );
+  }
+
+  function renderGroups(groups, meta) {
+    meta = meta || {};
     if (!groups || !groups.length) {
       return '<div class="bmf-bv-admin-groups"><p class="bmf-bv-empty">No session groups yet.</p></div>';
     }
 
     let html = '<div class="bmf-bv-admin-groups">';
     html += '<div class="bmf-bv-admin-groups-title">Session groups</div>';
+    html += renderPager('groups', meta.page, meta.pages, meta.total, groupsPerPage);
     html += '<ul class="bmf-bv-group-list">';
 
     groups.forEach(function (g) {
@@ -81,6 +107,11 @@
       if (g.device_mismatch) {
         html += '<span class="bmf-bv-group-mismatch" title="Device mismatch">◐</span>';
       }
+      if (g.analysis_status === 'failed') {
+        html += '<span class="bmf-bv-group-analysis-failed" title="Analysis failed">Analysis failed</span>';
+      } else if (g.analysis_status === 'ok') {
+        html += '<span class="bmf-bv-group-analysis-ok" title="Analysis ok">Analyzed</span>';
+      }
       html += '</div>';
       html += '<div class="bmf-bv-group-tasks">' + escapeHtml(tasks) + '</div>';
       html += '<div class="bmf-bv-group-actions">';
@@ -91,17 +122,21 @@
     });
 
     html += '</ul>';
+    html += renderPager('groups', meta.page, meta.pages, meta.total, groupsPerPage);
     html += '<p class="bmf-bv-admin-groups-hint">Unlock reopens a completed group for the member. “Clear takes” hard-deletes recordings in that group so they re-record from the start.</p>';
     html += '</div>';
     return html;
   }
 
-  function renderSessions(sessions) {
+  function renderSessions(sessions, meta) {
+    meta = meta || {};
     if (!sessions.length) {
       return '<p class="bmf-bv-empty">No recordings for this member yet.</p>';
     }
 
-    let html = '<div class="bmf-bv-admin-recordings-title">Recordings</div>';
+    let html = '<div class="bmf-bv-admin-recordings">';
+    html += '<div class="bmf-bv-admin-recordings-title">Recordings</div>';
+    html += renderPager('sessions', meta.page, meta.pages, meta.total, sessionsPerPage);
     html += '<ul class="bmf-bv-session-list">';
     sessions.forEach(function (s) {
       const dur = formatDuration(s.duration_sec);
@@ -136,6 +171,8 @@
       html += '</li>';
     });
     html += '</ul>';
+    html += renderPager('sessions', meta.page, meta.pages, meta.total, sessionsPerPage);
+    html += '</div>';
     return html;
   }
 
@@ -148,14 +185,27 @@
 
     const sessions = (sessionsData && sessionsData.sessions) || [];
     const groups = (groupsData && groupsData.groups) || [];
+    const sessionsTotal = (sessionsData && sessionsData.total != null) ? sessionsData.total : sessions.length;
+    const groupsTotal = (groupsData && groupsData.total != null) ? groupsData.total : groups.length;
+
+    const state = container._bmfPagerState || { groupsPage: 1, sessionsPage: 1 };
 
     let html = '';
     html += '<div class="bmf-bv-admin-header">';
     html += '<span class="bmf-bv-admin-member">' + escapeHtml(label) + '</span>';
-    html += '<span class="bmf-bv-admin-count">' + sessions.length + ' recording' + (sessions.length === 1 ? '' : 's') + '</span>';
+    html += '<span class="bmf-bv-admin-count">' + sessionsTotal + ' recording' + (sessionsTotal === 1 ? '' : 's') +
+      ' · ' + groupsTotal + ' group' + (groupsTotal === 1 ? '' : 's') + '</span>';
     html += '</div>';
-    html += renderGroups(groups);
-    html += renderSessions(sessions);
+    html += renderGroups(groups, {
+      page: groupsData && groupsData.page ? groupsData.page : state.groupsPage,
+      pages: groupsData && groupsData.pages ? groupsData.pages : 1,
+      total: groupsTotal
+    });
+    html += renderSessions(sessions, {
+      page: sessionsData && sessionsData.page ? sessionsData.page : state.sessionsPage,
+      pages: sessionsData && sessionsData.pages ? sessionsData.pages : 1,
+      total: sessionsTotal
+    });
     container.innerHTML = html;
   }
 
@@ -179,36 +229,58 @@
     return data;
   }
 
-  async function loadForMember(container, detail) {
+  function memberParams(detail) {
     const userId = detail && detail.user_id ? parseInt(detail.user_id, 10) : 0;
     const email = detail && detail.email ? String(detail.email).trim() : '';
-
-    if (!userId && !email) {
-      setStatus(container, 'Select a member to view recordings.');
-      return;
-    }
-
-    setStatus(container, 'Loading recordings…');
-
     const params = new URLSearchParams();
-    params.set('limit', String(cfg.limit || 50));
     if (userId > 0) {
       params.set('user_id', String(userId));
     } else if (email) {
       params.set('email', email);
     }
+    return params;
+  }
+
+  async function loadForMember(container, detail, opts) {
+    opts = opts || {};
+    const paramsBase = memberParams(detail);
+    if (![...paramsBase.keys()].length) {
+      setStatus(container, 'Select a member to view recordings.');
+      return;
+    }
+
+    const state = container._bmfPagerState || { groupsPage: 1, sessionsPage: 1 };
+    if (opts.resetPages) {
+      state.groupsPage = 1;
+      state.sessionsPage = 1;
+    }
+    if (opts.groupsPage) state.groupsPage = opts.groupsPage;
+    if (opts.sessionsPage) state.sessionsPage = opts.sessionsPage;
+    container._bmfPagerState = state;
+    container._bmfLastDetail = detail;
+
+    setStatus(container, 'Loading recordings…');
 
     try {
-      const sessionsUrl = cfg.restUrl + (cfg.restUrl.indexOf('?') >= 0 ? '&' : '?') + params.toString();
-      const groupsUrl = restBase + '/admin/groups?' + params.toString();
+      const gParams = new URLSearchParams(paramsBase);
+      gParams.set('limit', String(groupsPerPage));
+      gParams.set('page', String(state.groupsPage));
+
+      const sParams = new URLSearchParams(paramsBase);
+      sParams.set('limit', String(sessionsPerPage));
+      sParams.set('page', String(state.sessionsPage));
+
+      const sessionsUrl = cfg.restUrl + (cfg.restUrl.indexOf('?') >= 0 ? '&' : '?') + sParams.toString();
+      const groupsUrl = restBase + '/admin/groups?' + gParams.toString();
 
       const results = await Promise.all([
-        fetchJson(groupsUrl).catch(function () { return { groups: [] }; }),
+        fetchJson(groupsUrl).catch(function () {
+          return { groups: [], total: 0, page: 1, pages: 1 };
+        }),
         fetchJson(sessionsUrl)
       ]);
 
       renderAll(container, results[0], results[1]);
-      container._bmfLastDetail = detail;
     } catch (err) {
       setStatus(container, err.message || 'Network error loading recordings.', true);
     }
@@ -269,13 +341,32 @@
 
   function initPanel(container) {
     setStatus(container, 'Select a member to view recordings.');
+    container._bmfPagerState = { groupsPage: 1, sessionsPage: 1 };
 
     document.addEventListener('uls:selected-member', function (ev) {
       const detail = (ev && ev.detail) || {};
-      loadForMember(container, detail);
+      loadForMember(container, detail, { resetPages: true });
     });
 
     container.addEventListener('click', function (ev) {
+      const pagerBtn = ev.target.closest('[data-pager-kind]');
+      if (pagerBtn && container.contains(pagerBtn) && !pagerBtn.disabled) {
+        ev.preventDefault();
+        const kind = pagerBtn.getAttribute('data-pager-kind');
+        const dir = parseInt(pagerBtn.getAttribute('data-pager-dir'), 10) || 0;
+        const state = container._bmfPagerState || { groupsPage: 1, sessionsPage: 1 };
+        if (kind === 'groups') {
+          state.groupsPage = Math.max(1, (state.groupsPage || 1) + dir);
+        } else if (kind === 'sessions') {
+          state.sessionsPage = Math.max(1, (state.sessionsPage || 1) + dir);
+        }
+        container._bmfPagerState = state;
+        if (container._bmfLastDetail) {
+          loadForMember(container, container._bmfLastDetail);
+        }
+        return;
+      }
+
       const btn = ev.target.closest('[data-unlock-group]');
       if (!btn || !container.contains(btn)) return;
       ev.preventDefault();

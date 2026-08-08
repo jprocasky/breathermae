@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BMF_BioVoice_Repository {
 
-	const DB_VERSION = '0.2.6';
+	const DB_VERSION = '0.2.18';
 
 	/**
 	 * Create / upgrade tables. Safe to call repeatedly (dbDelta).
@@ -76,6 +76,9 @@ class BMF_BioVoice_Repository {
 			wellness_anchor_json LONGTEXT NULL,
 			device_summary_json LONGTEXT NULL,
 			device_mismatch TINYINT(1) NOT NULL DEFAULT 0,
+			analysis_status VARCHAR(20) NULL,
+			analysis_error_json LONGTEXT NULL,
+			analysis_at DATETIME NULL,
 			started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			completed_at DATETIME NULL,
@@ -84,7 +87,8 @@ class BMF_BioVoice_Repository {
 			KEY status (status),
 			KEY is_current (is_current),
 			KEY is_final (is_final),
-			KEY protocol_id (protocol_id)
+			KEY protocol_id (protocol_id),
+			KEY analysis_status (analysis_status)
 		) {$charset};" );
 
 		dbDelta( "CREATE TABLE {$sessions} (
@@ -125,7 +129,7 @@ class BMF_BioVoice_Repository {
 			user_email VARCHAR(191) COLLATE utf8mb4_unicode_520_ci NULL,
 			session_group_id BIGINT UNSIGNED NULL,
 			comparison_session_id VARCHAR(120) NULL,
-			schema_version VARCHAR(20) NOT NULL DEFAULT 'stage7',
+			schema_version VARCHAR(40) NOT NULL DEFAULT 'stage7',
 			source VARCHAR(40) NOT NULL DEFAULT 'engine',
 			rdi_score DECIMAL(8,2) NULL,
 			rdi_band VARCHAR(60) NULL,
@@ -180,6 +184,110 @@ class BMF_BioVoice_Repository {
 			),
 			ARRAY_A
 		);
+	}
+
+	/** Stage7 (or any) result for one session group — newest first. */
+	public static function get_result_for_session_group( int $session_group_id, string $schema_version = 'stage7' ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
+		if ( $schema_version ) {
+			return $db->get_row(
+				$db->prepare(
+					"SELECT * FROM {$t} WHERE session_group_id = %d AND schema_version = %s ORDER BY id DESC LIMIT 1",
+					$session_group_id,
+					$schema_version
+				),
+				ARRAY_A
+			);
+		}
+		return $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE session_group_id = %d ORDER BY id DESC LIMIT 1",
+				$session_group_id
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Stored baseline reference JSON for a user (worker / comparison).
+	 * Uses schema_version = baseline_reference; payload in pattern_payload_json.
+	 */
+	public static function get_baseline_reference_for_user( int $user_id ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
+		return $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE user_id = %d AND schema_version = %s ORDER BY id DESC LIMIT 1",
+				$user_id,
+				'baseline_reference'
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Insert or update a result row by session_group_id + schema_version when group id set.
+	 *
+	 * @return int|false Result id
+	 */
+	public static function upsert_result( array $data ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_results' );
+
+		$schema = isset( $data['schema_version'] ) ? (string) $data['schema_version'] : 'stage7';
+		$group_id = ! empty( $data['session_group_id'] ) ? (int) $data['session_group_id'] : 0;
+		$user_id  = ! empty( $data['user_id'] ) ? (int) $data['user_id'] : 0;
+
+		$existing = null;
+		if ( $schema === 'baseline_reference' && $user_id > 0 ) {
+			$existing = self::get_baseline_reference_for_user( $user_id );
+		} elseif ( $group_id > 0 ) {
+			$existing = self::get_result_for_session_group( $group_id, $schema );
+		}
+
+		$now = current_time( 'mysql', true );
+		$data['updated_at'] = $now;
+
+		if ( $existing ) {
+			$id = (int) $existing['id'];
+			unset( $data['created_at'] );
+			$ok = $db->update( $t, $data, [ 'id' => $id ] );
+			return ( false === $ok ) ? false : $id;
+		}
+
+		$data = array_merge( [
+			'schema_version' => $schema,
+			'source'         => 'engine',
+			'created_at'     => $now,
+		], $data );
+
+		$ok = $db->insert( $t, $data );
+		return $ok ? (int) $db->insert_id : false;
+	}
+
+	/**
+	 * Final groups for a user + purpose, oldest first, limited.
+	 *
+	 * @return array<int, array>
+	 */
+	public static function get_final_groups_for_user( int $user_id, string $purpose, int $limit = 3 ): array {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		$limit = max( 1, min( 50, $limit ) );
+		$rows = $db->get_results(
+			$db->prepare(
+				"SELECT * FROM {$t}
+				WHERE user_id = %d AND purpose = %s AND is_final = 1
+				ORDER BY COALESCE(completed_at, started_at) ASC, id ASC
+				LIMIT %d",
+				$user_id,
+				sanitize_key( $purpose ),
+				$limit
+			),
+			ARRAY_A
+		);
+		return $rows ?: [];
 	}
 
 	/* ─── Protocols ───────────────────────────────────────────── */
@@ -286,12 +394,39 @@ class BMF_BioVoice_Repository {
 		$now = current_time( 'mysql', true );
 		$result = $db->query(
 			$db->prepare(
-				"UPDATE {$t} SET status = 'in_progress', is_final = 0, is_current = 1, completed_at = NULL, updated_at = %s WHERE id = %d",
+				"UPDATE {$t} SET status = 'in_progress', is_final = 0, is_current = 1, completed_at = NULL,
+					analysis_status = NULL, analysis_error_json = NULL, analysis_at = NULL, updated_at = %s WHERE id = %d",
 				$now,
 				$group_id
 			)
 		);
 		return false !== $result;
+	}
+
+	/**
+	 * Persist analysis outcome on a session group (worker success/failure).
+	 *
+	 * @param int         $group_id
+	 * @param string      $status  ok|failed|processing
+	 * @param array|null  $error   Optional structured error payload
+	 */
+	public static function set_group_analysis_status( int $group_id, string $status, $error = null ): bool {
+		$status = sanitize_key( $status );
+		if ( ! in_array( $status, [ 'ok', 'failed', 'processing' ], true ) ) {
+			return false;
+		}
+		$data = [
+			'analysis_status' => $status,
+			'analysis_at'     => current_time( 'mysql', true ),
+		];
+		if ( $status === 'ok' ) {
+			$data['analysis_error_json'] = null;
+		} elseif ( is_array( $error ) ) {
+			$data['analysis_error_json'] = wp_json_encode( $error );
+		} elseif ( is_string( $error ) && $error !== '' ) {
+			$data['analysis_error_json'] = wp_json_encode( [ 'message' => $error ] );
+		}
+		return self::update_group( $group_id, $data );
 	}
 
 	public static function get_current_group_for_user( int $user_id, string $purpose = '' ) {
@@ -338,15 +473,63 @@ class BMF_BioVoice_Repository {
 		$t        = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
 		$purpose  = isset( $args['purpose'] ) ? sanitize_key( $args['purpose'] ) : '';
 		$limit    = isset( $args['limit'] ) ? max( 1, min( 200, (int) $args['limit'] ) ) : 50;
+		$offset   = isset( $args['offset'] ) ? max( 0, (int) $args['offset'] ) : 0;
 		$sql      = "SELECT * FROM {$t} WHERE user_id = %d";
 		$params   = [ $user_id ];
 		if ( $purpose ) {
 			$sql   .= ' AND purpose = %s';
 			$params[] = $purpose;
 		}
-		$sql .= ' ORDER BY id DESC LIMIT %d';
+		$sql .= ' ORDER BY id DESC LIMIT %d OFFSET %d';
 		$params[] = $limit;
+		$params[] = $offset;
 		return $db->get_results( $db->prepare( $sql, $params ), ARRAY_A ) ?: [];
+	}
+
+	/**
+	 * Count session groups for a user (optional purpose filter).
+	 */
+	public static function count_groups_for_user( int $user_id, array $args = [] ): int {
+		$db      = BMF_BioVoice_DBX::$db;
+		$t       = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		$purpose = isset( $args['purpose'] ) ? sanitize_key( $args['purpose'] ) : '';
+		$sql     = "SELECT COUNT(*) FROM {$t} WHERE user_id = %d";
+		$params  = [ $user_id ];
+		if ( $purpose ) {
+			$sql     .= ' AND purpose = %s';
+			$params[] = $purpose;
+		}
+		return (int) $db->get_var( $db->prepare( $sql, $params ) );
+	}
+
+	/**
+	 * Count recording sessions for a user (same filters as get_sessions_for_user).
+	 */
+	public static function count_sessions_for_user( int $user_id, array $args = [] ): int {
+		$db     = BMF_BioVoice_DBX::$db;
+		$t      = BMF_BioVoice_DBX::t( 'bm_biovoice_sessions' );
+		$where  = [ 'user_id = %d' ];
+		$params = [ $user_id ];
+
+		if ( ! empty( $args['session_type'] ) ) {
+			$where[]  = 'session_type = %s';
+			$params[] = sanitize_key( $args['session_type'] );
+		}
+		if ( ! empty( $args['status'] ) ) {
+			$where[]  = 'status = %s';
+			$params[] = sanitize_key( $args['status'] );
+		}
+		if ( ! empty( $args['session_group_id'] ) ) {
+			$where[]  = 'session_group_id = %d';
+			$params[] = (int) $args['session_group_id'];
+		}
+		if ( ! empty( $args['task_code'] ) ) {
+			$where[]  = 'task_code = %s';
+			$params[] = sanitize_key( $args['task_code'] );
+		}
+
+		$sql = 'SELECT COUNT(*) FROM ' . $t . ' WHERE ' . implode( ' AND ', $where );
+		return (int) $db->get_var( $db->prepare( $sql, $params ) );
 	}
 
 	/** Count groups flagged device_mismatch for user (any purpose). */

@@ -103,10 +103,260 @@ class BMF_BioVoice_REST_API {
 			'callback'            => [ __CLASS__, 'get_status' ],
 			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
 		] );
+
+		// ── Analysis worker (pull-based, Application Password) ──
+		register_rest_route( self::NS, '/worker/queue', [
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => [ __CLASS__, 'worker_queue' ],
+			'permission_callback' => [ __CLASS__, 'require_worker' ],
+		] );
+
+		register_rest_route( self::NS, '/worker/groups/(?P<id>\d+)', [
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => [ __CLASS__, 'worker_group_bundle' ],
+			'permission_callback' => [ __CLASS__, 'require_worker' ],
+			'args'                => [
+				'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+			],
+		] );
+
+		register_rest_route( self::NS, '/worker/sessions/(?P<id>\d+)/audio', [
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => [ __CLASS__, 'worker_session_audio' ],
+			'permission_callback' => [ __CLASS__, 'require_worker' ],
+			'args'                => [
+				'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+			],
+		] );
+
+		register_rest_route( self::NS, '/worker/results', [
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => [ __CLASS__, 'worker_post_results' ],
+			'permission_callback' => [ __CLASS__, 'require_worker' ],
+		] );
+
+		register_rest_route( self::NS, '/worker/baseline', [
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => [ __CLASS__, 'worker_post_baseline' ],
+			'permission_callback' => [ __CLASS__, 'require_worker' ],
+		] );
+
+		register_rest_route( self::NS, '/worker/errors', [
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => [ __CLASS__, 'worker_post_error' ],
+			'permission_callback' => [ __CLASS__, 'require_worker' ],
+		] );
 	}
 
 	public static function require_logged_in() {
 		return is_user_logged_in();
+	}
+
+	/**
+	 * Worker routes: API key (preferred) OR logged-in admin (Application Password).
+	 *
+	 * @param WP_REST_Request $request Passed by WP to permission_callback.
+	 * @return true|WP_Error
+	 */
+	public static function require_worker( $request ) {
+		if ( $request instanceof WP_REST_Request
+			&& BMF_BioVoice_Worker_Service::allow_worker_request( $request ) ) {
+			return true;
+		}
+		// Fallback if callback signature ever omits request.
+		if ( BMF_BioVoice_Worker_Service::current_user_can_worker() ) {
+			return true;
+		}
+		return new WP_Error(
+			'bmf_biovoice_worker_forbidden',
+			'Analysis worker authentication required. Send header X-BMF-BioVoice-Key with the worker API key (recommended), or use an admin Application Password.',
+			[ 'status' => 403 ]
+		);
+	}
+
+	/**
+	 * GET /worker/queue?limit=20
+	 */
+	public static function worker_queue( WP_REST_Request $request ) {
+		$limit = absint( $request->get_param( 'limit' ) ) ?: 20;
+		return rest_ensure_response( BMF_BioVoice_Worker_Service::build_queue( $limit ) );
+	}
+
+	/**
+	 * GET /worker/groups/{id} — single group bundle (files + wellness).
+	 */
+	public static function worker_group_bundle( WP_REST_Request $request ) {
+		$id    = absint( $request['id'] );
+		$group = BMF_BioVoice_Repository::get_group( $id );
+		if ( ! $group ) {
+			return new WP_Error( 'bmf_biovoice_not_found', 'Group not found.', [ 'status' => 404 ] );
+		}
+		return rest_ensure_response( BMF_BioVoice_Worker_Service::format_group_bundle( $group ) );
+	}
+
+	/**
+	 * GET /worker/sessions/{id}/audio — stream private audio for the worker.
+	 */
+	public static function worker_session_audio( WP_REST_Request $request ) {
+		$id      = absint( $request['id'] );
+		$session = BMF_BioVoice_Repository::get_session( $id );
+		if ( ! $session ) {
+			return new WP_Error( 'bmf_biovoice_not_found', 'Session not found.', [ 'status' => 404 ] );
+		}
+		$path = BMF_BioVoice_Storage::get_path( $session['storage_key'] );
+		if ( ! $path || ! is_readable( $path ) ) {
+			return new WP_Error( 'bmf_biovoice_missing_file', 'Audio file is missing.', [ 'status' => 404 ] );
+		}
+
+		$mime = ! empty( $session['mime_type'] ) ? $session['mime_type'] : 'application/octet-stream';
+		$filename = ! empty( $session['original_filename'] )
+			? $session['original_filename']
+			: ( 'session_' . $id . '.bin' );
+
+		// Binary response — bypass JSON envelope.
+		$response = new WP_REST_Response( null, 200 );
+		$response->header( 'Content-Type', $mime );
+		$response->header( 'Content-Disposition', 'attachment; filename="' . sanitize_file_name( $filename ) . '"' );
+		$response->header( 'Content-Length', (string) filesize( $path ) );
+		$response->header( 'Cache-Control', 'no-store' );
+
+		// Stream via send_file-style callback.
+		add_filter( 'rest_pre_serve_request', static function ( $served, $result, $request, $server ) use ( $path, $response ) {
+			if ( $result !== $response ) {
+				return $served;
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+			readfile( $path );
+			return true;
+		}, 10, 4 );
+
+		return $response;
+	}
+
+	/**
+	 * POST /worker/results — stage7 plain report + pattern payload for a comparison group.
+	 *
+	 * Body JSON:
+	 *   user_id, session_group_id, plain_report (object), pattern_payload (object), source?
+	 */
+	public static function worker_post_results( WP_REST_Request $request ) {
+		$user_id = absint( $request->get_param( 'user_id' ) );
+		$group_id = absint( $request->get_param( 'session_group_id' ) );
+		if ( $user_id < 1 || $group_id < 1 ) {
+			return new WP_Error( 'bmf_biovoice_params', 'user_id and session_group_id are required.', [ 'status' => 400 ] );
+		}
+
+		$plain = $request->get_param( 'plain_report' );
+		$pattern = $request->get_param( 'pattern_payload' );
+		if ( is_string( $plain ) ) {
+			$plain = json_decode( $plain, true );
+		}
+		if ( is_string( $pattern ) ) {
+			$pattern = json_decode( $pattern, true );
+		}
+		if ( ! is_array( $plain ) && ! is_array( $pattern ) ) {
+			return new WP_Error( 'bmf_biovoice_params', 'plain_report and/or pattern_payload required.', [ 'status' => 400 ] );
+		}
+
+		$id = BMF_BioVoice_Results_Service::store_result( $user_id, [
+			'session_group_id' => $group_id,
+			'plain_report'     => is_array( $plain ) ? $plain : null,
+			'pattern_payload'  => is_array( $pattern ) ? $pattern : null,
+			'schema_version'   => 'stage7',
+			'source'           => sanitize_key( (string) $request->get_param( 'source' ) ) ?: 'engine',
+		] );
+
+		if ( ! $id ) {
+			return new WP_Error( 'bmf_biovoice_db', 'Failed to store result.', [ 'status' => 500 ] );
+		}
+
+		return rest_ensure_response( [
+			'ok'         => true,
+			'result_id'  => (int) $id,
+			'user_id'    => $user_id,
+			'session_group_id' => $group_id,
+		] );
+	}
+
+	/**
+	 * POST /worker/baseline — store baseline_reference.json for a user.
+	 *
+	 * Body JSON: user_id, baseline_reference (object)
+	 */
+	public static function worker_post_baseline( WP_REST_Request $request ) {
+		$user_id = absint( $request->get_param( 'user_id' ) );
+		$ref     = $request->get_param( 'baseline_reference' );
+		if ( is_string( $ref ) ) {
+			$ref = json_decode( $ref, true );
+		}
+		if ( $user_id < 1 || ! is_array( $ref ) ) {
+			return new WP_Error( 'bmf_biovoice_params', 'user_id and baseline_reference object required.', [ 'status' => 400 ] );
+		}
+
+		$group_ids = $request->get_param( 'group_ids' );
+		if ( is_string( $group_ids ) ) {
+			$group_ids = array_filter( array_map( 'absint', explode( ',', $group_ids ) ) );
+		}
+		if ( ! is_array( $group_ids ) ) {
+			$group_ids = [];
+		}
+
+		$id = BMF_BioVoice_Results_Service::store_baseline_reference( $user_id, $ref, [
+			'source'    => sanitize_key( (string) $request->get_param( 'source' ) ) ?: 'engine',
+			'group_ids' => $group_ids,
+		] );
+
+		if ( ! $id ) {
+			return new WP_Error( 'bmf_biovoice_db', 'Failed to store baseline reference.', [ 'status' => 500 ] );
+		}
+
+		return rest_ensure_response( [
+			'ok'        => true,
+			'result_id' => (int) $id,
+			'user_id'   => $user_id,
+			'schema'    => 'baseline_reference',
+		] );
+	}
+
+	/**
+	 * POST /worker/errors — analysis failure: mark group(s), Fusion tag, support email.
+	 *
+	 * Body: user_id, job_type, message, session_group_id?, group_ids?, task_codes?, detail?
+	 */
+	public static function worker_post_error( WP_REST_Request $request ) {
+		$user_id = absint( $request->get_param( 'user_id' ) );
+		$message = (string) $request->get_param( 'message' );
+		if ( $message === '' ) {
+			return new WP_Error( 'bmf_biovoice_params', 'message is required.', [ 'status' => 400 ] );
+		}
+
+		$group_ids = $request->get_param( 'group_ids' );
+		if ( is_string( $group_ids ) ) {
+			$group_ids = array_filter( array_map( 'absint', explode( ',', $group_ids ) ) );
+		}
+		if ( ! is_array( $group_ids ) ) {
+			$group_ids = [];
+		}
+
+		$task_codes = $request->get_param( 'task_codes' );
+		if ( is_string( $task_codes ) ) {
+			$task_codes = array_filter( array_map( 'sanitize_key', explode( ',', $task_codes ) ) );
+		}
+		if ( ! is_array( $task_codes ) ) {
+			$task_codes = [];
+		}
+
+		$result = BMF_BioVoice_Results_Service::report_analysis_error( [
+			'user_id'          => $user_id,
+			'job_type'         => (string) $request->get_param( 'job_type' ),
+			'message'          => $message,
+			'detail'           => (string) $request->get_param( 'detail' ),
+			'session_group_id' => absint( $request->get_param( 'session_group_id' ) ),
+			'group_ids'        => $group_ids,
+			'task_codes'       => $task_codes,
+		] );
+
+		return rest_ensure_response( $result );
 	}
 
 	public static function get_protocol( WP_REST_Request $request ) {
@@ -221,18 +471,36 @@ class BMF_BioVoice_REST_API {
 			return new WP_Error( 'bmf_biovoice_user', 'user_id or email is required.', [ 'status' => 400 ] );
 		}
 
-		$groups = BMF_BioVoice_Session_Service::list_groups_for_admin( $target_id, [
-			'purpose' => $request->get_param( 'purpose' ),
-			'limit'   => absint( $request->get_param( 'limit' ) ?: 50 ),
+		$limit  = min( 100, absint( $request->get_param( 'limit' ) ?: 50 ) );
+		$page   = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
+		$offset = absint( $request->get_param( 'offset' ) );
+		if ( ! $request->get_param( 'offset' ) && $page > 1 ) {
+			$offset = ( $page - 1 ) * $limit;
+		}
+
+		$purpose = $request->get_param( 'purpose' );
+		$groups  = BMF_BioVoice_Session_Service::list_groups_for_admin( $target_id, [
+			'purpose' => $purpose,
+			'limit'   => $limit,
+			'offset'  => $offset,
 		] );
 		if ( is_wp_error( $groups ) ) {
 			return $groups;
 		}
 
+		$total = BMF_BioVoice_Repository::count_groups_for_user( $target_id, [
+			'purpose' => $purpose ? sanitize_key( (string) $purpose ) : '',
+		] );
+
 		$target_user = get_userdata( $target_id );
 		return rest_ensure_response( [
 			'groups'         => $groups,
 			'count'          => count( $groups ),
+			'total'          => $total,
+			'limit'          => $limit,
+			'offset'         => $offset,
+			'page'           => $page,
+			'pages'          => $limit > 0 ? (int) ceil( $total / $limit ) : 1,
 			'target_user_id' => $target_id,
 			'target_email'   => $target_user ? $target_user->user_email : null,
 			'target_display' => $target_user ? $target_user->display_name : null,
@@ -327,9 +595,15 @@ class BMF_BioVoice_REST_API {
 				$target_id = (int) $user->ID;
 			}
 		}
+		$limit  = min( 100, absint( $request->get_param( 'limit' ) ?: 50 ) );
+		$page   = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
+		$offset = absint( $request->get_param( 'offset' ) );
+		if ( ! $request->get_param( 'offset' ) && $page > 1 ) {
+			$offset = ( $page - 1 ) * $limit;
+		}
 		$args = [
-			'limit'  => min( 100, absint( $request->get_param( 'limit' ) ?: 50 ) ),
-			'offset' => absint( $request->get_param( 'offset' ) ?: 0 ),
+			'limit'  => $limit,
+			'offset' => $offset,
 		];
 		if ( $request->get_param( 'session_type' ) ) {
 			$args['session_type'] = sanitize_key( $request->get_param( 'session_type' ) );
@@ -339,10 +613,16 @@ class BMF_BioVoice_REST_API {
 		foreach ( $rows as $row ) {
 			$out[] = self::format_session_summary( $row, $can_inspect );
 		}
+		$total = BMF_BioVoice_Repository::count_sessions_for_user( $target_id, $args );
 		$target_user = get_userdata( $target_id );
 		return rest_ensure_response( [
 			'sessions'       => $out,
 			'count'          => count( $out ),
+			'total'          => $total,
+			'limit'          => $limit,
+			'offset'         => $offset,
+			'page'           => $page,
+			'pages'          => $limit > 0 ? (int) ceil( $total / $limit ) : 1,
 			'target_user_id' => $target_id,
 			'target_email'   => $target_user ? $target_user->user_email : null,
 			'target_display' => $target_user ? $target_user->display_name : null,

@@ -274,10 +274,12 @@ class BMF_BioVoice_Session_Service {
 			return new WP_Error( 'bmf_biovoice_user', 'Invalid user.', [ 'status' => 400 ] );
 		}
 
-		$rows = BMF_BioVoice_Repository::get_groups_for_user( $target_user_id, [
+		$list_args = [
 			'purpose' => isset( $args['purpose'] ) ? sanitize_key( (string) $args['purpose'] ) : '',
 			'limit'   => isset( $args['limit'] ) ? (int) $args['limit'] : 50,
-		] );
+			'offset'  => isset( $args['offset'] ) ? max( 0, (int) $args['offset'] ) : 0,
+		];
+		$rows = BMF_BioVoice_Repository::get_groups_for_user( $target_user_id, $list_args );
 
 		$out = [];
 		foreach ( $rows as $g ) {
@@ -289,19 +291,21 @@ class BMF_BioVoice_Session_Service {
 				}
 			}
 			$out[] = [
-				'group_id'        => (int) $g['id'],
-				'purpose'         => $g['purpose'],
-				'status'          => $g['status'],
-				'is_final'        => (bool) $g['is_final'],
-				'is_current'      => (bool) $g['is_current'],
-				'device_mismatch' => (bool) $g['device_mismatch'],
-				'protocol_version'=> $g['protocol_version'] ?? null,
-				'started_at'      => $g['started_at'] ?? null,
-				'completed_at'    => $g['completed_at'] ?? null,
-				'updated_at'      => $g['updated_at'] ?? null,
-				'take_count'      => count( $takes ),
-				'task_codes'      => $task_codes,
-				'can_unlock'      => ( $g['status'] !== 'in_progress' ) || ! empty( $g['is_final'] ) || ! empty( $g['is_current'] ),
+				'group_id'         => (int) $g['id'],
+				'purpose'          => $g['purpose'],
+				'status'           => $g['status'],
+				'is_final'         => (bool) $g['is_final'],
+				'is_current'       => (bool) $g['is_current'],
+				'device_mismatch'  => (bool) $g['device_mismatch'],
+				'analysis_status'  => $g['analysis_status'] ?? null,
+				'analysis_at'      => $g['analysis_at'] ?? null,
+				'protocol_version' => $g['protocol_version'] ?? null,
+				'started_at'       => $g['started_at'] ?? null,
+				'completed_at'     => $g['completed_at'] ?? null,
+				'updated_at'       => $g['updated_at'] ?? null,
+				'take_count'       => count( $takes ),
+				'task_codes'       => $task_codes,
+				'can_unlock'       => ( $g['status'] !== 'in_progress' ) || ! empty( $g['is_final'] ) || ! empty( $g['is_current'] ),
 			];
 		}
 
