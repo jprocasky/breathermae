@@ -3,7 +3,7 @@ setlocal
 
 REM === EDIT THIS to your OneDrive repo root ===
 set "SRC=C:\Users\jprocasky\OneDrive\z-Github\breathermae\Breathermae Voice Regulation"
-set "DST=C:\BioVoice\breathermae"
+set "DST=C:\BioVoice\breathermae\Breathermae Voice Regulation"
 
 if not exist "%SRC%" (
   echo Source not found: %SRC%
