@@ -256,57 +256,57 @@ def write_wellness_override_module(
     )
 
 
-def _wellness_override_block(wellness_module_import: str, include_comparison_helper: bool = False) -> str:
-    """Build the non-interactive wellness override source block."""
-    lines = [
-        "",
-        "# --- CLI wellness override ---",
-        "import importlib as _CLI_importlib",
-        f"_cli_wellness_mod = _CLI_importlib.import_module({wellness_module_import!r})",
-        "_CLI_WELLNESS = _cli_wellness_mod.WELLNESS",
-        "",
-        "def collect_pre_recording_assessment(session_id, session_processed_timestamp):",
-        '    """CLI override: use pre-collected wellness answers (no input())."""',
-        '    print("\\n------------------------------------------------------------")',
-        '    print(f"Pre-recording context (CLI-supplied) for {session_id}")',
-        '    print("------------------------------------------------------------")',
-        '    answers = _CLI_WELLNESS["by_session"].get(session_id) or _CLI_WELLNESS.get("default") or {}',
-        "    if not answers:",
-        "        raise RuntimeError(",
-        '            f"No CLI wellness answers for session {session_id}. "',
-        '            "Pass --wellness-file."',
-        "        )",
-        "    responses = {",
-        '        "session_id": session_id,',
-        '        "session_processed_timestamp": session_processed_timestamp,',
-        "    }",
-        "    for field_name in assessment_questions:",
-        "        if field_name not in answers:",
-        "            raise RuntimeError(",
-        "                f\"Wellness missing key '{field_name}' for {session_id}\"",
-        "            )",
-        "        responses[field_name] = int(answers[field_name])",
-        '        print(f"  {field_name}: {responses[field_name]}")',
-        "    return add_wellness_anchor_scores(responses)",
-        "",
-    ]
-    if include_comparison_helper:
-        lines.extend(
-            [
-                "def get_or_collect_comparison_assessment(session_id, session_processed_timestamp):",
-                '    """CLI override: always use supplied wellness (never prompt)."""',
-                "    return collect_pre_recording_assessment(session_id, session_processed_timestamp)",
-                "",
-            ]
-        )
-    lines.append("# --- end CLI wellness override ---")
-    lines.append("")
-    return "\n".join(lines)
+def _cli_collect_function_source() -> str:
+    """Source for non-interactive collect_pre_recording_assessment."""
+    return (
+        "def collect_pre_recording_assessment(session_id, session_processed_timestamp):\n"
+        '    """CLI override: use pre-collected wellness answers (no input())."""\n'
+        '    print("\\n------------------------------------------------------------")\n'
+        '    print(f"Pre-recording context (CLI-supplied) for {session_id}")\n'
+        '    print("------------------------------------------------------------")\n'
+        '    answers = _CLI_WELLNESS["by_session"].get(session_id) or _CLI_WELLNESS.get("default") or {}\n'
+        "    if not answers:\n"
+        "        raise RuntimeError(\n"
+        '            f"No CLI wellness answers for session {session_id}. "\n'
+        '            "Pass --wellness-file."\n'
+        "        )\n"
+        "    responses = {\n"
+        '        "session_id": session_id,\n'
+        '        "session_processed_timestamp": session_processed_timestamp,\n'
+        "    }\n"
+        "    for field_name in assessment_questions:\n"
+        "        if field_name not in answers:\n"
+        "            raise RuntimeError(\n"
+        '                f"Wellness missing key {field_name!r} for {session_id}"\n'
+        "            )\n"
+        "        responses[field_name] = int(answers[field_name])\n"
+        '        print(f"  {field_name}: {responses[field_name]}")\n'
+        "    return add_wellness_anchor_scores(responses)\n\n"
+    )
+
+
+def _cli_comparison_collect_function_source() -> str:
+    """Source for non-interactive get_or_collect_comparison_assessment."""
+    return (
+        "def get_or_collect_comparison_assessment(session_id, session_processed_timestamp):\n"
+        '    """CLI override: always use supplied wellness (never prompt / never reuse stale)."""\n'
+        "    return collect_pre_recording_assessment(session_id, session_processed_timestamp)\n\n"
+    )
+
+
+def _wellness_import_block(wellness_module_import: str) -> str:
+    """Import block for CLI wellness answers (no function defs)."""
+    return (
+        "\n# --- CLI wellness import ---\n"
+        "import importlib as _CLI_importlib\n"
+        f"_cli_wellness_mod = _CLI_importlib.import_module({wellness_module_import!r})\n"
+        "_CLI_WELLNESS = _cli_wellness_mod.WELLNESS\n"
+        "# --- end CLI wellness import ---\n\n"
+    )
 
 
 def _replace_function_with_stub(source: str, func_name: str, stub_body: str) -> str:
     """Replace an entire top-level function definition with a short stub."""
-    # Match from "def name(" through the end of that function (next top-level def or EOF).
     pattern = (
         r"^def "
         + re.escape(func_name)
@@ -354,6 +354,25 @@ def patch_script_config(
             1,
         )
 
+    # Import CLI wellness module near the top (after standard imports).
+    # Place after the last "from scipy..." / import block marker used by both engines.
+    import_anchor = "from scipy.signal import butter, filtfilt, hilbert"
+    if import_anchor in patched:
+        patched = patched.replace(
+            import_anchor,
+            import_anchor + _wellness_import_block(wellness_module_import),
+            1,
+        )
+    else:
+        # Fallback: inject after first blank line following imports
+        patched = _wellness_import_block(wellness_module_import) + patched
+
+    # Replace interactive collectors with CLI versions (must replace the ORIGINAL
+    # defs so they are not overwritten later).
+    patched = _replace_function_with_stub(
+        patched, "collect_pre_recording_assessment", _cli_collect_function_source()
+    )
+
     if is_baseline:
         start_marker = "baseline_session_folders = ["
         if start_marker in patched:
@@ -383,11 +402,6 @@ def patch_script_config(
             )
             patched = patched.replace(results_marker, new_results, 1)
 
-        anchor = "future_comparison_domain_weights = {"
-        if anchor in patched:
-            inject = _wellness_override_block(wellness_module_import, include_comparison_helper=False)
-            patched = patched.replace(anchor, inject + anchor, 1)
-
         # Force fresh processing of staged sessions (no resume from prior CSVs).
         stub = (
             "def load_existing_csv_rows(csv_path):\n"
@@ -397,6 +411,14 @@ def patch_script_config(
     else:
         if not comparison_folder_line or not baseline_reference_line:
             raise ValueError("comparison_folder_line and baseline_reference_line required")
+
+        # Comparison uses get_or_collect_comparison_assessment — replace it too
+        # so it never reuses stale interactive CSV rows or prompts.
+        patched = _replace_function_with_stub(
+            patched,
+            "get_or_collect_comparison_assessment",
+            _cli_comparison_collect_function_source(),
+        )
 
         cmp_marker = 'comparison_session_folder = Path("data/raw/Frank Comparison Session 1")'
         if cmp_marker in patched:
@@ -433,11 +455,6 @@ def patch_script_config(
                 f'"BioVoice BSI comparison"  # CLI'
             )
             patched = patched.replace(cmp_results_marker, new_cmp_results, 1)
-
-        anchor = "bsi_framework_weights = {"
-        if anchor in patched:
-            inject = _wellness_override_block(wellness_module_import, include_comparison_helper=True)
-            patched = patched.replace(anchor, inject + anchor, 1)
 
     patched_script.write_text(patched, encoding="utf-8")
 
