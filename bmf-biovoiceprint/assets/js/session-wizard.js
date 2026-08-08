@@ -569,8 +569,26 @@
     function load() {
       setPanel('<p class="bmf-bv-empty">Loading session…</p>');
 
+      // First: does this user already have a locked script?
+      api('/user-script')
+        .catch(function () {
+          return { locked: false };
+        })
+        .then(function (lockInfo) {
+          if (lockInfo && lockInfo.locked) {
+            return continueToProtocol();
+          }
+          // No lock → show script selection (language → category → confirm).
+          showScriptPicker();
+        })
+        .catch(function (err) {
+          setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message || 'Failed to load session.') + '</p>');
+        });
+    }
+
+    function continueToProtocol() {
       // Resolve phase first so purpose=auto does not keep creating extra baseline groups.
-      api('/status')
+      return api('/status')
         .catch(function () {
           return null;
         })
@@ -606,10 +624,146 @@
           }).then(function (data) {
             showForState(data);
           });
-        })
-        .catch(function (err) {
-          setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message || 'Failed to load session.') + '</p>');
         });
+    }
+
+    function showScriptPicker() {
+      let selectedLang = 'en';
+      let selectedScriptId = null;
+      let scriptsCache = {};
+
+      function renderLanguage() {
+        setPanel(
+          '<div class="bmf-bv-script-picker">' +
+          '<h3 class="bmf-bv-heading">Choose your language</h3>' +
+          '<p class="bmf-bv-lead">You’ll read a short passage in this language for all your BioVoicePrint sessions.</p>' +
+          '<div class="bmf-bv-lang-options">' +
+          '<button type="button" class="bmf-bv-btn bmf-bv-lang-btn' + (selectedLang === 'en' ? ' is-selected' : '') + '" data-lang="en">English</button>' +
+          '<button type="button" class="bmf-bv-btn bmf-bv-lang-btn' + (selectedLang === 'es' ? ' is-selected' : '') + '" data-lang="es">Español</button>' +
+          '</div>' +
+          '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-lang-continue' + (selectedLang ? '' : ' disabled') + '>Continue</button>' +
+          '</div>'
+        );
+        panel.querySelectorAll('[data-lang]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            selectedLang = btn.getAttribute('data-lang');
+            selectedScriptId = null;
+            renderLanguage();
+          });
+        });
+        const cont = panel.querySelector('[data-lang-continue]');
+        if (cont) {
+          cont.addEventListener('click', function () {
+            loadScriptsAndShowCategories();
+          });
+        }
+      }
+
+      function loadScriptsAndShowCategories() {
+        setPanel('<p class="bmf-bv-empty">Loading passages…</p>');
+        api('/scripts?language=' + encodeURIComponent(selectedLang))
+          .then(function (data) {
+            scriptsCache[selectedLang] = (data && data.scripts) ? data.scripts : [];
+            renderCategories();
+          })
+          .catch(function (err) {
+            setPanel('<p class="bmf-bv-empty--error">' + escapeHtml(err.message || 'Could not load passages.') + '</p>');
+          });
+      }
+
+      function renderCategories() {
+        const list = scriptsCache[selectedLang] || [];
+        if (!list.length) {
+          setPanel(
+            '<div class="bmf-bv-script-picker">' +
+            '<p class="bmf-bv-empty">No passages available for this language yet.</p>' +
+            '<button type="button" class="bmf-bv-btn" data-back-lang>Go back</button></div>'
+          );
+          const back = panel.querySelector('[data-back-lang]');
+          if (back) back.addEventListener('click', renderLanguage);
+          return;
+        }
+
+        let cards = '';
+        list.forEach(function (s) {
+          const selected = selectedScriptId === s.id;
+          cards +=
+            '<label class="bmf-bv-script-card' + (selected ? ' is-selected' : '') + '">' +
+            '<input type="radio" name="bmf_script" value="' + escapeAttr(String(s.id)) + '"' + (selected ? ' checked' : '') + '>' +
+            '<span class="bmf-bv-script-cat">' + escapeHtml(s.category) + '</span>' +
+            '<strong class="bmf-bv-script-title">' + escapeHtml(s.title) + '</strong>' +
+            '<span class="bmf-bv-script-desc">' + escapeHtml(s.description || '') + '</span>' +
+            '<span class="bmf-bv-script-meta">~' + escapeHtml(String(s.estimated_seconds || 60)) + ' seconds</span>' +
+            '</label>';
+        });
+
+        setPanel(
+          '<div class="bmf-bv-script-picker">' +
+          '<h3 class="bmf-bv-heading">Choose the type of speaking that fits you best</h3>' +
+          '<p class="bmf-bv-lead">This becomes your personal baseline passage. You’ll use the same text every time so we can track real changes.</p>' +
+          '<div class="bmf-bv-script-cards">' + cards + '</div>' +
+          '<div class="bmf-bv-script-actions">' +
+          '<button type="button" class="bmf-bv-btn" data-back-lang>Back</button>' +
+          '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-script-continue' + (selectedScriptId ? '' : ' disabled') + '>Use this passage</button>' +
+          '</div></div>'
+        );
+
+        panel.querySelectorAll('input[name="bmf_script"]').forEach(function (radio) {
+          radio.addEventListener('change', function () {
+            selectedScriptId = parseInt(radio.value, 10);
+            renderCategories();
+          });
+        });
+        const back = panel.querySelector('[data-back-lang]');
+        if (back) back.addEventListener('click', renderLanguage);
+        const cont = panel.querySelector('[data-script-continue]');
+        if (cont) {
+          cont.addEventListener('click', function () {
+            if (!selectedScriptId) return;
+            const chosen = list.find(function (s) { return s.id === selectedScriptId; });
+            renderConfirm(chosen);
+          });
+        }
+      }
+
+      function renderConfirm(script) {
+        if (!script) return;
+        setPanel(
+          '<div class="bmf-bv-script-picker">' +
+          '<h3 class="bmf-bv-heading">Confirm your passage</h3>' +
+          '<p class="bmf-bv-lead"><strong>' + escapeHtml(script.title) + '</strong> · ' +
+          escapeHtml(script.language === 'es' ? 'Español' : 'English') +
+          ' · ' + escapeHtml(script.category) + '</p>' +
+          '<blockquote class="bmf-bv-step-prompt bmf-bv-script-preview">' + escapeHtml(script.body_text) + '</blockquote>' +
+          '<p class="bmf-bv-warn">Once you start, this passage is locked for your baseline and all future sessions. Changing it later means starting a new baseline series.</p>' +
+          '<div class="bmf-bv-script-actions">' +
+          '<button type="button" class="bmf-bv-btn" data-back-cats>Go back</button>' +
+          '<button type="button" class="bmf-bv-btn bmf-bv-btn-record" data-lock-start>Lock &amp; Start Baseline</button>' +
+          '</div></div>'
+        );
+        const back = panel.querySelector('[data-back-cats]');
+        if (back) back.addEventListener('click', renderCategories);
+        const lockBtn = panel.querySelector('[data-lock-start]');
+        if (lockBtn) {
+          lockBtn.addEventListener('click', function () {
+            lockBtn.disabled = true;
+            lockBtn.textContent = 'Locking…';
+            api('/user-script', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ script_id: script.id })
+            }).then(function () {
+              return continueToProtocol();
+            }).catch(function (err) {
+              alert(err.message || 'Could not lock the passage.');
+              lockBtn.disabled = false;
+              lockBtn.textContent = 'Lock & Start Baseline';
+            });
+          });
+        }
+      }
+
+      renderLanguage();
     }
 
     root.addEventListener('bmf-biovoice-mic-check-passed', function () {

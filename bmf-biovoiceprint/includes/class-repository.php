@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BMF_BioVoice_Repository {
 
-	const DB_VERSION = '0.2.18';
+	const DB_VERSION = '0.2.19';
 
 	/**
 	 * Create / upgrade tables. Safe to call repeatedly (dbDelta).
@@ -24,6 +24,8 @@ class BMF_BioVoice_Repository {
 		$groups    = $wpdb->prefix . 'bm_biovoice_session_groups';
 		$sessions  = $wpdb->prefix . 'bm_biovoice_sessions';
 		$results   = $wpdb->prefix . 'bm_biovoice_results';
+		$scripts   = $wpdb->prefix . 'bm_biovoice_scripts';
+		$user_script = $wpdb->prefix . 'bm_biovoice_user_script';
 
 		dbDelta( "CREATE TABLE {$protocols} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -144,6 +146,34 @@ class BMF_BioVoice_Repository {
 			KEY session_group_id (session_group_id),
 			KEY analyzed_at (analyzed_at),
 			KEY source (source)
+		) {$charset};" );
+
+		dbDelta( "CREATE TABLE {$scripts} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			script_code VARCHAR(64) NOT NULL,
+			category VARCHAR(32) NOT NULL,
+			language VARCHAR(8) NOT NULL DEFAULT 'en',
+			title VARCHAR(128) NOT NULL,
+			description TEXT NULL,
+			body_text LONGTEXT NOT NULL,
+			estimated_seconds SMALLINT UNSIGNED NOT NULL DEFAULT 60,
+			version VARCHAR(16) NOT NULL DEFAULT '1.0',
+			is_active TINYINT(1) NOT NULL DEFAULT 1,
+			sort_order SMALLINT NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			UNIQUE KEY script_code (script_code),
+			KEY lang_cat_active (language, category, is_active)
+		) {$charset};" );
+
+		dbDelta( "CREATE TABLE {$user_script} (
+			user_id BIGINT UNSIGNED NOT NULL,
+			script_id BIGINT UNSIGNED NOT NULL,
+			locked_at DATETIME NOT NULL,
+			baseline_series INT UNSIGNED NOT NULL DEFAULT 1,
+			PRIMARY KEY  (user_id, baseline_series),
+			KEY script_id (script_id)
 		) {$charset};" );
 
 		update_option( 'bmf_biovoice_db_version', self::DB_VERSION );
@@ -653,5 +683,151 @@ class BMF_BioVoice_Repository {
 		$db = BMF_BioVoice_DBX::$db;
 		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_sessions' );
 		return false !== $db->delete( $t, [ 'id' => $session_id ], [ '%d' ] );
+	}
+
+	/* ─── Scripts & user lock ─────────────────────────────────── */
+
+	public static function insert_script( array $data ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_scripts' );
+		$data = array_merge( [
+			'created_at' => current_time( 'mysql', true ),
+			'updated_at' => current_time( 'mysql', true ),
+		], $data );
+		$ok = $db->insert( $t, $data );
+		return $ok ? (int) $db->insert_id : false;
+	}
+
+	public static function get_script( int $id ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_scripts' );
+		return $db->get_row(
+			$db->prepare( "SELECT * FROM {$t} WHERE id = %d LIMIT 1", $id ),
+			ARRAY_A
+		);
+	}
+
+	public static function get_script_by_code( string $code ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_scripts' );
+		return $db->get_row(
+			$db->prepare( "SELECT * FROM {$t} WHERE script_code = %s LIMIT 1", $code ),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Active scripts, optionally filtered by language.
+	 *
+	 * @return array<int, array>
+	 */
+	public static function get_active_scripts( string $language = '' ): array {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_scripts' );
+		if ( $language ) {
+			return $db->get_results(
+				$db->prepare(
+					"SELECT * FROM {$t} WHERE is_active = 1 AND language = %s ORDER BY sort_order ASC, id ASC",
+					sanitize_key( $language )
+				),
+				ARRAY_A
+			) ?: [];
+		}
+		return $db->get_results(
+			"SELECT * FROM {$t} WHERE is_active = 1 ORDER BY language ASC, sort_order ASC, id ASC",
+			ARRAY_A
+		) ?: [];
+	}
+
+	/**
+	 * Current (highest baseline_series) lock for a user, or null.
+	 */
+	public static function get_user_script_lock( int $user_id ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_user_script' );
+		return $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE user_id = %d ORDER BY baseline_series DESC LIMIT 1",
+				$user_id
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Lock a script for the user. Refuses if a lock already exists for the given series.
+	 *
+	 * @return int|false|WP_Error  rows affected / false / error
+	 */
+	public static function lock_user_script( int $user_id, int $script_id, int $baseline_series = 1 ) {
+		$db = BMF_BioVoice_DBX::$db;
+		$t  = BMF_BioVoice_DBX::t( 'bm_biovoice_user_script' );
+
+		$existing = $db->get_row(
+			$db->prepare(
+				"SELECT * FROM {$t} WHERE user_id = %d AND baseline_series = %d LIMIT 1",
+				$user_id,
+				$baseline_series
+			),
+			ARRAY_A
+		);
+		if ( $existing ) {
+			return new WP_Error(
+				'bmf_biovoice_script_locked',
+				'A script is already locked for this baseline series.',
+				[ 'status' => 409 ]
+			);
+		}
+
+		$ok = $db->insert( $t, [
+			'user_id'         => $user_id,
+			'script_id'       => $script_id,
+			'locked_at'       => current_time( 'mysql', true ),
+			'baseline_series' => $baseline_series,
+		] );
+		return $ok ? 1 : false;
+	}
+
+	/**
+	 * One-time: lock every user who already has session groups onto the legacy script.
+	 * Safe to call repeatedly (skips users who already have a lock).
+	 */
+	public static function migrate_existing_users_to_legacy_script(): int {
+		$legacy = self::get_script_by_code( 'legacy_en_v1' );
+		if ( ! $legacy ) {
+			return 0;
+		}
+		$script_id = (int) $legacy['id'];
+
+		$db = BMF_BioVoice_DBX::$db;
+		$groups_t = BMF_BioVoice_DBX::t( 'bm_biovoice_session_groups' );
+		$lock_t   = BMF_BioVoice_DBX::t( 'bm_biovoice_user_script' );
+
+		$users = $db->get_col( "SELECT DISTINCT user_id FROM {$groups_t}" );
+		$locked = 0;
+		$now = current_time( 'mysql', true );
+
+		foreach ( $users as $uid ) {
+			$uid = (int) $uid;
+			if ( $uid < 1 ) {
+				continue;
+			}
+			$exists = $db->get_var(
+				$db->prepare( "SELECT 1 FROM {$lock_t} WHERE user_id = %d LIMIT 1", $uid )
+			);
+			if ( $exists ) {
+				continue;
+			}
+			$ok = $db->insert( $lock_t, [
+				'user_id'         => $uid,
+				'script_id'       => $script_id,
+				'locked_at'       => $now,
+				'baseline_series' => 1,
+			] );
+			if ( $ok ) {
+				$locked++;
+			}
+		}
+		return $locked;
 	}
 }

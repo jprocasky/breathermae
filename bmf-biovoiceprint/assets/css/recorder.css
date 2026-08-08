@@ -1172,3 +1172,95 @@
   border-radius: 4px;
   padding: 0.1rem 0.4rem;
 }
+
+/* ── Script picker (first-session, light theme) ── */
+.bmf-bv-script-picker {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0.5rem 0 1.5rem;
+}
+.bmf-bv-lang-options {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+  flex-wrap: wrap;
+}
+.bmf-bv-lang-btn {
+  min-width: 7rem;
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #0f172a;
+}
+.bmf-bv-lang-btn.is-selected {
+  border-color: #0ea5e9;
+  background: #e0f2fe;
+  color: #0c4a6e;
+}
+.bmf-bv-script-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+}
+.bmf-bv-script-card {
+  display: block;
+  position: relative;
+  padding: 0.9rem 1rem 0.9rem 2.4rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.bmf-bv-script-card:hover {
+  border-color: #94a3b8;
+}
+.bmf-bv-script-card.is-selected {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
+}
+.bmf-bv-script-card input[type="radio"] {
+  position: absolute;
+  left: 0.85rem;
+  top: 1.05rem;
+  margin: 0;
+}
+.bmf-bv-script-cat {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+.bmf-bv-script-title {
+  display: block;
+  font-size: 1rem;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+.bmf-bv-script-desc {
+  display: block;
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.4;
+}
+.bmf-bv-script-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.35rem;
+}
+.bmf-bv-script-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+.bmf-bv-script-preview {
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: 0.75rem 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}

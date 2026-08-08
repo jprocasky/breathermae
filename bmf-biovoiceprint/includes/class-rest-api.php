@@ -21,6 +21,25 @@ class BMF_BioVoice_REST_API {
 			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
 		] );
 
+		register_rest_route( self::NS, '/scripts', [
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => [ __CLASS__, 'list_scripts' ],
+			'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+		] );
+
+		register_rest_route( self::NS, '/user-script', [
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ __CLASS__, 'get_user_script' ],
+				'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+			],
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ __CLASS__, 'lock_user_script' ],
+				'permission_callback' => [ __CLASS__, 'require_logged_in' ],
+			],
+		] );
+
 		register_rest_route( self::NS, '/groups', [
 			[
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -362,6 +381,97 @@ class BMF_BioVoice_REST_API {
 	public static function get_protocol( WP_REST_Request $request ) {
 		$purpose = sanitize_key( (string) $request->get_param( 'purpose' ) ) ?: 'baseline';
 		return rest_ensure_response( BMF_BioVoice_Protocol_Service::get_active_payload( $purpose ) );
+	}
+
+	/**
+	 * GET /scripts?language=en
+	 */
+	public static function list_scripts( WP_REST_Request $request ) {
+		$lang = sanitize_key( (string) $request->get_param( 'language' ) );
+		$rows = BMF_BioVoice_Repository::get_active_scripts( $lang );
+		$out  = [];
+		foreach ( $rows as $row ) {
+			$out[] = [
+				'id'                => (int) $row['id'],
+				'script_code'       => $row['script_code'],
+				'category'          => $row['category'],
+				'language'          => $row['language'],
+				'title'             => $row['title'],
+				'description'       => $row['description'],
+				'body_text'         => $row['body_text'],
+				'estimated_seconds' => (int) $row['estimated_seconds'],
+				'version'           => $row['version'],
+				'sort_order'        => (int) $row['sort_order'],
+			];
+		}
+		return rest_ensure_response( [ 'scripts' => $out ] );
+	}
+
+	/**
+	 * GET /user-script — current lock (highest baseline_series) or null.
+	 */
+	public static function get_user_script( WP_REST_Request $request ) {
+		$user_id = get_current_user_id();
+		$lock    = BMF_BioVoice_Repository::get_user_script_lock( $user_id );
+		if ( ! $lock ) {
+			return rest_ensure_response( [ 'locked' => false, 'script' => null ] );
+		}
+		$script = BMF_BioVoice_Repository::get_script( (int) $lock['script_id'] );
+		if ( ! $script ) {
+			return rest_ensure_response( [ 'locked' => false, 'script' => null ] );
+		}
+		return rest_ensure_response( [
+			'locked'          => true,
+			'baseline_series' => (int) $lock['baseline_series'],
+			'locked_at'       => $lock['locked_at'],
+			'script'          => [
+				'id'                => (int) $script['id'],
+				'script_code'       => $script['script_code'],
+				'category'          => $script['category'],
+				'language'          => $script['language'],
+				'title'             => $script['title'],
+				'description'       => $script['description'],
+				'body_text'         => $script['body_text'],
+				'estimated_seconds' => (int) $script['estimated_seconds'],
+			],
+		] );
+	}
+
+	/**
+	 * POST /user-script — lock a script for baseline_series 1 (first time only).
+	 * Body: { script_id: int }
+	 */
+	public static function lock_user_script( WP_REST_Request $request ) {
+		$user_id   = get_current_user_id();
+		$script_id = absint( $request->get_param( 'script_id' ) );
+		if ( $script_id < 1 ) {
+			return new WP_Error( 'bmf_biovoice_script', 'script_id is required.', [ 'status' => 400 ] );
+		}
+		$script = BMF_BioVoice_Repository::get_script( $script_id );
+		if ( ! $script || ! (int) $script['is_active'] ) {
+			return new WP_Error( 'bmf_biovoice_script', 'Script not found or inactive.', [ 'status' => 404 ] );
+		}
+
+		$result = BMF_BioVoice_Repository::lock_user_script( $user_id, $script_id, 1 );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		if ( false === $result ) {
+			return new WP_Error( 'bmf_biovoice_db', 'Could not lock script.', [ 'status' => 500 ] );
+		}
+
+		return rest_ensure_response( [
+			'ok'              => true,
+			'locked'          => true,
+			'baseline_series' => 1,
+			'script'          => [
+				'id'          => (int) $script['id'],
+				'script_code' => $script['script_code'],
+				'title'       => $script['title'],
+				'language'    => $script['language'],
+				'category'    => $script['category'],
+			],
+		] );
 	}
 
 	public static function ensure_group( WP_REST_Request $request ) {

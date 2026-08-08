@@ -325,6 +325,16 @@ class BMF_BioVoice_Session_Service {
 		}
 
 		$steps     = BMF_BioVoice_Repository::get_steps_for_protocol( (int) $group['protocol_id'] );
+		$user_id   = (int) $group['user_id'];
+		$locked_body = null;
+		$lock = BMF_BioVoice_Repository::get_user_script_lock( $user_id );
+		if ( $lock ) {
+			$script = BMF_BioVoice_Repository::get_script( (int) $lock['script_id'] );
+			if ( $script && ! empty( $script['body_text'] ) ) {
+				$locked_body = $script['body_text'];
+			}
+		}
+
 		$next_step = null;
 		foreach ( $steps as $s ) {
 			$code = $s['task_code'];
@@ -334,12 +344,14 @@ class BMF_BioVoice_Session_Service {
 			}
 			if ( empty( $done[ $code ] ) ) {
 				$next_step = BMF_BioVoice_Protocol_Service::format_step( $s );
+				if ( $code === 'reading' && $locked_body ) {
+					$next_step['prompt_text'] = $locked_body;
+				}
 				break;
 			}
 		}
 
 		$complete = ( $next_step === null && ! empty( $steps ) );
-		$user_id  = (int) $group['user_id'];
 		$purpose  = sanitize_key( (string) ( $group['purpose'] ?? 'baseline' ) ) ?: 'baseline';
 
 		$baseline_final   = BMF_BioVoice_Repository::count_final_groups( $user_id, 'baseline' );
@@ -390,7 +402,11 @@ class BMF_BioVoice_Session_Service {
 
 		$formatted_steps = [];
 		foreach ( $steps as $s ) {
-			$formatted_steps[] = BMF_BioVoice_Protocol_Service::format_step( $s );
+			$fmt = BMF_BioVoice_Protocol_Service::format_step( $s );
+			if ( $s['task_code'] === 'reading' && $locked_body ) {
+				$fmt['prompt_text'] = $locked_body;
+			}
+			$formatted_steps[] = $fmt;
 		}
 
 		return [

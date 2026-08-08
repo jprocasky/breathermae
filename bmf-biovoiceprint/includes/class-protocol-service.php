@@ -19,6 +19,12 @@ class BMF_BioVoice_Protocol_Service {
 			BMF_BioVoice_Repository::install_tables();
 		}
 		self::seed_v1_if_needed();
+		self::seed_scripts_if_needed();
+		// One-time: existing users who already recorded get the legacy script locked.
+		if ( ! get_option( 'bmf_biovoice_legacy_script_migrated' ) ) {
+			BMF_BioVoice_Repository::migrate_existing_users_to_legacy_script();
+			update_option( 'bmf_biovoice_legacy_script_migrated', 1, false );
+		}
 	}
 
 	/**
@@ -209,5 +215,83 @@ class BMF_BioVoice_Protocol_Service {
 		}
 
 		return $protocol_id;
+	}
+
+	/**
+	 * Seed reading scripts (legacy + category variants). Idempotent.
+	 */
+	public static function seed_scripts_if_needed() {
+		if ( BMF_BioVoice_Repository::get_script_by_code( 'legacy_en_v1' ) ) {
+			return;
+		}
+
+		$legacy_body = 'I am reading this passage in a calm, natural, and steady voice. I will speak at a comfortable pace and breathe normally throughout the recording. I will not try to change my tone, emotion, or rhythm. I will allow each sentence to flow naturally and pause only where punctuation occurs. My goal is to remain clear, relaxed, and consistent from beginning to end. This recording is capturing how my voice functions in this moment through breath, timing, steadiness, and control.';
+
+		$scripts = [
+			[
+				'script_code'       => 'legacy_en_v1',
+				'category'          => 'general',
+				'language'          => 'en',
+				'title'             => 'Original / General',
+				'description'       => 'The original BioVoicePrint passage. Clear, neutral, and consistent — a solid default for most users.',
+				'body_text'         => $legacy_body,
+				'estimated_seconds' => 35,
+				'version'           => '1.0',
+				'is_active'         => 1,
+				'sort_order'        => 0,
+			],
+			[
+				'script_code'       => 'tech_en_v1',
+				'category'          => 'technical',
+				'language'          => 'en',
+				'title'             => 'Technical explanation',
+				'description'       => 'Structured, precise language useful for engineers, analysts, and instructors who explain systems or processes.',
+				'body_text'         => 'When we design a reliable system, we begin with clear requirements and measurable outcomes. Each component must perform its role without unnecessary complexity. I describe the flow from input to output in a calm and steady voice, pausing only where the logic requires a breath. Precision matters more than speed. Consistency of timing and articulation lets us observe how breath and control support technical communication.',
+				'estimated_seconds' => 40,
+				'version'           => '1.0',
+				'is_active'         => 1,
+				'sort_order'        => 10,
+			],
+			[
+				'script_code'       => 'motiv_en_v1',
+				'category'          => 'motivational',
+				'language'          => 'en',
+				'title'             => 'Coaching / motivational',
+				'description'       => 'Supportive, forward-looking language suited to coaches, trainers, and leaders who encourage others.',
+				'body_text'         => 'Progress is built one deliberate step at a time. I speak with steady energy and a calm center, reminding myself that recovery and focus are part of performance. Each breath supports the next phrase. I do not rush. I allow the message to land clearly so that encouragement feels grounded and real. This is how I communicate when I want others to feel capable and ready.',
+				'estimated_seconds' => 35,
+				'version'           => '1.0',
+				'is_active'         => 1,
+				'sort_order'        => 20,
+			],
+			[
+				'script_code'       => 'public_en_v1',
+				'category'          => 'public_speaking',
+				'language'          => 'en',
+				'title'             => 'Public speaking',
+				'description'       => 'Projected yet natural phrasing for presentations, talks, and any setting where presence and clarity matter.',
+				'body_text'         => 'Good morning. Today I want to share a simple idea with clarity and presence. I speak at a measured pace so every listener can follow. My posture is open, my breath is steady, and my voice carries without strain. I pause between thoughts so the message has room to land. Consistency of tone and timing is what makes a presentation feel confident and trustworthy from the first sentence to the last.',
+				'estimated_seconds' => 40,
+				'version'           => '1.0',
+				'is_active'         => 1,
+				'sort_order'        => 30,
+			],
+			[
+				'script_code'       => 'legacy_es_v1',
+				'category'          => 'general',
+				'language'          => 'es',
+				'title'             => 'Original / General (Español)',
+				'description'       => 'La pasaje original de BioVoicePrint en español. Clara, neutra y consistente.',
+				'body_text'         => 'Estoy leyendo este pasaje con una voz calmada, natural y constante. Hablaré a un ritmo cómodo y respiraré con normalidad durante la grabación. No intentaré cambiar mi tono, emoción o ritmo. Permitiré que cada oración fluya de forma natural y solo haré pausas donde lo indique la puntuación. Mi objetivo es mantenerme claro, relajado y consistente de principio a fin. Esta grabación captura cómo funciona mi voz en este momento a través de la respiración, el tiempo, la estabilidad y el control.',
+				'estimated_seconds' => 40,
+				'version'           => '1.0',
+				'is_active'         => 1,
+				'sort_order'        => 0,
+			],
+		];
+
+		foreach ( $scripts as $row ) {
+			BMF_BioVoice_Repository::insert_script( $row );
+		}
 	}
 }
