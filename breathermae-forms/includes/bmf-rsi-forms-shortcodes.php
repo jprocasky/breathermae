@@ -264,17 +264,129 @@ class BMF_RSI_Form_Service {
         set_transient( $cache_key, $cols, 12 * HOUR_IN_SECONDS );
         return $cols;
     }
+
+    public static function normalize_date_str( $date_str ) {
+        if ( empty( $date_str ) ) return null;
+        $date_str = sanitize_text_field( $date_str );
+        if ( preg_match( '/^(\d{4}-\d{2}-\d{2})/', $date_str, $m ) ) {
+            return $m[1];
+        }
+        $ts = strtotime( $date_str );
+        return ( $ts !== false ) ? date( 'Y-m-d', $ts ) : null;
+    }
+
+    /**
+     * Normalize raw RSI numeric values to 0–100 percent.
+     * readiness_score is already 0–100; other fields may be 0–1 or already %.
+     */
+    public static function to_percent( $raw, $field = '' ) {
+        if ( $raw === null || $raw === '' || ! is_numeric( $raw ) ) return null;
+        $val = (float) $raw;
+        if ( $field === 'readiness_score' ) {
+            return max( 0, min( 100, round( $val, 2 ) ) );
+        }
+        return ( $val <= 1.0 ) ? round( $val * 100, 2 ) : round( $val, 2 );
+    }
+
+    /**
+     * Previous finalized RSI results row before $date_str (or before current latest).
+     */
+    public static function get_previous_results_row_for_user( $user_id, $date_str = null ) {
+        $user_id  = (int) $user_id;
+        $date_str = self::normalize_date_str( $date_str );
+
+        $db   = BMF_RSI_DBX::$db;
+        $t_r  = BMF_RSI_DBX::t( 'bm_rsi_results' );
+        $user = get_userdata( $user_id );
+        if ( ! $user || empty( $user->user_email ) ) return null;
+        $email = $user->user_email;
+
+        if ( ! $date_str ) {
+            $current = self::get_results_row_for_user( $user_id, null );
+            if ( ! $current || empty( $current['results_date'] ) ) return null;
+            $date_str = self::normalize_date_str( $current['results_date'] );
+        }
+        if ( ! $date_str ) return null;
+
+        $row = $db->get_row(
+            $db->prepare(
+                "SELECT * FROM {$t_r}
+                 WHERE user_email = %s AND is_final = 1 AND results_date < %s
+                 ORDER BY results_date DESC, id DESC LIMIT 1",
+                $email, $date_str
+            ),
+            ARRAY_A
+        );
+        return $row ?: null;
+    }
+
+    /**
+     * Trend series for [bmf_rsi_trend_chart].
+     *
+     * Core RSI       = R11_final
+     * Performance RSI = R12_final
+     * Calibration    = R12_S6
+     *
+     * X-axis relative to first is_final=1 record (Baseline).
+     *
+     * @return array{baseline_date:string,points:array}|null
+     */
+    public static function get_trend_series_for_user( $user_id ) {
+        $user_id = (int) $user_id;
+        $db   = BMF_RSI_DBX::$db;
+        $t_r  = BMF_RSI_DBX::t( 'bm_rsi_results' );
+        $user = get_userdata( $user_id );
+        if ( ! $user || empty( $user->user_email ) ) return null;
+        $email = $user->user_email;
+
+        $rows = $db->get_results(
+            $db->prepare(
+                "SELECT results_date, R11_final, R12_final, R12_S6
+                 FROM {$t_r}
+                 WHERE user_email = %s AND is_final = 1
+                 ORDER BY results_date ASC, id ASC",
+                $email
+            ),
+            ARRAY_A
+        );
+        if ( empty( $rows ) ) return null;
+
+        $baseline_date = self::normalize_date_str( $rows[0]['results_date'] );
+        if ( ! $baseline_date ) return null;
+
+        $points = [];
+        foreach ( $rows as $r ) {
+            $d = self::normalize_date_str( $r['results_date'] );
+            if ( ! $d ) continue;
+            $points[] = [
+                'date'         => $d,
+                'core'         => self::to_percent( $r['R11_final'] ?? null ),
+                'performance'  => self::to_percent( $r['R12_final'] ?? null ),
+                'calibration'  => self::to_percent( $r['R12_S6'] ?? null ),
+            ];
+        }
+
+        return [
+            'baseline_date' => $baseline_date,
+            'points'        => $points,
+        ];
+    }
 }
 
 /** Shortcodes */
 class BMF_RSI_Form_Shortcodes {
 
     public static function init() {
-        add_shortcode( 'bmf_rsi_form',          [ __CLASS__, 'shortcode_form' ] );
-        add_shortcode( 'bmf_rsi_form_icon',     [ __CLASS__, 'shortcode_form_icon' ] );
-        add_shortcode( 'bmf_rsi_form_gauge',    [ __CLASS__, 'shortcode_form_gauge' ] );
-        add_shortcode( 'bmf_rsi_results_field', [ __CLASS__, 'shortcode_results_field' ] );
-        add_shortcode('bmf_rsi_history_select', [ __CLASS__, 'shortcode_history_select' ]);
+        add_shortcode( 'bmf_rsi_form',           [ __CLASS__, 'shortcode_form' ] );
+        add_shortcode( 'bmf_rsi_form_icon',      [ __CLASS__, 'shortcode_form_icon' ] );
+        add_shortcode( 'bmf_rsi_form_gauge',     [ __CLASS__, 'shortcode_form_gauge' ] );
+        add_shortcode( 'bmf_rsi_results_field',  [ __CLASS__, 'shortcode_results_field' ] );
+        add_shortcode( 'bmf_rsi_history_select', [ __CLASS__, 'shortcode_history_select' ] );
+        add_shortcode( 'bmf_rsi_results_delta',  [ __CLASS__, 'shortcode_results_delta' ] );
+        add_shortcode( 'bmf_rsi_trend_chart',    [ __CLASS__, 'shortcode_trend_chart' ] );
+        add_shortcode( 'bmf_rsi_section_delta',  [ __CLASS__, 'shortcode_section_delta' ] );
+        add_shortcode( 'bmf_rsi_dimension_avg',  [ __CLASS__, 'shortcode_dimension_avg' ] );
+        add_shortcode( 'bmf_rsi_history_report', [ __CLASS__, 'shortcode_history_report' ] );
         add_shortcode('bmf_rsi_section_icon', function ($atts) {
 
             if (function_exists('bmf_in_elementor_editor') && bmf_in_elementor_editor()) {
@@ -906,97 +1018,989 @@ class BMF_RSI_Form_Shortcodes {
 
     /**
      * Flexible field passthrough for bm_rsi_results
-     * [bmf_rsi_results_field field="R11|R12|R12_S6|master_score|readiness_score|R11_Notes|details_json|updated_at"
-     *    user_id="" date="" format="text|number|date|json|html|raw" format_date="Y-m-d" decimals="2" autop="0" max_chars="0" mode="snapshot|latest"]
+     * [bmf_rsi_results_field field="R11_final" format="number" decimals="0" colorize="1"]
+     *
+     * Same options as [bmf_bsi_results_field]:
+     *   format="text|number|date|json|html|raw"
+     *   decimals="0"   (used with format=number; 0–1 values auto-scaled to %)
+     *   colorize="1"   (lookup color, then strain-zone fallback; lower = greener)
      */
     public static function shortcode_results_field( $atts ) {
-        if (self::should_bail_for_editor()) return '';
+        if ( self::should_bail_for_editor() ) return '';
 
         $atts = shortcode_atts( [
-            'field' => '', 'user_id'=>get_current_user_id(), 'date'=>'',
-            'format'=>'text', 'format_date'=>'Y-m-d', 'decimals'=>'2', 'autop'=>'0', 'max_chars'=>'0',
-            'mode'=>'latest'
+            'field'       => '',
+            'user_id'     => get_current_user_id(),
+            'date'        => '',
+            'format'      => 'text',
+            'format_date' => 'Y-m-d',
+            'decimals'    => '2',
+            'autop'       => '0',
+            'max_chars'   => '0',
+            'mode'        => 'latest',
+            'colorize'    => '0',
         ], $atts, 'bmf_rsi_results_field' );
 
-        $user_id = (int)$atts['user_id']; if (!$user_id) return '';
-        $field = trim( (string)$atts['field'] ); if ($field === '') return '';
+        $user_id = (int) $atts['user_id'];
+        if ( ! $user_id ) return '';
+        $field = trim( (string) $atts['field'] );
+        if ( $field === '' ) return '';
 
-        $cols = BMF_RSI_Form_Service::get_results_table_columns(); if ( empty( $cols[ $field ] ) ) return '';
+        $cols = BMF_RSI_Form_Service::get_results_table_columns();
+        if ( empty( $cols[ $field ] ) ) return '';
 
-        $mode = strtolower((string)$atts['mode']); if ($mode!=='snapshot') $mode='latest';
+        $mode = strtolower( (string) $atts['mode'] );
+        if ( $mode !== 'snapshot' ) $mode = 'latest';
 
         if ( $mode === 'snapshot' ) {
-            // Rolling latest-non-empty across all rows
-            $db  = BMF_RSI_DBX::$db; $t_r = BMF_RSI_DBX::t('bm_rsi_results');
-            $user = get_userdata($user_id); if ( ! $user || empty($user->user_email) ) return '';
+            $db  = BMF_RSI_DBX::$db;
+            $t_r = BMF_RSI_DBX::t( 'bm_rsi_results' );
+            $user = get_userdata( $user_id );
+            if ( ! $user || empty( $user->user_email ) ) return '';
             $email = $user->user_email;
 
-            $rows = $db->get_results( $db->prepare("SELECT * FROM {$t_r} WHERE user_email = %s AND is_final = 1 ORDER BY results_date DESC, id DESC", $email), ARRAY_A );
+            $rows = $db->get_results(
+                $db->prepare(
+                    "SELECT * FROM {$t_r} WHERE user_email = %s AND is_final = 1 ORDER BY results_date DESC, id DESC",
+                    $email
+                ),
+                ARRAY_A
+            );
             if ( ! $rows ) return '';
 
-            $row = null; $value = '';
-            foreach ($rows as $r) {
-                if ( array_key_exists($field,$r) && $r[$field] !== null && $r[$field] !== '' ) { $row=$r; $value=$r[$field]; break; }
+            $row   = null;
+            $value = '';
+            foreach ( $rows as $r ) {
+                if ( array_key_exists( $field, $r ) && $r[ $field ] !== null && $r[ $field ] !== '' ) {
+                    $row   = $r;
+                    $value = $r[ $field ];
+                    break;
+                }
             }
             if ( ! $row ) return '';
         } else {
-            $date_str = isset($_GET['rsi_date'])
-                ? sanitize_text_field($_GET['rsi_date'])
-                : ($atts['date'] ?: null);
+            $date_str = isset( $_GET['rsi_date'] )
+                ? sanitize_text_field( $_GET['rsi_date'] )
+                : ( $atts['date'] ?: null );
 
             $row = BMF_RSI_Form_Service::get_results_row_for_user( $user_id, $date_str );
-            
             if ( ! $row ) return '';
-            $value = array_key_exists($field,$row) && $row[$field] !== null ? $row[$field] : '';
+            $value = array_key_exists( $field, $row ) && $row[ $field ] !== null ? $row[ $field ] : '';
         }
 
         $format   = strtolower( (string) $atts['format'] );
-        $autop    = ((int)$atts['autop'] === 1);
-        $max      = max( 0, (int)$atts['max_chars'] );
+        $autop    = ( (int) $atts['autop'] === 1 );
+        $max      = max( 0, (int) $atts['max_chars'] );
+        $colorize = ( (int) $atts['colorize'] === 1 );
+
         $truncate = function( $text, $limit ) {
             $text = (string) $text;
-            if ( $limit <= 0 || mb_strlen($text) <= $limit ) return $text;
-            $cut = mb_substr($text, 0, $limit);
-            $space = mb_strrpos($cut, ' ');
-            if ( $space !== false && $space >= $limit - 20 ) $cut = mb_substr($cut, 0, $space);
-            return rtrim($cut) . '…';
+            if ( $limit <= 0 || mb_strlen( $text ) <= $limit ) return $text;
+            $cut   = mb_substr( $text, 0, $limit );
+            $space = mb_strrpos( $cut, ' ' );
+            if ( $space !== false && $space >= $limit - 20 ) $cut = mb_substr( $cut, 0, $space );
+            return rtrim( $cut ) . '…';
         };
 
-        switch ($format) {
+        $numeric_for_color = null;
+
+        switch ( $format ) {
             case 'raw':
-                $out = (string)$value; break;
+                $out = (string) $value;
+                break;
 
             case 'html':
-                $out = (string)$value; if ($autop) $out = wpautop($out); break;
+                $out = (string) $value;
+                if ( $autop ) $out = wpautop( $out );
+                break;
 
             case 'number':
-                if ($value === '') return '';
-                $dec = max(0, (int)$atts['decimals']);
-                $num = is_numeric($value) ? (float)$value : null; if ($num === null) return '';
-                $out = number_format($num, $dec, '.', ','); break;
+                if ( $value === '' ) return '';
+                $dec = max( 0, (int) $atts['decimals'] );
+                $num = is_numeric( $value ) ? (float) $value : null;
+                if ( $num === null ) return '';
+
+                // Match BSI: 0–1 domain values → percent. readiness_score is already 0–100.
+                if ( $field !== 'readiness_score' && $num <= 1.0 ) {
+                    $num = $num * 100;
+                }
+                $numeric_for_color = $num;
+                $out = number_format( $num, $dec, '.', ',' );
+                break;
 
             case 'date':
-                if (empty($value)) return '';
-                $ts = strtotime((string)$value);
-                $out = ($ts === false) ? esc_html((string)$value) : esc_html( date($atts['format_date'] ?: 'Y-m-d', $ts) );
+                if ( empty( $value ) ) return '';
+                $ts  = strtotime( (string) $value );
+                $out = ( $ts === false )
+                    ? esc_html( (string) $value )
+                    : esc_html( date( $atts['format_date'] ?: 'Y-m-d', $ts ) );
                 break;
 
             case 'json':
-                if ($value === '') return '';
-                $decoded = is_array($value) || is_object($value) ? $value : json_decode((string)$value, true);
-                $out = ($decoded === null)
-                    ? esc_html((string)$value)
-                    : '<pre class="bmf-rsi-json">' . esc_html( json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ) . '</pre>';
+                if ( $value === '' ) return '';
+                $decoded = is_array( $value ) || is_object( $value )
+                    ? $value
+                    : json_decode( (string) $value, true );
+                $out = ( $decoded === null )
+                    ? esc_html( (string) $value )
+                    : '<pre class="bmf-rsi-json">' . esc_html( json_encode( $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) ) . '</pre>';
                 break;
 
-            case 'text': default:
-                $txt = (string)$value;
-                if ($max > 0) $txt = $truncate($txt, $max);
-                $out = nl2br( esc_html($txt) );
-                if ($autop) { $raw = (string)$value; if ($max>0) $raw = $truncate($raw, $max); $out = wpautop( esc_html($raw) ); }
+            case 'text':
+            default:
+                $txt = (string) $value;
+                if ( $max > 0 ) $txt = $truncate( $txt, $max );
+                $out = nl2br( esc_html( $txt ) );
+                if ( $autop ) {
+                    $raw = (string) $value;
+                    if ( $max > 0 ) $raw = $truncate( $raw, $max );
+                    $out = wpautop( esc_html( $raw ) );
+                }
                 break;
         }
+
+        if ( $colorize && $numeric_for_color !== null ) {
+            // Prefer form-specific lookup (R11→11, R12→12); else overall (0); else strain zones.
+            $lookup_form_id = 0;
+            if ( preg_match( '/^R11/i', $field ) ) {
+                $lookup_form_id = 11;
+            } elseif ( preg_match( '/^R12/i', $field ) && stripos( $field, 'S6' ) === false ) {
+                $lookup_form_id = 12;
+            }
+
+            $color = '';
+            $meta  = BMF_RSI_Form_Service::resolve_form_lookup( $lookup_form_id, (float) $numeric_for_color );
+            if ( ! empty( $meta['form_color'] ) ) {
+                $color = $meta['form_color'];
+            }
+            if ( $color === '' ) {
+                // Strain bands — lower is better (green → yellow → orange → red)
+                $color = self::strain_color( (float) $numeric_for_color );
+            }
+            if ( $color !== '' ) {
+                $out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+            }
+        }
+
         return $out;
+    }
+
+    /**
+     * [bmf_rsi_results_delta field="R11_final|R12_final|R12_S6|readiness_score|master_score" ...]
+     * Lower-is-better: decrease = green, increase = red.
+     */
+    public static function shortcode_results_delta( $atts ) {
+        if ( self::should_bail_for_editor() ) return '';
+        $atts = shortcode_atts( [
+            'field'      => '',
+            'user_id'    => get_current_user_id(),
+            'decimals'   => '0',
+            'show_arrow' => '1',
+            'show_sign'  => '1',
+            'colorize'   => '1',
+        ], $atts, 'bmf_rsi_results_delta' );
+
+        $user_id = (int) $atts['user_id'];
+        $field   = trim( (string) $atts['field'] );
+        if ( ! $user_id || $field === '' ) return '';
+
+        $cols = BMF_RSI_Form_Service::get_results_table_columns();
+        if ( empty( $cols[ $field ] ) ) return '';
+
+        $date_str = isset( $_GET['rsi_date'] )
+            ? BMF_RSI_Form_Service::normalize_date_str( $_GET['rsi_date'] )
+            : null;
+
+        $current = BMF_RSI_Form_Service::get_results_row_for_user( $user_id, $date_str );
+        if ( ! $current || ! array_key_exists( $field, $current ) || $current[ $field ] === null || $current[ $field ] === '' ) {
+            return '0';
+        }
+
+        $prev = BMF_RSI_Form_Service::get_previous_results_row_for_user( $user_id, $date_str );
+        if ( ! $prev || ! array_key_exists( $field, $prev ) || $prev[ $field ] === null || $prev[ $field ] === '' ) {
+            $out = '0';
+            if ( (int) $atts['colorize'] === 1 ) {
+                $out = '<span style="color:#888888;">' . $out . '</span>';
+            }
+            return $out;
+        }
+
+        $cur_pct  = BMF_RSI_Form_Service::to_percent( $current[ $field ], $field );
+        $prev_pct = BMF_RSI_Form_Service::to_percent( $prev[ $field ], $field );
+        if ( $cur_pct === null || $prev_pct === null ) return '0';
+
+        $delta = $cur_pct - $prev_pct;
+        $dec   = max( 0, (int) $atts['decimals'] );
+        $abs   = abs( $delta );
+        $num   = number_format( $abs, $dec, '.', ',' );
+
+        $sign = '';
+        if ( (int) $atts['show_sign'] === 1 ) {
+            if ( $delta > 0 )      $sign = '+';
+            elseif ( $delta < 0 )  $sign = '−';
+        }
+        $arrow = '';
+        if ( (int) $atts['show_arrow'] === 1 ) {
+            if ( $delta > 0 )      $arrow = ' ↑';
+            elseif ( $delta < 0 )  $arrow = ' ↓';
+        }
+        $out = $sign . $num . $arrow;
+
+        // Lower is better for all RSI metrics
+        if ( (int) $atts['colorize'] === 1 ) {
+            if ( $delta < 0 ) {
+                $color = '#44dd30';
+            } elseif ( $delta > 0 ) {
+                $color = '#c62828';
+            } else {
+                $color = '#888888';
+            }
+            $out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+        }
+        return $out;
+    }
+
+    /**
+     * [bmf_rsi_section_delta section_id="48" form_id="11" ...]
+     * Delta of a single R11 section score vs previous assessment. Lower is better.
+     */
+    public static function shortcode_section_delta( $atts ) {
+        if ( self::should_bail_for_editor() ) return '';
+        $atts = shortcode_atts( [
+            'section_id' => '',
+            'form_id'    => '11',
+            'user_id'    => get_current_user_id(),
+            'decimals'   => '0',
+            'show_arrow' => '1',
+            'show_sign'  => '1',
+            'colorize'   => '1',
+        ], $atts, 'bmf_rsi_section_delta' );
+
+        $user_id    = (int) $atts['user_id'];
+        $form_id    = (int) $atts['form_id'] ?: 11;
+        $section_id = (int) $atts['section_id'];
+        if ( ! $user_id || ! $section_id ) return '';
+
+        $date_str = isset( $_GET['rsi_date'] )
+            ? BMF_RSI_Form_Service::normalize_date_str( $_GET['rsi_date'] )
+            : null;
+
+        $cur  = BMF_RSI_Section_Service::get_section_score( $user_id, $form_id, $section_id, $date_str );
+        $prev = BMF_RSI_Section_Service::get_previous_section_score( $user_id, $form_id, $section_id, $date_str );
+
+        if ( $cur === null ) return '0';
+        if ( $prev === null ) {
+            $out = '0';
+            if ( (int) $atts['colorize'] === 1 ) {
+                $out = '<span style="color:#888888;">' . $out . '</span>';
+            }
+            return $out;
+        }
+
+        $delta = (float) $cur - (float) $prev;
+        $dec   = max( 0, (int) $atts['decimals'] );
+        $num   = number_format( abs( $delta ), $dec, '.', ',' );
+
+        $sign = '';
+        if ( (int) $atts['show_sign'] === 1 ) {
+            if ( $delta > 0 )      $sign = '+';
+            elseif ( $delta < 0 )  $sign = '−';
+        }
+        $arrow = '';
+        if ( (int) $atts['show_arrow'] === 1 ) {
+            if ( $delta > 0 )      $arrow = ' ↑';
+            elseif ( $delta < 0 )  $arrow = ' ↓';
+        }
+        $out = $sign . $num . $arrow;
+
+        if ( (int) $atts['colorize'] === 1 ) {
+            if ( $delta < 0 ) {
+                $color = '#44dd30';
+            } elseif ( $delta > 0 ) {
+                $color = '#c62828';
+            } else {
+                $color = '#888888';
+            }
+            $out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+        }
+        return $out;
+    }
+
+    /**
+     * [bmf_rsi_dimension_avg group="drivers|mediators|outcomes" field="score|delta" ...]
+     * Category average of the 3 section scores in that group (form 11).
+     */
+    public static function shortcode_dimension_avg( $atts ) {
+        if ( self::should_bail_for_editor() ) return '';
+        $atts = shortcode_atts( [
+            'group'      => '',
+            'field'      => 'score', // score | delta
+            'form_id'    => '11',
+            'user_id'    => get_current_user_id(),
+            'decimals'   => '0',
+            'show_arrow' => '1',
+            'show_sign'  => '1',
+            'colorize'   => '1',
+        ], $atts, 'bmf_rsi_dimension_avg' );
+
+        $user_id = (int) $atts['user_id'];
+        $form_id = (int) $atts['form_id'] ?: 11;
+        $group   = strtolower( trim( (string) $atts['group'] ) );
+        $field   = strtolower( trim( (string) $atts['field'] ) );
+        if ( ! $user_id || ! in_array( $group, [ 'drivers', 'mediators', 'outcomes' ], true ) ) return '';
+
+        $map = BMF_RSI_Section_Service::dimension_section_ids();
+        $section_ids = $map[ $group ] ?? [];
+        if ( empty( $section_ids ) ) return '';
+
+        $date_str = isset( $_GET['rsi_date'] )
+            ? BMF_RSI_Form_Service::normalize_date_str( $_GET['rsi_date'] )
+            : null;
+
+        $cur_vals = [];
+        $prev_vals = [];
+        foreach ( $section_ids as $sid ) {
+            $c = BMF_RSI_Section_Service::get_section_score( $user_id, $form_id, $sid, $date_str );
+            if ( $c !== null ) $cur_vals[] = (float) $c;
+            $p = BMF_RSI_Section_Service::get_previous_section_score( $user_id, $form_id, $sid, $date_str );
+            if ( $p !== null ) $prev_vals[] = (float) $p;
+        }
+
+        if ( empty( $cur_vals ) ) return '';
+
+        $cur_avg = round( array_sum( $cur_vals ) / count( $cur_vals ), 2 );
+
+        if ( $field !== 'delta' ) {
+            $dec = max( 0, (int) $atts['decimals'] );
+            return esc_html( number_format( $cur_avg, $dec, '.', ',' ) );
+        }
+
+        if ( empty( $prev_vals ) ) {
+            $out = '0';
+            if ( (int) $atts['colorize'] === 1 ) {
+                $out = '<span style="color:#888888;">' . $out . '</span>';
+            }
+            return $out;
+        }
+
+        $prev_avg = round( array_sum( $prev_vals ) / count( $prev_vals ), 2 );
+        $delta    = $cur_avg - $prev_avg;
+        $dec      = max( 0, (int) $atts['decimals'] );
+        $num      = number_format( abs( $delta ), $dec, '.', ',' );
+
+        $sign = '';
+        if ( (int) $atts['show_sign'] === 1 ) {
+            if ( $delta > 0 )      $sign = '+';
+            elseif ( $delta < 0 )  $sign = '−';
+        }
+        $arrow = '';
+        if ( (int) $atts['show_arrow'] === 1 ) {
+            if ( $delta > 0 )      $arrow = ' ↑';
+            elseif ( $delta < 0 )  $arrow = ' ↓';
+        }
+        $out = $sign . $num . $arrow;
+
+        if ( (int) $atts['colorize'] === 1 ) {
+            if ( $delta < 0 ) {
+                $color = '#44dd30';
+            } elseif ( $delta > 0 ) {
+                $color = '#c62828';
+            } else {
+                $color = '#888888';
+            }
+            $out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+        }
+        return $out;
+    }
+
+    /**
+     * [bmf_rsi_trend_chart height="360" user_id=""]
+     *
+     * Multi-series line chart (baseline-relative, ~1 year window):
+     *   Core RSI        = R11_final
+     *   Performance RSI = R12_final
+     *   Calibration     = R12_S6
+     *
+     * Phase markers at Baseline, +90d, +180d, +270d.
+     * Lower is better (same strain-style Y zones as BSI).
+     */
+    public static function shortcode_trend_chart( $atts ) {
+        if ( self::should_bail_for_editor() ) return '';
+
+        $atts = shortcode_atts( [
+            'user_id' => get_current_user_id(),
+            'height'  => '360',
+        ], $atts, 'bmf_rsi_trend_chart' );
+
+        $user_id = (int) $atts['user_id'];
+        if ( ! $user_id ) return '';
+
+        $data = BMF_RSI_Form_Service::get_trend_series_for_user( $user_id );
+        if ( ! $data || empty( $data['points'] ) ) {
+            return '<div class="bmf-rsi-trend-empty" style="padding:24px;text-align:center;color:#8892a4;background:#0b1220;border-radius:12px;">No historical RSI data</div>';
+        }
+
+        $baseline = $data['baseline_date'];
+        $points   = $data['points'];
+        $height   = max( 240, (int) $atts['height'] );
+        $n_points = count( $points );
+
+        // Adaptive point size for denser RSI series (~50/yr)
+        $point_radius = ( $n_points > 24 ) ? 2.5 : ( ( $n_points > 12 ) ? 3.5 : 5 );
+        $point_hover  = $point_radius + 2;
+
+        $phases = [
+            [ 'key' => 'baseline',  'label' => 'Baseline',           'sub' => 'Assessment',      'offset' => 0   ],
+            [ 'key' => 'early',     'label' => 'Early Alignment',    'sub' => '+90 days',         'offset' => 90  ],
+            [ 'key' => 'system',    'label' => 'System Response',    'sub' => '+180 days',        'offset' => 180 ],
+            [ 'key' => 'adaptive',  'label' => 'Adaptive Stability', 'sub' => '+270 days',        'offset' => 270 ],
+        ];
+
+        $base_ts = strtotime( $baseline . ' 00:00:00' );
+        foreach ( $phases as &$ph ) {
+            $ph['date'] = date( 'Y-m-d', strtotime( '+' . $ph['offset'] . ' days', $base_ts ) );
+            $ph['ts']   = strtotime( $ph['date'] . ' 00:00:00' ) * 1000;
+        }
+        unset( $ph );
+
+        $x_min_ts = ( $base_ts - 10 * DAY_IN_SECONDS ) * 1000;
+        $x_max_ts = ( $base_ts + 365 * DAY_IN_SECONDS ) * 1000;
+
+        $series = [ 'core' => [], 'performance' => [], 'calibration' => [] ];
+        $latest = [ 'core' => null, 'performance' => null, 'calibration' => null ];
+        foreach ( $points as $pt ) {
+            $ts = strtotime( $pt['date'] . ' 00:00:00' ) * 1000;
+            foreach ( [ 'core', 'performance', 'calibration' ] as $key ) {
+                if ( $pt[ $key ] !== null ) {
+                    $series[ $key ][] = [ 'x' => $ts, 'y' => $pt[ $key ] ];
+                    $latest[ $key ] = $pt[ $key ];
+                }
+            }
+        }
+
+        $uid = 'bmf_rsi_trend_' . $user_id . '_' . wp_unique_id();
+        $json_core         = wp_json_encode( $series['core'] );
+        $json_performance  = wp_json_encode( $series['performance'] );
+        $json_calibration  = wp_json_encode( $series['calibration'] );
+        $json_phases       = wp_json_encode( $phases );
+
+        // Distinct palette (still dark-theme friendly)
+        $c_core        = '#e91e8c'; // magenta
+        $c_performance = '#3b82f6'; // blue
+        $c_calibration = '#22d3ee'; // cyan
+
+        ob_start();
+        ?>
+<div class="bmf-rsi-trend-wrap" style="background:#0b1220;border-radius:16px;padding:20px 16px 16px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
+  <div class="bmf-rsi-trend-phases" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+    <?php foreach ( $phases as $i => $ph ):
+        $icons = [ '📋', '🎯', '📈', '🛡️' ];
+        $icon  = $icons[ $i ] ?? '●';
+    ?>
+    <div style="background:#121a2b;border:1px solid #1e2a44;border-radius:10px;padding:10px 8px;text-align:center;">
+      <div style="font-size:1.25rem;margin-bottom:4px;"><?php echo $icon; ?></div>
+      <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.02em;color:#93c5fd;"><?php echo esc_html( $ph['label'] ); ?></div>
+      <div style="font-size:0.65rem;color:#64748b;margin-top:2px;"><?php echo esc_html( date( 'M j, Y', $ph['ts'] / 1000 ) ); ?></div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+
+  <div style="position:relative;height:<?php echo (int) $height; ?>px;">
+    <canvas id="<?php echo esc_attr( $uid ); ?>"></canvas>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:14px;font-size:0.85rem;">
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo $c_core; ?>;border-radius:2px;display:inline-block;"></span>
+      Core RSI
+      <?php if ( $latest['core'] !== null ): ?>
+        <strong style="color:<?php echo $c_core; ?>;"><?php echo esc_html( number_format( $latest['core'], 0 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo $c_performance; ?>;border-radius:2px;display:inline-block;"></span>
+      Performance RSI
+      <?php if ( $latest['performance'] !== null ): ?>
+        <strong style="color:<?php echo $c_performance; ?>;"><?php echo esc_html( number_format( $latest['performance'], 0 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo $c_calibration; ?>;border-radius:2px;display:inline-block;"></span>
+      Calibration
+      <?php if ( $latest['calibration'] !== null ): ?>
+        <strong style="color:<?php echo $c_calibration; ?>;"><?php echo esc_html( number_format( $latest['calibration'], 0 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+  </div>
+</div>
+
+<script>
+(function(){
+  var canvasId = <?php echo wp_json_encode( $uid ); ?>;
+  var core         = <?php echo $json_core; ?>;
+  var performance  = <?php echo $json_performance; ?>;
+  var calibration  = <?php echo $json_calibration; ?>;
+  var phases       = <?php echo $json_phases; ?>;
+  var xMin         = <?php echo (int) $x_min_ts; ?>;
+  var xMax         = <?php echo (int) $x_max_ts; ?>;
+  var cCore        = <?php echo wp_json_encode( $c_core ); ?>;
+  var cPerformance = <?php echo wp_json_encode( $c_performance ); ?>;
+  var cCalibration = <?php echo wp_json_encode( $c_calibration ); ?>;
+  var ptRadius     = <?php echo (float) $point_radius; ?>;
+  var ptHover      = <?php echo (float) $point_hover; ?>;
+
+  function loadScript(src, cb) {
+    if (document.querySelector('script[src="'+src+'"]')) { cb(); return; }
+    var s = document.createElement('script');
+    s.src = src; s.onload = cb; document.head.appendChild(s);
+  }
+
+  function boot() {
+    loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', function(){
+      loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js', function(){
+        render();
+      });
+    });
+  }
+
+  function render() {
+    var ctx = document.getElementById(canvasId);
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    var zonePlugin = {
+      id: 'bmfRsiZones',
+      beforeDraw: function(chart) {
+        var y = chart.scales.y;
+        var x = chart.scales.x;
+        var areas = [
+          { from: 75, to: 100, color: 'rgba(198,40,40,0.12)' },
+          { from: 50, to: 75,  color: 'rgba(234,88,12,0.10)' },
+          { from: 25, to: 50,  color: 'rgba(234,179,8,0.08)' },
+          { from: 0,  to: 25,  color: 'rgba(34,197,94,0.08)' }
+        ];
+        var ctx2 = chart.ctx;
+        areas.forEach(function(a){
+          var y1 = y.getPixelForValue(a.to);
+          var y2 = y.getPixelForValue(a.from);
+          ctx2.fillStyle = a.color;
+          ctx2.fillRect(x.left, y1, x.right - x.left, y2 - y1);
+        });
+      }
+    };
+
+    var phasePlugin = {
+      id: 'bmfRsiPhases',
+      afterDraw: function(chart) {
+        var x = chart.scales.x;
+        var y = chart.scales.y;
+        var ctx2 = chart.ctx;
+        phases.forEach(function(ph){
+          var px = x.getPixelForValue(ph.ts);
+          if (px < x.left || px > x.right) return;
+          ctx2.save();
+          ctx2.beginPath();
+          ctx2.setLineDash([4, 4]);
+          ctx2.strokeStyle = 'rgba(148,163,184,0.45)';
+          ctx2.lineWidth = 1;
+          ctx2.moveTo(px, y.top);
+          ctx2.lineTo(px, y.bottom);
+          ctx2.stroke();
+          ctx2.restore();
+        });
+      }
+    };
+
+    // Soft glow under each line (matches BSI bmfGlow plugin)
+    // Tweak shadowBlur (e.g. 8–20) to adjust strength
+    var glowPlugin = {
+      id: 'bmfRsiGlow',
+      beforeDatasetDraw: function(chart, args) {
+        var ctx2 = chart.ctx;
+        var ds   = chart.data.datasets[args.index];
+        if (!ds) return;
+        ctx2.save();
+        ctx2.shadowColor   = ds.borderColor || 'rgba(255,255,255,0.4)';
+        ctx2.shadowBlur    = 8;
+        ctx2.shadowOffsetX = 0;
+        ctx2.shadowOffsetY = 4;
+      },
+      afterDatasetDraw: function(chart) {
+        chart.ctx.restore();
+      }
+    };
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Core RSI',
+            data: core,
+            borderColor: cCore,
+            backgroundColor: cCore,
+            borderWidth: 2.5,
+            pointRadius: ptRadius,
+            pointHoverRadius: ptHover,
+            pointBackgroundColor: '#0b1220',
+            pointBorderColor: cCore,
+            pointBorderWidth: 2,
+            tension: 0.35,
+            spanGaps: true
+          },
+          {
+            label: 'Performance RSI',
+            data: performance,
+            borderColor: cPerformance,
+            backgroundColor: cPerformance,
+            borderWidth: 2.5,
+            pointRadius: ptRadius,
+            pointHoverRadius: ptHover,
+            pointBackgroundColor: '#0b1220',
+            pointBorderColor: cPerformance,
+            pointBorderWidth: 2,
+            tension: 0.35,
+            spanGaps: true
+          },
+          {
+            label: 'Calibration',
+            data: calibration,
+            borderColor: cCalibration,
+            backgroundColor: cCalibration,
+            borderWidth: 2.5,
+            pointRadius: ptRadius,
+            pointHoverRadius: ptHover,
+            pointBackgroundColor: '#0b1220',
+            pointBorderColor: cCalibration,
+            pointBorderWidth: 2,
+            tension: 0.35,
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#121a2b',
+            titleColor: '#e2e8f0',
+            bodyColor: '#cbd5e1',
+            borderColor: '#1e2a44',
+            borderWidth: 1,
+            callbacks: {
+              title: function(items) {
+                if (!items.length) return '';
+                var d = new Date(items[0].parsed.x);
+                return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            min: xMin,
+            max: xMax,
+            time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+            grid: { color: 'rgba(30,42,68,0.8)', drawBorder: false },
+            ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            grid: { color: 'rgba(30,42,68,0.6)', drawBorder: false },
+            ticks: {
+              stepSize: 25,
+              color: function(ctx) {
+                var v = ctx.tick && ctx.tick.value;
+                if (v === 0)  return '#00da17';
+                if (v === 25) return '#eff012';
+                if (v === 50) return '#ff6600';
+                if (v === 75) return '#d60008';
+                return '#94a3b8';
+              },
+              callback: function(v) {
+                if (v === 100) return '100';
+                if (v === 75)  return '75  HIGH STRAIN';
+                if (v === 50)  return '50  ELEVATED';
+                if (v === 25)  return '25  MODERATE';
+                if (v === 0)   return '0   OPTIMAL';
+                return v;
+              }
+            }
+          }
+        }
+      },
+      plugins: [ zonePlugin, phasePlugin, glowPlugin ]
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Strain-style color (lower is better / greener).
+     */
+    public static function strain_color( $score ): string {
+        if ( $score === null || $score === '' || ! is_numeric( $score ) ) return '#64748b';
+        $s = (float) $score;
+        if ( $s < 25 )  return '#22c55e'; // Optimal
+        if ( $s < 50 )  return '#eab308'; // Moderate
+        if ( $s < 75 )  return '#f97316'; // Elevated
+        return '#ef4444';                 // High Strain
+    }
+
+    /**
+     * Format a signed delta HTML span (lower-is-better colors).
+     */
+    private static function format_delta_html( $delta, $decimals = 0 ): string {
+        if ( $delta === null ) {
+            return '<span style="color:#64748b;">—</span>';
+        }
+        $delta = (float) $delta;
+        $num   = number_format( abs( $delta ), max( 0, (int) $decimals ), '.', ',' );
+        if ( $delta < 0 ) {
+            return '<span style="color:#44dd30;font-weight:600;">−' . $num . ' ↓</span>';
+        }
+        if ( $delta > 0 ) {
+            return '<span style="color:#c62828;font-weight:600;">+' . $num . ' ↑</span>';
+        }
+        return '<span style="color:#888888;">0</span>';
+    }
+
+    /**
+     * [bmf_rsi_history_report height="360" user_id="" show_date_picker="1"]
+     *
+     * All-in-one dark RSI history view:
+     *  - assessment date picker
+     *  - KPI strip (Core / Performance / Calibration / Readiness / Master) with deltas
+     *  - baseline-relative trend chart
+     *  - RSI Dimensions panel (Drivers / Mediators / Outcomes + 9 section scores & deltas)
+     */
+    public static function shortcode_history_report( $atts ) {
+        if ( self::should_bail_for_editor() ) {
+            return '<div style="padding:24px;background:#0b1220;border-radius:12px;color:#8892a4;text-align:center;">RSI History Report (editor preview)</div>';
+        }
+
+        $atts = shortcode_atts( [
+            'user_id'          => get_current_user_id(),
+            'height'           => '340',
+            'show_date_picker' => '1',
+        ], $atts, 'bmf_rsi_history_report' );
+
+        $user_id = (int) $atts['user_id'];
+        if ( ! $user_id ) return '';
+
+        $date_str = isset( $_GET['rsi_date'] )
+            ? BMF_RSI_Form_Service::normalize_date_str( $_GET['rsi_date'] )
+            : null;
+
+        $row = BMF_RSI_Form_Service::get_results_row_for_user( $user_id, $date_str );
+        if ( ! $row ) {
+            return '<div class="bmf-rsi-history-empty" style="padding:28px;text-align:center;color:#8892a4;background:#0b1220;border-radius:16px;font-family:system-ui,-apple-system,sans-serif;">No finalized RSI assessments found.</div>';
+        }
+
+        $prev = BMF_RSI_Form_Service::get_previous_results_row_for_user( $user_id, $date_str );
+
+        $metrics = [
+            'core' => [
+                'label' => 'Core RSI',
+                'field' => 'R11_final',
+                'color' => '#e91e8c',
+            ],
+            'performance' => [
+                'label' => 'Performance RSI',
+                'field' => 'R12_final',
+                'color' => '#3b82f6',
+            ],
+            'calibration' => [
+                'label' => 'Calibration',
+                'field' => 'R12_S6',
+                'color' => '#22d3ee',
+            ],
+            'readiness' => [
+                'label' => 'Readiness',
+                'field' => 'readiness_score',
+                'color' => '#a78bfa',
+            ],
+            'master' => [
+                'label' => 'Master Score',
+                'field' => 'master_score',
+                'color' => '#fbbf24',
+            ],
+        ];
+
+        $kpi = [];
+        foreach ( $metrics as $key => $meta ) {
+            $field = $meta['field'];
+            $cur   = BMF_RSI_Form_Service::to_percent( $row[ $field ] ?? null, $field );
+            $prv   = null;
+            if ( $prev && isset( $prev[ $field ] ) && $prev[ $field ] !== null && $prev[ $field ] !== '' ) {
+                $prv = BMF_RSI_Form_Service::to_percent( $prev[ $field ], $field );
+            }
+            $kpi[ $key ] = [
+                'label' => $meta['label'],
+                'color' => $meta['color'],
+                'score' => $cur,
+                'delta' => ( $cur !== null && $prv !== null ) ? round( $cur - $prv, 1 ) : null,
+            ];
+        }
+
+        $dims = BMF_RSI_Section_Service::get_dimensions_snapshot( $user_id, 11, $date_str );
+        $group_labels = BMF_RSI_Section_Service::dimension_group_labels();
+        $section_map  = BMF_RSI_Section_Service::dimension_section_ids();
+
+        $results_date = BMF_RSI_Form_Service::normalize_date_str( $row['results_date'] ?? '' );
+        $date_display = $results_date ? date( 'M j, Y', strtotime( $results_date ) ) : '—';
+
+        $chart_html = self::shortcode_trend_chart( [
+            'user_id' => $user_id,
+            'height'  => $atts['height'],
+        ] );
+
+        // Dark-theme date picker (inline, not the light default)
+        $picker_html = '';
+        if ( (int) $atts['show_date_picker'] === 1 ) {
+            $user = get_userdata( $user_id );
+            $dates = ( $user && ! empty( $user->user_email ) && class_exists( 'BMF_Repository' ) )
+                ? BMF_Repository::get_rsi_result_dates( $user->user_email )
+                : [];
+            if ( ! empty( $dates ) ) {
+                $selected = $date_str ?: ( $dates[0] ?? '' );
+                ob_start();
+                ?>
+                <div class="bmf-rsi-history-select" style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:#94a3b8;">
+                  <span style="white-space:nowrap;font-weight:600;color:#cbd5e1;">Assessment</span>
+                  <select id="bmf_rsi_report_date_select" style="padding:6px 10px;font-size:0.85rem;border:1px solid #1e2a44;border-radius:8px;background:#121a2b;color:#e2e8f0;min-width:140px;">
+                    <?php foreach ( $dates as $d ): ?>
+                      <option value="<?php echo esc_attr( $d ); ?>" <?php selected( $selected, $d ); ?>>
+                        <?php echo esc_html( date( 'M j, Y', strtotime( $d ) ) ); ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <script>
+                (function(){
+                  var el = document.getElementById('bmf_rsi_report_date_select');
+                  if (!el) return;
+                  el.addEventListener('change', function(){
+                    var url = new URL(window.location.href);
+                    if (this.value) url.searchParams.set('rsi_date', this.value);
+                    else url.searchParams.delete('rsi_date');
+                    window.location.href = url.toString();
+                  });
+                })();
+                </script>
+                <?php
+                $picker_html = ob_get_clean();
+            }
+        }
+
+        ob_start();
+        ?>
+<div class="bmf-rsi-history-report" style="background:#0b1220;border-radius:16px;padding:20px 18px 22px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
+
+  <!-- Header -->
+  <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
+    <div>
+      <div style="font-size:1.05rem;font-weight:700;letter-spacing:0.01em;color:#f1f5f9;">RSI History</div>
+      <div style="font-size:0.78rem;color:#64748b;margin-top:3px;">Viewing <?php echo esc_html( $date_display ); ?><?php echo $prev ? ' · vs prior assessment' : ''; ?></div>
+    </div>
+    <?php echo $picker_html; ?>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="bmf-rsi-kpi-strip" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:18px;">
+    <?php foreach ( $kpi as $k => $item ):
+        $sc = $item['score'];
+        $sc_color = self::strain_color( $sc );
+    ?>
+    <div style="background:#121a2b;border:1px solid #1e2a44;border-radius:12px;padding:12px 10px;text-align:center;">
+      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#94a3b8;margin-bottom:6px;"><?php echo esc_html( $item['label'] ); ?></div>
+      <div style="font-size:1.45rem;font-weight:700;line-height:1.1;color:<?php echo esc_attr( $sc_color ); ?>;">
+        <?php echo $sc !== null ? esc_html( number_format( $sc, 0 ) ) : '—'; ?>
+      </div>
+      <div style="font-size:0.78rem;margin-top:6px;"><?php echo self::format_delta_html( $item['delta'], 0 ); ?></div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+
+  <!-- Chart + Dimensions -->
+  <div class="bmf-rsi-report-body" style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,0.9fr);gap:16px;align-items:start;">
+
+    <!-- Trend -->
+    <div style="min-width:0;">
+      <?php echo $chart_html; // already dark-themed ?>
+    </div>
+
+    <!-- Dimensions panel -->
+    <div style="background:#121a2b;border:1px solid #1e2a44;border-radius:14px;padding:14px 14px 10px;">
+      <div style="font-size:0.9rem;font-weight:700;color:#e2e8f0;margin-bottom:12px;">RSI Dimensions</div>
+
+      <?php foreach ( $section_map as $group_key => $section_ids ):
+          $g = $dims['groups'][ $group_key ] ?? [ 'score' => null, 'delta' => null ];
+          $g_label = $group_labels[ $group_key ] ?? ucfirst( $group_key );
+          $g_color = self::strain_color( $g['score'] );
+      ?>
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1e2a44;">
+          <span style="font-size:0.78rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:#93c5fd;"><?php echo esc_html( $g_label ); ?></span>
+          <span style="display:inline-flex;align-items:center;gap:8px;font-size:0.82rem;">
+            <strong style="color:<?php echo esc_attr( $g_color ); ?>;">
+              <?php echo $g['score'] !== null ? esc_html( number_format( $g['score'], 0 ) ) : '—'; ?>
+            </strong>
+            <?php echo self::format_delta_html( $g['delta'] ?? null, 0 ); ?>
+          </span>
+        </div>
+
+        <?php foreach ( $section_ids as $sid ):
+            $s = $dims['sections'][ $sid ] ?? null;
+            if ( ! $s ) continue;
+            $s_color = self::strain_color( $s['score'] );
+        ?>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;">
+          <span style="font-size:0.8rem;color:#cbd5e1;"><?php echo esc_html( $s['label'] ); ?></span>
+          <span style="display:inline-flex;align-items:center;gap:10px;font-size:0.8rem;white-space:nowrap;">
+            <strong style="color:<?php echo esc_attr( $s_color ); ?>;min-width:28px;text-align:right;">
+              <?php echo $s['score'] !== null ? esc_html( number_format( $s['score'], 0 ) ) : '—'; ?>
+            </strong>
+            <span style="min-width:52px;text-align:right;"><?php echo self::format_delta_html( $s['delta'], 0 ); ?></span>
+          </span>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+
+  <style>
+    @media (max-width: 960px) {
+      .bmf-rsi-history-report .bmf-rsi-report-body {
+        grid-template-columns: 1fr !important;
+      }
+      .bmf-rsi-history-report .bmf-rsi-kpi-strip {
+        grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+      }
+    }
+    @media (max-width: 520px) {
+      .bmf-rsi-history-report .bmf-rsi-kpi-strip {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</div>
+        <?php
+        return ob_get_clean();
     }
 
     public static function resolve_color_from_score( float $score ): string {
@@ -1013,72 +2017,192 @@ BMF_RSI_Form_Shortcodes::init();
 class BMF_RSI_Section_Service {
 
     /**
-     * Get section score (0–100) for the user's latest RSI response
+     * R11 (form_id=11) section_ids grouped like BSI Drivers / Mediators / Outcomes.
+     *
+     * Drivers:   Digestive(51), Environmental(54), Lifestyle(55)
+     * Mediators: Metabolic(49), Inflammatory(50), Emotional(52)
+     * Outcomes:  Biological Strain(48), Recovery(53), Adaptive Capacity(56)
      */
-    public static function get_section_score( $user_id, $form_id, $section_id ) {
+    public static function dimension_section_ids(): array {
+        return [
+            'drivers'   => [ 51, 54, 55 ],
+            'mediators' => [ 49, 50, 52 ],
+            'outcomes'  => [ 48, 53, 56 ],
+        ];
+    }
+
+    /** Human labels for R11 sections (form_id=11). */
+    public static function section_labels(): array {
+        return [
+            48 => 'Biological Strain',
+            49 => 'Metabolic',
+            50 => 'Inflammatory',
+            51 => 'Digestive',
+            52 => 'Emotional',
+            53 => 'Recovery',
+            54 => 'Environmental',
+            55 => 'Lifestyle',
+            56 => 'Adaptive Capacity',
+        ];
+    }
+
+    public static function dimension_group_labels(): array {
+        return [
+            'drivers'   => 'Drivers',
+            'mediators' => 'Mediators',
+            'outcomes'  => 'Outcomes',
+        ];
+    }
+
+    /**
+     * Batch current + previous section scores for all dimension sections.
+     * Returns [ section_id => ['score'=>?float,'prev'=>?float,'delta'=>?float], ... ]
+     * plus group averages under keys drivers/mediators/outcomes.
+     */
+    public static function get_dimensions_snapshot( $user_id, $form_id = 11, $date_str = null ): array {
+        $map    = self::dimension_section_ids();
+        $labels = self::section_labels();
+        $out    = [ 'sections' => [], 'groups' => [] ];
+
+        foreach ( $map as $group => $ids ) {
+            $cur_vals  = [];
+            $prev_vals = [];
+            foreach ( $ids as $sid ) {
+                $cur  = self::get_section_score( $user_id, $form_id, $sid, $date_str );
+                $prev = self::get_previous_section_score( $user_id, $form_id, $sid, $date_str );
+                $delta = ( $cur !== null && $prev !== null ) ? round( (float) $cur - (float) $prev, 2 ) : null;
+                $out['sections'][ $sid ] = [
+                    'id'    => $sid,
+                    'label' => $labels[ $sid ] ?? ( 'Section ' . $sid ),
+                    'group' => $group,
+                    'score' => $cur,
+                    'prev'  => $prev,
+                    'delta' => $delta,
+                ];
+                if ( $cur !== null )  $cur_vals[]  = (float) $cur;
+                if ( $prev !== null ) $prev_vals[] = (float) $prev;
+            }
+            $cur_avg  = ! empty( $cur_vals )  ? round( array_sum( $cur_vals )  / count( $cur_vals ),  1 ) : null;
+            $prev_avg = ! empty( $prev_vals ) ? round( array_sum( $prev_vals ) / count( $prev_vals ), 1 ) : null;
+            $out['groups'][ $group ] = [
+                'score' => $cur_avg,
+                'prev'  => $prev_avg,
+                'delta' => ( $cur_avg !== null && $prev_avg !== null ) ? round( $cur_avg - $prev_avg, 1 ) : null,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Resolve form_id=11 response id for a user at/near a given results date.
+     *
+     * @param string|null $date_str YYYY-MM-DD; null = latest submitted
+     * @param bool        $on_or_before when true and date given, prefer DATE(submitted_at) <= date
+     */
+    public static function resolve_response_id( $user_id, $form_id, $date_str = null, $on_or_before = false ) {
         global $wpdb;
+        $user_id = (int) $user_id;
+        $form_id = (int) $form_id;
+        if ( ! $user_id || ! $form_id ) return 0;
 
-        // Basic validation
-        $user = get_userdata($user_id);
-        if (!$user || empty($user->user_email)) return null;
+        if ( $date_str === null && isset( $_GET['rsi_date'] ) ) {
+            $date_str = $_GET['rsi_date'];
+        }
+        $date_str = BMF_RSI_Form_Service::normalize_date_str( $date_str );
 
-        $date_str = isset($_GET['rsi_date'])
-            ? sanitize_text_field($_GET['rsi_date']) 
-            : null;        
-
-        if ($date_str) {
-
-            // Find response closest to selected RSI result date
+        if ( $date_str ) {
+            // Exact same-day match first
             $response_id = (int) $wpdb->get_var(
                 $wpdb->prepare(
-                    "SELECT id
-                    FROM {$wpdb->prefix}bm_responses
-                    WHERE user_id = %d
-                    AND form_id = %d
-                    AND DATE(submitted_at) = %s
-                    ORDER BY submitted_at DESC
-                    LIMIT 1",
-                    $user_id,
-                    $form_id,
-                    $date_str
+                    "SELECT id FROM {$wpdb->prefix}bm_responses
+                     WHERE user_id = %d AND form_id = %d
+                       AND submitted_at IS NOT NULL
+                       AND DATE(submitted_at) = %s
+                     ORDER BY submitted_at DESC LIMIT 1",
+                    $user_id, $form_id, $date_str
                 )
             );
+            if ( $response_id ) return $response_id;
 
-        } else {
-
-            // fallback to existing behavior
-            $response_id = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT id
-                    FROM {$wpdb->prefix}bm_responses
-                    WHERE user_id = %d
-                    AND form_id = %d
-                    AND submitted_at IS NOT NULL
-                    ORDER BY submitted_at DESC
-                    LIMIT 1",
-                    $user_id,
-                    $form_id
-                )
-            );
+            if ( $on_or_before ) {
+                $response_id = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT id FROM {$wpdb->prefix}bm_responses
+                         WHERE user_id = %d AND form_id = %d
+                           AND submitted_at IS NOT NULL
+                           AND DATE(submitted_at) <= %s
+                         ORDER BY submitted_at DESC LIMIT 1",
+                        $user_id, $form_id, $date_str
+                    )
+                );
+                if ( $response_id ) return $response_id;
+            }
+            return 0;
         }
 
-        if (!$response_id) return null;
-
-        // 2️⃣ Fetch section score for that response
-        $score = $wpdb->get_var(
+        return (int) $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT score
-                FROM {$wpdb->prefix}bm_section_scores
-                WHERE response_id = %d
-                AND section_id = %d
-                LIMIT 1",
-                $response_id,
-                $section_id
+                "SELECT id FROM {$wpdb->prefix}bm_responses
+                 WHERE user_id = %d AND form_id = %d
+                   AND submitted_at IS NOT NULL
+                 ORDER BY submitted_at DESC LIMIT 1",
+                $user_id, $form_id
             )
         );
-        if ($score === null) return null;
+    }
 
-        // 3️⃣ Normalize to 0–100
-        return round((float)$score * 100, 2);
+    /**
+     * Get section score (0–100) for the user's RSI response.
+     * $date_str optional; falls back to ?rsi_date= then latest.
+     */
+    public static function get_section_score( $user_id, $form_id, $section_id, $date_str = null ) {
+        global $wpdb;
+
+        $user = get_userdata( $user_id );
+        if ( ! $user || empty( $user->user_email ) ) return null;
+
+        $section_id  = (int) $section_id;
+        $response_id = self::resolve_response_id( $user_id, $form_id, $date_str, false );
+        if ( ! $response_id ) return null;
+
+        $score = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT score FROM {$wpdb->prefix}bm_section_scores
+                 WHERE response_id = %d AND section_id = %d LIMIT 1",
+                $response_id, $section_id
+            )
+        );
+        if ( $score === null ) return null;
+
+        return round( (float) $score * 100, 2 );
+    }
+
+    /**
+     * Section score from the previous final RSI assessment (before $date_str / current).
+     */
+    public static function get_previous_section_score( $user_id, $form_id, $section_id, $date_str = null ) {
+        $prev_row = BMF_RSI_Form_Service::get_previous_results_row_for_user( $user_id, $date_str );
+        if ( ! $prev_row || empty( $prev_row['results_date'] ) ) return null;
+
+        $prev_date = BMF_RSI_Form_Service::normalize_date_str( $prev_row['results_date'] );
+        if ( ! $prev_date ) return null;
+
+        // Prefer exact date; fall back to on-or-before so sparse R11 submissions still resolve
+        $score = self::get_section_score( $user_id, $form_id, $section_id, $prev_date );
+        if ( $score !== null ) return $score;
+
+        global $wpdb;
+        $response_id = self::resolve_response_id( $user_id, $form_id, $prev_date, true );
+        if ( ! $response_id ) return null;
+
+        $raw = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT score FROM {$wpdb->prefix}bm_section_scores
+                 WHERE response_id = %d AND section_id = %d LIMIT 1",
+                $response_id, (int) $section_id
+            )
+        );
+        if ( $raw === null ) return null;
+        return round( (float) $raw * 100, 2 );
     }
 }
