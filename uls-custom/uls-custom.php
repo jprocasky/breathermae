@@ -1102,6 +1102,36 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_script('bm-idle-redirect');
 });
 
+/**
+ * Force logout when a still-authenticated user lands on the session-expired page.
+ * This guarantees the next visit triggers a real login + WP Fusion tag pull from Zoho.
+ */
+add_action( 'template_redirect', function () {
+    if ( is_admin() || ! is_user_logged_in() ) {
+        return;
+    }
+
+    // Adjust the path check if your page slug is different or uses a page ID
+    $path = trim( parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+    if ( $path !== 'session-expired' ) {
+        return;
+    }
+
+    // Optional: skip for true admins if you ever want them to stay logged in
+    if ( current_user_can( 'manage_options' ) ) { return; }
+
+    wp_logout();
+
+    // Optional but nice: clear any lingering WP Fusion / object caches for this user
+    // if ( function_exists( 'wp_fusion' ) && method_exists( wp_fusion()->user, 'flush_user_cache' ) ) {
+    //     wp_fusion()->user->flush_user_cache( get_current_user_id() ); // already logged out, so skip
+    // }
+
+    // Stay on the same page so the "session expired" content is shown
+    // (wp_logout() does not redirect by itself when called this way)
+}, 1 );
+
+
 /* ========================================================================== */
 /* ADMIN TOOLS: Elementor Pages & Templates Index                              */
 /* Description:                                                               */
