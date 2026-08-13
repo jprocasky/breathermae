@@ -2,6 +2,7 @@
  * BreatherMae User Monitor List - Styles
  * Clean, professional table for internal dashboards
  * Works well inside Elementor Pro sections
+ * Version 1.4.0
  */
 
 .breathermae-user-monitor {
@@ -9,6 +10,7 @@
   max-width: 100%;
   margin: 20px 0;
   color: #1f2937;
+  position: relative;
 }
 
 .monitor-header {
@@ -42,7 +44,8 @@
   align-items: center;
 }
 
-.monitor-search-form input[type="text"] {
+.monitor-search-form input[type="text"],
+.uml-search-input {
   padding: 6px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -51,7 +54,8 @@
   box-shadow: none;
 }
 
-.monitor-search-form input[type="text"]:focus {
+.monitor-search-form input[type="text"]:focus,
+.uml-search-input:focus {
   border-color: #3b82f6;
   outline: none;
   box-shadow: 0 0 0 1px #3b82f6;
@@ -129,6 +133,13 @@
   min-width: 34px;
   text-align: center;
   border-radius: 4px;
+  cursor: pointer;
+}
+
+.tablenav-pages .button:disabled,
+.tablenav-pages .button[disabled] {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .tablenav-pages .current {
@@ -136,6 +147,14 @@
   color: #fff;
   border-color: #1e40af;
   font-weight: 600;
+  cursor: default;
+}
+
+.uml-ellipsis {
+  padding: 0 4px;
+  color: #94a3b8;
+  font-size: 13px;
+  user-select: none;
 }
 
 .displaying-num {
@@ -151,6 +170,35 @@
   color: #64748b;
   font-size: 12px;
   font-style: italic;
+}
+
+/* Loading state */
+.uml-results {
+  position: relative;
+  min-height: 80px;
+}
+
+.uml-results.uml-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.uml-spinner {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #1e40af;
+  border-radius: 50%;
+  animation: uml-spin 0.7s linear infinite;
+  z-index: 5;
+}
+
+@keyframes uml-spin {
+  to { transform: translateX(-50%) rotate(360deg); }
 }
 
 /* Responsive tweaks */
@@ -171,6 +219,7 @@
     font-size: 13px;
   }
 }
+
 /* Reduce size of Search and Export CSV buttons */
 .breathermae-user-monitor .monitor-controls .button {
     font-size: 11px !important;
