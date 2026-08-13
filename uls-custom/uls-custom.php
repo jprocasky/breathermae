@@ -14,6 +14,10 @@ define('ULS_CUSTOM_FILE', __FILE__);
 define('ULS_CUSTOM_DIR', plugin_dir_path(__FILE__));
 define('ULS_CUSTOM_URL', plugin_dir_url(__FILE__));
 
+require_once ULS_CUSTOM_DIR . 'bmf-wpf-access-rules-shortcode.php';
+
+
+
 add_shortcode('logout_url', function () {
     return esc_url( wp_logout_url( home_url() ) );
 });
@@ -816,6 +820,18 @@ add_action('template_redirect', function() {
     $new_value  = $count . "|" . $last_visit;
     update_user_meta($user_id, $meta_key, $new_value);
 });
+
+// Reduce default cookie time so that users are logged out
+add_filter( 'auth_cookie_expiration', function ( $expiration, $user_id, $remember ) {
+    // Admins keep longer sessions if you want
+    if ( user_can( $user_id, 'manage_options' ) ) {
+        return $expiration; // default ~14 days
+    }
+    // Regular members: 1 day (or 2 days if you prefer)
+    return DAY_IN_SECONDS; // or 2 * DAY_IN_SECONDS
+}, 10, 3 );
+
+
 
 /* --------------------------------------------------------------------------
  * CRON: recreate a dynamic SQL VIEW aggregating page visit meta per email.
