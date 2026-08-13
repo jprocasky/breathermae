@@ -31,16 +31,47 @@ class BreatherMae_User_Monitor_List {
         // Intentionally no nopriv — page is WP Fusion protected / staff only.
     }
 
+    /**
+     * Detect Elementor editor or preview so we can skip interactive JS.
+     */
+    private function is_elementor_edit_or_preview() {
+        // Query-string flags (most reliable early).
+        if ( isset( $_GET['elementor-preview'] ) || isset( $_GET['elementor'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            return true;
+        }
+
+        if ( ! defined( 'ELEMENTOR_VERSION' ) || ! class_exists( '\Elementor\Plugin' ) ) {
+            return false;
+        }
+
+        $elementor = \Elementor\Plugin::$instance;
+
+        if ( isset( $elementor->editor ) && method_exists( $elementor->editor, 'is_edit_mode' ) && $elementor->editor->is_edit_mode() ) {
+            return true;
+        }
+
+        if ( isset( $elementor->preview ) && method_exists( $elementor->preview, 'is_preview_mode' ) && $elementor->preview->is_preview_mode() ) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function enqueue_assets() {
+        // Always skip interactive JS inside Elementor editor / preview.
+        // CSS is still loaded so the table looks correct in the canvas.
+        $in_elementor = $this->is_elementor_edit_or_preview();
+
         // Only load when shortcode is present (cheap check via global post content).
         global $post;
         $needs = false;
         if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'user_monitor_list' ) ) {
             $needs = true;
         }
-        // Elementor / builder fallback — still enqueue if we cannot detect (small assets).
+        // Elementor / builder fallback — shortcode often lives in _elementor_data.
+        // Keep the fallback for frontend, but we already gated JS above for editor.
         if ( ! $needs && ( is_singular() || is_page() ) ) {
-            $needs = true; // safe; CSS/JS are tiny
+            $needs = true; // safe; CSS/JS are tiny on real frontend
         }
         if ( ! $needs ) {
             return;
@@ -53,6 +84,11 @@ class BreatherMae_User_Monitor_List {
             array(),
             self::VERSION
         );
+
+        // No JS (and therefore no AJAX refresh) while editing in Elementor.
+        if ( $in_elementor ) {
+            return;
+        }
 
         wp_enqueue_script(
             'breathermae-user-monitor-list',
