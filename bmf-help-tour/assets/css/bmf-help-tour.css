@@ -1,0 +1,169 @@
+/**
+ * BMF Help Tour – styles
+ * Builds on Driver.js defaults with mobile-first adjustments
+ * and a clean look that can sit alongside your existing dark cards.
+ */
+
+/* ---------- Popover base ---------- */
+.bmf-help-popover.driver-popover,
+.driver-popover.bmf-help-popover {
+	background: #1a1a1e;
+	color: #f0f0f2;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 12px;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+	max-width: 320px;
+	padding: 0;
+	font-family: inherit;
+}
+
+/* Title */
+.bmf-help-popover .driver-popover-title {
+	font-size: 1.05rem;
+	font-weight: 600;
+	color: #ffffff;
+	margin: 0;
+	padding: 14px 16px 6px;
+	line-height: 1.3;
+}
+
+/* Description */
+.bmf-help-popover .driver-popover-description {
+	font-size: 0.9rem;
+	line-height: 1.45;
+	color: #c8c8d0;
+	padding: 0 16px 14px;
+	margin: 0;
+}
+
+/* Progress text */
+.bmf-help-popover .driver-popover-progress-text {
+	font-size: 0.75rem;
+	color: #888;
+	padding: 0 16px 8px;
+}
+
+/* Footer / buttons row */
+.bmf-help-popover .driver-popover-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 12px 12px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	margin: 0;
+}
+
+/* Buttons */
+.bmf-help-popover .driver-popover-footer button {
+	border-radius: 8px;
+	font-size: 0.85rem;
+	font-weight: 500;
+	padding: 8px 14px;
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s ease, transform 0.1s ease;
+	min-height: 36px; /* better touch target */
+}
+
+.bmf-help-popover .driver-popover-prev-btn {
+	background: transparent;
+	color: #aaa;
+	text-shadow: none;
+}
+
+.bmf-help-popover .driver-popover-prev-btn:hover {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.bmf-help-popover .driver-popover-next-btn,
+.bmf-help-popover .driver-popover-close-btn {
+	background: #3db7ff;
+	color: #fff;
+	/* Dark shadow so white text stays crisp (Driver default light shadow blurs it) */
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.bmf-help-popover .driver-popover-next-btn:hover,
+.bmf-help-popover .driver-popover-close-btn:hover {
+	background: #3df2ff;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+}
+
+/* Restart trigger (class on any icon / link / button) */
+.bmf-help-tour-restart {
+	cursor: pointer;
+}
+
+/* Arrow */
+.bmf-help-popover .driver-popover-arrow {
+	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.bmf-help-popover .driver-popover-arrow-side-bottom {
+	border-bottom-color: #1a1a1e;
+}
+.bmf-help-popover .driver-popover-arrow-side-top {
+	border-top-color: #1a1a1e;
+}
+.bmf-help-popover .driver-popover-arrow-side-left {
+	border-left-color: #1a1a1e;
+}
+.bmf-help-popover .driver-popover-arrow-side-right {
+	border-right-color: #1a1a1e;
+}
+
+/* ---------- Mobile adjustments ---------- */
+@media (max-width: 640px) {
+	.bmf-help-popover.driver-popover,
+	.driver-popover.bmf-help-popover {
+		max-width: calc(100vw - 32px);
+		margin: 0 8px;
+	}
+
+	.bmf-help-popover .driver-popover-title {
+		font-size: 1rem;
+		padding: 12px 14px 4px;
+	}
+
+	.bmf-help-popover .driver-popover-description {
+		font-size: 0.875rem;
+		padding: 0 14px 12px;
+	}
+
+	.bmf-help-popover .driver-popover-footer button {
+		padding: 10px 16px;
+		min-height: 42px; /* larger touch targets on phone */
+		font-size: 0.9rem;
+	}
+}
+
+/* ---------- Stage / highlight ---------- */
+.driver-stage {
+	border-radius: 8px;
+}
+
+/* Optional: slightly stronger overlay on mobile for focus */
+@media (max-width: 640px) {
+	.driver-overlay {
+		/* Driver controls opacity via JS; this is just a safety net */
+	}
+}
+
+/* ---------- Importance variants ---------- */
+.bmf-help-popover.bmf-help-imp-warning {
+	border-color: rgba(255, 180, 50, 0.45);
+}
+.bmf-help-popover.bmf-help-imp-warning .driver-popover-title {
+	color: #ffc04d;
+}
+
+.bmf-help-popover.bmf-help-imp-question {
+	border-color: rgba(100, 180, 255, 0.4);
+}
+.bmf-help-popover.bmf-help-imp-question .driver-popover-title {
+	color: #7ec8ff;
+}
+
+/* info = default (no extra styles) */
