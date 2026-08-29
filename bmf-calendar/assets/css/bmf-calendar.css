@@ -1,0 +1,521 @@
+/* BMF Calendar – appointments list + form (mobile-first) */
+
+.bmf-cal-panel {
+	font-family: inherit;
+	max-width: 100%;
+	margin: 1rem 0;
+	padding: 1rem 1.1rem;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	background: #fff;
+	color: #1a202c;
+	box-sizing: border-box;
+}
+
+.bmf-cal-header {
+	margin-bottom: 0.75rem;
+}
+
+.bmf-cal-title {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 600;
+}
+
+.bmf-cal-placeholder,
+.bmf-cal-loading {
+	margin: 0;
+	color: #718096;
+	font-size: 0.95rem;
+}
+
+.bmf-cal-msg {
+	margin: 0.5rem 0;
+	padding: 0.75rem 1rem;
+	background: #f7fafc;
+	border-radius: 6px;
+	color: #4a5568;
+}
+
+/* Toolbar */
+.bmf-cal-toolbar {
+	margin-bottom: 0.85rem;
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+/* Buttons */
+.bmf-cal-btn {
+	appearance: none;
+	border: 1px solid #cbd5e0;
+	background: #edf2f7;
+	color: #2d3748;
+	border-radius: 6px;
+	padding: 0.4rem 0.85rem;
+	font-size: 0.9rem;
+	cursor: pointer;
+	line-height: 1.3;
+}
+
+.bmf-cal-btn:hover {
+	background: #e2e8f0;
+}
+
+.bmf-cal-btn-primary {
+	background: #3182ce;
+	border-color: #2b6cb0;
+	color: #fff;
+}
+
+.bmf-cal-btn-primary:hover {
+	background: #2b6cb0;
+}
+
+.bmf-cal-btn-ghost {
+	background: transparent;
+}
+
+.bmf-cal-btn-danger {
+	background: #fff5f5;
+	border-color: #feb2b2;
+	color: #c53030;
+}
+
+.bmf-cal-btn-danger:hover {
+	background: #fed7d7;
+}
+
+.bmf-cal-btn-sm {
+	padding: 0.25rem 0.55rem;
+	font-size: 0.8rem;
+}
+
+/* List */
+.bmf-cal-items {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.bmf-cal-item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	padding: 0.75rem 0;
+	border-bottom: 1px solid #edf2f7;
+}
+
+.bmf-cal-item:last-child {
+	border-bottom: none;
+}
+
+.bmf-cal-item-main {
+	flex: 1 1 200px;
+	min-width: 0;
+}
+
+.bmf-cal-item-subject {
+	font-weight: 600;
+	margin-bottom: 0.15rem;
+}
+
+.bmf-cal-item-meta {
+	font-size: 0.875rem;
+	color: #4a5568;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 0.75rem;
+	align-items: center;
+}
+
+.bmf-cal-item-loc {
+	font-size: 0.8rem;
+	color: #718096;
+	margin-top: 0.15rem;
+}
+
+.bmf-cal-item-actions {
+	display: flex;
+	gap: 0.35rem;
+	flex-shrink: 0;
+}
+
+/* Status chips */
+.bmf-cal-status {
+	display: inline-block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.1rem 0.45rem;
+	border-radius: 999px;
+	background: #edf2f7;
+	color: #4a5568;
+	text-transform: capitalize;
+}
+
+.bmf-cal-status--requested {
+	background: #fefcbf;
+	color: #975a16;
+}
+
+.bmf-cal-status--confirmed {
+	background: #c6f6d5;
+	color: #276749;
+}
+
+.bmf-cal-status--completed {
+	background: #bee3f8;
+	color: #2a4365;
+}
+
+.bmf-cal-status--cancelled {
+	background: #fed7d7;
+	color: #9b2c2c;
+}
+
+.bmf-cal-status--no_show {
+	background: #e2e8f0;
+	color: #4a5568;
+}
+
+/* Form */
+.bmf-cal-form-wrap {
+	margin-top: 0.5rem;
+}
+
+.bmf-cal-form .bmf-cal-field {
+	margin-bottom: 0.75rem;
+}
+
+.bmf-cal-form label {
+	display: block;
+	font-size: 0.85rem;
+	font-weight: 500;
+	margin-bottom: 0.25rem;
+	color: #4a5568;
+}
+
+.bmf-cal-form input[type="text"],
+.bmf-cal-form input[type="datetime-local"],
+.bmf-cal-form select,
+.bmf-cal-form textarea {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0.45rem 0.6rem;
+	border: 1px solid #cbd5e0;
+	border-radius: 6px;
+	font-size: 0.95rem;
+	background: #fff;
+	color: inherit;
+}
+
+.bmf-cal-field-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.bmf-cal-field-row .bmf-cal-field {
+	flex: 1 1 140px;
+}
+
+.bmf-cal-form-actions {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	flex-wrap: wrap;
+}
+
+/* Dark-card friendly */
+.bmf-cal-panel.is-dark {
+	background: #1a202c;
+	border-color: #2d3748;
+	color: #e2e8f0;
+}
+
+.bmf-cal-panel.is-dark .bmf-cal-placeholder,
+.bmf-cal-panel.is-dark .bmf-cal-item-loc {
+	color: #a0aec0;
+}
+
+.bmf-cal-panel.is-dark .bmf-cal-item {
+	border-bottom-color: #2d3748;
+}
+
+.bmf-cal-panel.is-dark .bmf-cal-item-meta {
+	color: #a0aec0;
+}
+
+.bmf-cal-panel.is-dark input,
+.bmf-cal-panel.is-dark select,
+.bmf-cal-panel.is-dark textarea {
+	background: #2d3748;
+	border-color: #4a5568;
+	color: #e2e8f0;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+	.bmf-cal-panel {
+		padding: 0.85rem;
+		border-radius: 8px;
+	}
+
+	.bmf-cal-item {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.bmf-cal-item-actions {
+		justify-content: flex-start;
+	}
+}
+
+/* Availability + slots */
+.bmf-cal-subtitle {
+	margin: 0 0 0.5rem;
+	font-size: 0.95rem;
+	font-weight: 600;
+}
+
+.bmf-cal-avail-section {
+	margin-top: 1rem;
+	padding-top: 0.85rem;
+	border-top: 1px solid #edf2f7;
+}
+
+.bmf-cal-avail-list {
+	list-style: none;
+	margin: 0 0 0.6rem;
+	padding: 0;
+}
+
+.bmf-cal-avail-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.35rem 0;
+	font-size: 0.9rem;
+}
+
+.bmf-cal-avail-form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	align-items: center;
+}
+
+.bmf-cal-avail-form select,
+.bmf-cal-avail-form input[type="time"],
+.bmf-cal-avail-form input[type="date"] {
+	padding: 0.35rem 0.45rem;
+	border: 1px solid #cbd5e0;
+	border-radius: 6px;
+	font-size: 0.9rem;
+}
+
+.bmf-cal-avail-to { font-size: 0.85rem; color: #718096; }
+
+.bmf-cal-slot-day { margin-bottom: 0.65rem; }
+
+.bmf-cal-slot-day-label {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #4a5568;
+	margin-bottom: 0.3rem;
+}
+
+.bmf-cal-slot-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+.bmf-cal-slot-chip {
+	display: inline-block;
+	padding: 0.3rem 0.55rem;
+	border: 1px solid #cbd5e0;
+	border-radius: 999px;
+	background: #edf2f7;
+	font-size: 0.8rem;
+}
+
+button.bmf-cal-slot-chip {
+	cursor: pointer;
+	background: #fff;
+}
+
+button.bmf-cal-slot-chip:hover,
+button.bmf-cal-slot-chip.is-selected {
+	background: #3182ce;
+	border-color: #2b6cb0;
+	color: #fff;
+}
+
+.bmf-cal-request .bmf-cal-field { margin-bottom: 0.75rem; }
+
+.bmf-cal-request select,
+.bmf-cal-request input[type="text"],
+.bmf-cal-request input[type="datetime-local"],
+.bmf-cal-request textarea {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0.45rem 0.6rem;
+	border: 1px solid #cbd5e0;
+	border-radius: 6px;
+	font-size: 0.95rem;
+}
+
+.bmf-cal-request-status {
+	margin-top: 0.75rem;
+	color: #276749;
+	font-size: 0.9rem;
+}
+
+button.bmf-cal-slot-chip.is-mine,
+.bmf-cal-slot-chip.is-mine {
+	background: #fefcbf;
+	border-color: #ecc94b;
+	color: #744210;
+	cursor: default;
+}
+
+.bmf-cal-tz-hint {
+	display: inline-block;
+	margin-left: 0.35rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: #718096;
+}
+
+.bmf-cal-tz-note {
+	margin: 0.25rem 0 0;
+	font-size: 0.8rem;
+	font-weight: 400;
+	color: #718096;
+}
+
+.bmf-cal-outlook-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	margin-bottom: 0.85rem;
+	padding: 0.6rem 0.75rem;
+	background: #f7fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	font-size: 0.85rem;
+}
+
+.bmf-cal-outlook-label {
+	font-weight: 600;
+}
+
+.bmf-cal-outlook-state {
+	color: #4a5568;
+	flex: 1 1 180px;
+}
+
+button.bmf-cal-slot-chip.is-confirmed,
+.bmf-cal-slot-chip.is-confirmed {
+	background: #c6f6d5;
+	border-color: #38a169;
+	color: #22543d;
+}
+
+.bmf-cal-agenda-day {
+	margin-bottom: 0.85rem;
+}
+.bmf-cal-outlook-bar.is-reconnect,
+.bmf-cal-outlook-bar .bmf-cal-outlook-connect {
+	font-weight: 600;
+}
+
+.bmf-cal-coverage-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem 0.85rem;
+	margin: 0 0 0.75rem;
+}
+.bmf-cal-coverage-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.75rem;
+	color: #4a5568;
+}
+.bmf-cal-coverage-swatch {
+	width: 0.7rem;
+	height: 0.7rem;
+	border-radius: 2px;
+	flex: 0 0 auto;
+}
+.bmf-cal-coverage-legend-name {
+	line-height: 1.1;
+}
+.bmf-cal-coverage-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 4px;
+}
+.bmf-cal-coverage-dow {
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-align: center;
+	color: #718096;
+	padding: 0.2rem 0;
+}
+.bmf-cal-coverage-cell {
+	min-height: 4.5rem;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	padding: 0.25rem;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 2px;
+}
+.bmf-cal-coverage-cell.is-pad {
+	background: #f7fafc;
+	border-color: transparent;
+	min-height: 0;
+}
+.bmf-cal-coverage-date {
+	font-size: 0.7rem;
+	font-weight: 600;
+	color: #4a5568;
+	line-height: 1;
+	margin-bottom: 0.1rem;
+}
+.bmf-cal-coverage-chip {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 1.15rem;
+	max-height: 1.15rem;
+	padding: 0 0.3rem;
+	border-radius: 3px;
+	font-size: 0.62rem;
+	line-height: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+@media (max-width: 700px) {
+	.bmf-cal-coverage-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.bmf-cal-coverage-dow { display: none; }
+	.bmf-cal-coverage-cell.is-pad { display: none; }
+}
+
+.bmf-cal-coverage-chip.is-requested {
+	opacity: 0.82;
+	box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55);
+	font-style: italic;
+}
