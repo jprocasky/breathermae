@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.7.0
+ * Version: 1.7.1
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -252,11 +252,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.7.0' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.7.1' );
         wp_enqueue_style( 'uls-members-css' );
 
         // JS for row selection + AJAX + pagination + tag admin
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.7.0', true );
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.7.1', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -1359,13 +1359,68 @@ class ULS_Members_Plugin {
      * Tag Admin helpers + AJAX (INTERNAL / Sales / Subscriptions)
      * ------------------------------------------------------------------ */
 
-    /** Allowed simple (toggle) tags and their friendly labels. */
+    /** Default simple (toggle) tags and their friendly labels. */
     private function get_simple_tag_map() {
         return [
             'INTERNAL' => 'INTERNAL (Employee access)',
             'ART'      => 'Art of Wellness',
             'S360'     => '360 Health Intelligence',
         ];
+    }
+
+    /**
+     * Parse shortcode tags="Label|TAG, Other|OTHER" into [ TAG => Label ].
+     * Falls back to the default map when the attribute is empty or invalid.
+     */
+    private function parse_simple_tag_map( $raw ) {
+        $raw = trim( html_entity_decode( (string) $raw, ENT_QUOTES, 'UTF-8' ) );
+        if ( $raw === '' ) {
+            return $this->get_simple_tag_map();
+        }
+
+        $map = [];
+        foreach ( preg_split( '/\s*,\s*/', $raw ) as $pair ) {
+            $pair = trim( $pair );
+            if ( $pair === '' ) {
+                continue;
+            }
+            if ( strpos( $pair, '|' ) !== false ) {
+                list( $label, $tag ) = array_map( 'trim', explode( '|', $pair, 2 ) );
+            } else {
+                $label = $tag = $pair;
+            }
+            $tag = $this->sanitize_simple_tag_slug( $tag );
+            if ( $tag === '' ) {
+                continue;
+            }
+            if ( $label === '' ) {
+                $label = $tag;
+            }
+            $map[ $tag ] = $label;
+        }
+
+        return ! empty( $map ) ? $map : $this->get_simple_tag_map();
+    }
+
+    /** Sanitize a toggle-tag slug (WP Fusion label / code). */
+    private function sanitize_simple_tag_slug( $tag ) {
+        $tag = trim( (string) $tag );
+        $tag = preg_replace( '/[^A-Za-z0-9._-]/', '', $tag );
+        return is_string( $tag ) ? $tag : '';
+    }
+
+    /**
+     * Resolve the simple-tag map for this request.
+     * Prefer an explicit map, then a raw tags string (shortcode / AJAX), else defaults.
+     */
+    private function resolve_simple_tag_map( $raw_or_map = '' ) {
+        if ( is_array( $raw_or_map ) && ! empty( $raw_or_map ) ) {
+            return $raw_or_map;
+        }
+        if ( is_string( $raw_or_map ) && trim( $raw_or_map ) !== '' ) {
+            return $this->parse_simple_tag_map( $raw_or_map );
+        }
+        return $this->get_simple_tag_map();
     }
 
     /** True if the user currently has the given tag *label*. */
@@ -1427,14 +1482,15 @@ class ULS_Members_Plugin {
     /**
      * Build the status payload used by the tag-admin UI.
      */
-    private function build_tag_admin_status( $user_id ) {
+    private function build_tag_admin_status( $user_id, $tag_map = null ) {
+        $tag_map = $this->resolve_simple_tag_map( $tag_map );
         $user = get_user_by( 'id', $user_id );
         if ( ! $user ) {
             return null;
         }
 
         $simple = [];
-        foreach ( $this->get_simple_tag_map() as $tag => $label ) {
+        foreach ( $tag_map as $tag => $label ) {
             $simple[ $tag ] = [
                 'label'   => $label,
                 'has_tag' => $this->user_has_tag_label( $user_id, $tag ),
@@ -1474,7 +1530,8 @@ class ULS_Members_Plugin {
             wp_send_json_error( [ 'message' => 'No member selected' ], 400 );
         }
 
-        $status = $this->build_tag_admin_status( $user_id );
+        $tag_map = $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) );
+        $status  = $this->build_tag_admin_status( $user_id, $tag_map );
         if ( ! $status ) {
             wp_send_json_error( [ 'message' => 'User not found' ], 404 );
         }
@@ -1495,11 +1552,12 @@ class ULS_Members_Plugin {
         }
 
         $user_id     = (int) ( $_POST['user_id'] ?? 0 );
-        $tag         = sanitize_text_field( wp_unslash( $_POST['tag'] ?? '' ) );
+        $tag         = $this->sanitize_simple_tag_slug( wp_unslash( $_POST['tag'] ?? '' ) );
         $action_type = sanitize_key( $_POST['action_type'] ?? '' );
+        $tag_map     = $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) );
 
-        $allowed = array_keys( $this->get_simple_tag_map() );
-        if ( ! $user_id || ! in_array( $tag, $allowed, true ) || ! in_array( $action_type, [ 'add', 'remove' ], true ) ) {
+        $allowed = array_keys( $tag_map );
+        if ( ! $user_id || $tag === '' || ! in_array( $tag, $allowed, true ) || ! in_array( $action_type, [ 'add', 'remove' ], true ) ) {
             wp_send_json_error( [ 'message' => 'Invalid request' ], 400 );
         }
 
@@ -1512,7 +1570,7 @@ class ULS_Members_Plugin {
             bm_log( "Tag admin: removed {$tag} from user {$user_id}" );
         }
 
-        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+        wp_send_json_success( $this->build_tag_admin_status( $user_id, $tag_map ) );
     }
 
     /**
@@ -1564,13 +1622,13 @@ class ULS_Members_Plugin {
             // Tags were still applied; surface the warning
             wp_send_json_error( [
                 'message' => 'Tags applied but relation table insert failed: ' . $wpdb->last_error,
-                'status'  => $this->build_tag_admin_status( $user_id ),
+                'status'  => $this->build_tag_admin_status( $user_id, $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) ) ),
             ], 500 );
         }
 
         bm_log( "Tag admin: made user {$user_id} sales person {$next}" );
 
-        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+        wp_send_json_success( $this->build_tag_admin_status( $user_id, $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) ) ) );
     }
 
     /**
@@ -1609,21 +1667,30 @@ class ULS_Members_Plugin {
 
         bm_log( "Tag admin: removed sales codes " . implode( ',', $codes ) . " from user {$user_id}" );
 
-        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+        wp_send_json_success( $this->build_tag_admin_status( $user_id, $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) ) ) );
     }
 
     /**
-     * Shortcode: [uls_member_tag_admin]
+     * Shortcode: [uls_member_tag_admin tags="Art of Wellness|ART, Provider|DOCTOR"]
      * Renders the administrative tag panel for the currently selected member.
-     * Listens to the uls:selected-member event and also hydrates from the
-     * persisted selection on page load.
+     * Listens to the uls:selected-member event.
+     *
+     * tags attr: comma-separated label|tag pairs. Omit to use the default
+     * INTERNAL / ART / S360 toggles.
      */
     public function shortcode_member_tag_admin( $atts ) {
         if ( ! is_user_logged_in() ) {
             return '';
         }
 
-        $atts = shortcode_atts( [], $atts, 'uls_member_tag_admin' );
+        $atts = shortcode_atts( [
+            'tags' => '',
+        ], $atts, 'uls_member_tag_admin' );
+
+        $tag_map     = $this->parse_simple_tag_map( $atts['tags'] );
+        $tags_attr   = implode( ',', array_map( function( $tag, $label ) {
+            return $label . '|' . $tag;
+        }, array_keys( $tag_map ), $tag_map ) );
 
         // Always start blank. Panel only populates after an explicit row click
         // (uls:selected-member). Do not hydrate from the persisted selection.
@@ -1631,7 +1698,8 @@ class ULS_Members_Plugin {
         ?>
         <div class="uls-tag-admin" id="uls-tag-admin"
              data-user-id=""
-             data-email="">
+             data-email=""
+             data-tags="<?php echo esc_attr( $tags_attr ); ?>">
             <div class="uls-tag-admin__header">
                 <h4 class="uls-tag-admin__title">Member Tags</h4>
                 <div class="uls-tag-admin__member">
@@ -1648,7 +1716,7 @@ class ULS_Members_Plugin {
                     <div class="uls-tag-admin__section">
                         <h5>Access &amp; Subscriptions</h5>
                         <div class="uls-tag-admin__toggles">
-                            <?php foreach ( $this->get_simple_tag_map() as $tag => $label ) : ?>
+                            <?php foreach ( $tag_map as $tag => $label ) : ?>
                                 <label class="uls-tag-admin__toggle">
                                     <input type="checkbox"
                                            class="uls-tag-toggle"

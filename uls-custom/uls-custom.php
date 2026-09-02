@@ -1605,6 +1605,8 @@ register_deactivation_hook(ULS_CUSTOM_FILE, function() {
 /* --------------------------------------------------------------------------
  * Stops woocommerce customer data from syncing to CRM if 'email_optin' field is not truthy.
  * -------------------------------------------------------------------------- */
+/* --- removed this so that Fusion tags are added during checkout
+
 function do_not_sync_unconfirmed_customers( $customer_data ) {
     if ( empty( $customer_data['email_optin'] ) ) {
         return false; // Cancels sync to CRM for this checkout
@@ -1612,6 +1614,7 @@ function do_not_sync_unconfirmed_customers( $customer_data ) {
     return $customer_data;
 }
 add_filter( 'wpf_woocommerce_customer_data', 'do_not_sync_unconfirmed_customers' );
+*/
 
 /**
  * Breathermae Lazy Popup (Elementor on-demand render)

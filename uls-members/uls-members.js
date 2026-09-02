@@ -640,6 +640,10 @@ function updateScopedResultsLink(memberId) {
 
     var currentUserId = parseInt($panel.data('user-id'), 10) || 0;
 
+    function configuredTags() {
+      return ($panel.attr('data-tags') || '').toString();
+    }
+
     function showMessage(text, isError) {
       var $msg = $panel.find('.uls-tag-admin__message');
       $msg.removeClass('is-success is-error')
@@ -670,12 +674,14 @@ function updateScopedResultsLink(memberId) {
       $panel.find('.uls-tag-admin__content').show();
 
       // Simple toggles
+      var allTags = (status.all_tags || []).map(function(t){ return String(t).toLowerCase(); });
       $panel.find('.uls-tag-toggle').each(function() {
         var $cb = $(this);
-        var tag = $cb.data('tag');
+        var tag = ($cb.data('tag') || '').toString();
         var info = status.simple && status.simple[tag];
+        var has = info ? !!info.has_tag : (allTags.indexOf(tag.toLowerCase()) !== -1);
         $cb.prop('disabled', false);
-        $cb.prop('checked', !!(info && info.has_tag));
+        $cb.prop('checked', has);
       });
 
       // Sales section
@@ -719,7 +725,8 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_get_tag_admin_status',
         nonce: W.nonce,
-        user_id: userId
+        user_id: userId,
+        tags: configuredTags()
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -746,6 +753,7 @@ function updateScopedResultsLink(memberId) {
         nonce: W.nonce,
         user_id: currentUserId,
         tag: tag,
+        tags: configuredTags(),
         action_type: wantAdd ? 'add' : 'remove'
       }).done(function(resp) {
         if (resp && resp.success) {
@@ -773,7 +781,8 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_make_sales_person',
         nonce: W.nonce,
-        user_id: currentUserId
+        user_id: currentUserId,
+        tags: configuredTags()
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -798,7 +807,8 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_remove_sales_person',
         nonce: W.nonce,
-        user_id: currentUserId
+        user_id: currentUserId,
+        tags: configuredTags()
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
