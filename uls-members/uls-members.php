@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.7.1
+ * Version: 1.8.0
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -40,6 +40,7 @@ class ULS_Members_Plugin {
         add_shortcode( 'uls_members_table', [ $this, 'shortcode_members_table' ] );
         add_shortcode( 'uls_selected_user', [ $this, 'shortcode_selected_user' ] );
         add_shortcode( 'uls_member_tag_admin', [ $this, 'shortcode_member_tag_admin' ] );
+        add_shortcode( 'uls_claim_member', [ $this, 'shortcode_claim_member' ] );
 
         // Front-end assets
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
@@ -61,6 +62,8 @@ class ULS_Members_Plugin {
         add_action( 'wp_ajax_uls_toggle_simple_tag',    [ $this, 'ajax_toggle_simple_tag' ] );
         add_action( 'wp_ajax_uls_make_sales_person',    [ $this, 'ajax_make_sales_person' ] );
         add_action( 'wp_ajax_uls_remove_sales_person',  [ $this, 'ajax_remove_sales_person' ] );
+        add_action( 'wp_ajax_uls_claim_search',         [ $this, 'ajax_claim_search' ] );
+        add_action( 'wp_ajax_uls_claim_member',         [ $this, 'ajax_claim_member' ] );
 
         add_action( 'init', [ $this, 'handle_csv_export' ] );        
         
@@ -252,11 +255,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.7.1' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.8.0' );
         wp_enqueue_style( 'uls-members-css' );
 
-        // JS for row selection + AJAX + pagination + tag admin
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.7.1', true );
+        // JS for row selection + AJAX + pagination + tag admin + claim
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.8.0', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -1359,68 +1362,13 @@ class ULS_Members_Plugin {
      * Tag Admin helpers + AJAX (INTERNAL / Sales / Subscriptions)
      * ------------------------------------------------------------------ */
 
-    /** Default simple (toggle) tags and their friendly labels. */
+    /** Allowed simple (toggle) tags and their friendly labels. */
     private function get_simple_tag_map() {
         return [
             'INTERNAL' => 'INTERNAL (Employee access)',
             'ART'      => 'Art of Wellness',
             'S360'     => '360 Health Intelligence',
         ];
-    }
-
-    /**
-     * Parse shortcode tags="Label|TAG, Other|OTHER" into [ TAG => Label ].
-     * Falls back to the default map when the attribute is empty or invalid.
-     */
-    private function parse_simple_tag_map( $raw ) {
-        $raw = trim( html_entity_decode( (string) $raw, ENT_QUOTES, 'UTF-8' ) );
-        if ( $raw === '' ) {
-            return $this->get_simple_tag_map();
-        }
-
-        $map = [];
-        foreach ( preg_split( '/\s*,\s*/', $raw ) as $pair ) {
-            $pair = trim( $pair );
-            if ( $pair === '' ) {
-                continue;
-            }
-            if ( strpos( $pair, '|' ) !== false ) {
-                list( $label, $tag ) = array_map( 'trim', explode( '|', $pair, 2 ) );
-            } else {
-                $label = $tag = $pair;
-            }
-            $tag = $this->sanitize_simple_tag_slug( $tag );
-            if ( $tag === '' ) {
-                continue;
-            }
-            if ( $label === '' ) {
-                $label = $tag;
-            }
-            $map[ $tag ] = $label;
-        }
-
-        return ! empty( $map ) ? $map : $this->get_simple_tag_map();
-    }
-
-    /** Sanitize a toggle-tag slug (WP Fusion label / code). */
-    private function sanitize_simple_tag_slug( $tag ) {
-        $tag = trim( (string) $tag );
-        $tag = preg_replace( '/[^A-Za-z0-9._-]/', '', $tag );
-        return is_string( $tag ) ? $tag : '';
-    }
-
-    /**
-     * Resolve the simple-tag map for this request.
-     * Prefer an explicit map, then a raw tags string (shortcode / AJAX), else defaults.
-     */
-    private function resolve_simple_tag_map( $raw_or_map = '' ) {
-        if ( is_array( $raw_or_map ) && ! empty( $raw_or_map ) ) {
-            return $raw_or_map;
-        }
-        if ( is_string( $raw_or_map ) && trim( $raw_or_map ) !== '' ) {
-            return $this->parse_simple_tag_map( $raw_or_map );
-        }
-        return $this->get_simple_tag_map();
     }
 
     /** True if the user currently has the given tag *label*. */
@@ -1482,15 +1430,14 @@ class ULS_Members_Plugin {
     /**
      * Build the status payload used by the tag-admin UI.
      */
-    private function build_tag_admin_status( $user_id, $tag_map = null ) {
-        $tag_map = $this->resolve_simple_tag_map( $tag_map );
+    private function build_tag_admin_status( $user_id ) {
         $user = get_user_by( 'id', $user_id );
         if ( ! $user ) {
             return null;
         }
 
         $simple = [];
-        foreach ( $tag_map as $tag => $label ) {
+        foreach ( $this->get_simple_tag_map() as $tag => $label ) {
             $simple[ $tag ] = [
                 'label'   => $label,
                 'has_tag' => $this->user_has_tag_label( $user_id, $tag ),
@@ -1530,8 +1477,7 @@ class ULS_Members_Plugin {
             wp_send_json_error( [ 'message' => 'No member selected' ], 400 );
         }
 
-        $tag_map = $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) );
-        $status  = $this->build_tag_admin_status( $user_id, $tag_map );
+        $status = $this->build_tag_admin_status( $user_id );
         if ( ! $status ) {
             wp_send_json_error( [ 'message' => 'User not found' ], 404 );
         }
@@ -1552,12 +1498,11 @@ class ULS_Members_Plugin {
         }
 
         $user_id     = (int) ( $_POST['user_id'] ?? 0 );
-        $tag         = $this->sanitize_simple_tag_slug( wp_unslash( $_POST['tag'] ?? '' ) );
+        $tag         = sanitize_text_field( wp_unslash( $_POST['tag'] ?? '' ) );
         $action_type = sanitize_key( $_POST['action_type'] ?? '' );
-        $tag_map     = $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) );
 
-        $allowed = array_keys( $tag_map );
-        if ( ! $user_id || $tag === '' || ! in_array( $tag, $allowed, true ) || ! in_array( $action_type, [ 'add', 'remove' ], true ) ) {
+        $allowed = array_keys( $this->get_simple_tag_map() );
+        if ( ! $user_id || ! in_array( $tag, $allowed, true ) || ! in_array( $action_type, [ 'add', 'remove' ], true ) ) {
             wp_send_json_error( [ 'message' => 'Invalid request' ], 400 );
         }
 
@@ -1570,7 +1515,7 @@ class ULS_Members_Plugin {
             bm_log( "Tag admin: removed {$tag} from user {$user_id}" );
         }
 
-        wp_send_json_success( $this->build_tag_admin_status( $user_id, $tag_map ) );
+        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
     }
 
     /**
@@ -1622,13 +1567,13 @@ class ULS_Members_Plugin {
             // Tags were still applied; surface the warning
             wp_send_json_error( [
                 'message' => 'Tags applied but relation table insert failed: ' . $wpdb->last_error,
-                'status'  => $this->build_tag_admin_status( $user_id, $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) ) ),
+                'status'  => $this->build_tag_admin_status( $user_id ),
             ], 500 );
         }
 
         bm_log( "Tag admin: made user {$user_id} sales person {$next}" );
 
-        wp_send_json_success( $this->build_tag_admin_status( $user_id, $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) ) ) );
+        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
     }
 
     /**
@@ -1667,30 +1612,364 @@ class ULS_Members_Plugin {
 
         bm_log( "Tag admin: removed sales codes " . implode( ',', $codes ) . " from user {$user_id}" );
 
-        wp_send_json_success( $this->build_tag_admin_status( $user_id, $this->parse_simple_tag_map( wp_unslash( $_POST['tags'] ?? '' ) ) ) );
+        wp_send_json_success( $this->build_tag_admin_status( $user_id ) );
+    }
+
+    /* ------------------------------------------------------------------
+     * Claim unlinked members (sales portal)
+     * Sales parent SA### applies child link tag SA###-1 to a member
+     * found by email/name search. No full unassigned dump.
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Child link tag applied to members under a sales parent.
+     * Convention: SA100 → SA100-1 (matches existing attribution tags).
+     */
+    private function get_child_link_tag_for_parent( $parent_code ) {
+        $parent_code = strtoupper( trim( (string) $parent_code ) );
+        if ( ! preg_match( '/^SA\d+$/', $parent_code ) ) {
+            return '';
+        }
+        return $parent_code . '-1';
     }
 
     /**
-     * Shortcode: [uls_member_tag_admin tags="Art of Wellness|ART, Provider|DOCTOR"]
-     * Renders the administrative tag panel for the currently selected member.
-     * Listens to the uls:selected-member event.
+     * Member-side sales link tags only (SA100-1), not parent codes (SA100).
+     */
+    private function get_user_sales_link_tags( $user_id ) {
+        $out = [];
+        foreach ( $this->get_user_wpf_tag_labels( $user_id ) as $label ) {
+            $label = trim( (string) $label );
+            if ( preg_match( '/^SA\d+-\d+/i', $label ) ) {
+                $out[] = $label;
+            }
+        }
+        return array_values( array_unique( $out ) );
+    }
+
+    /**
+     * Viewer context for claim UI / AJAX.
+     * Empty codes ⇒ not a sales parent, cannot claim.
+     */
+    private function get_claim_viewer_context() {
+        $user_id = get_current_user_id();
+        $codes   = $this->get_user_sales_parent_codes( $user_id );
+        $primary = ! empty( $codes ) ? $codes[0] : '';
+        return [
+            'user_id'   => (int) $user_id,
+            'codes'     => $codes,
+            'parent'    => $primary,
+            'link_tag'  => $primary ? $this->get_child_link_tag_for_parent( $primary ) : '',
+            'can_claim' => ( $primary !== '' && function_exists( 'wp_fusion' ) ),
+        ];
+    }
+
+    /**
+     * Search WP users by email, login, display name, first/last name.
+     * Exact email match is always returned first. Cap at $limit.
      *
-     * tags attr: comma-separated label|tag pairs. Omit to use the default
-     * INTERNAL / ART / S360 toggles.
+     * @return WP_User[]
+     */
+    private function search_users_for_claim( $term, $limit = 20 ) {
+        $term  = trim( (string) $term );
+        $limit = max( 1, min( 20, (int) $limit ) );
+        if ( $term === '' ) {
+            return [];
+        }
+
+        $found = [];
+        $ids   = [];
+
+        if ( is_email( $term ) ) {
+            $exact = get_user_by( 'email', $term );
+            if ( $exact instanceof WP_User ) {
+                $found[] = $exact;
+                $ids[]   = (int) $exact->ID;
+            }
+        }
+
+        $q = new WP_User_Query( [
+            'search'         => '*' . $term . '*',
+            'search_columns' => [ 'user_login', 'user_email', 'display_name', 'user_nicename' ],
+            'number'         => $limit,
+            'orderby'        => 'registered',
+            'order'          => 'DESC',
+            'exclude'        => $ids,
+        ] );
+        foreach ( (array) $q->get_results() as $u ) {
+            if ( ! ( $u instanceof WP_User ) ) {
+                continue;
+            }
+            $uid = (int) $u->ID;
+            if ( in_array( $uid, $ids, true ) ) {
+                continue;
+            }
+            $found[] = $u;
+            $ids[]   = $uid;
+            if ( count( $found ) >= $limit ) {
+                return $found;
+            }
+        }
+
+        $q2 = new WP_User_Query( [
+            'number'     => $limit,
+            'orderby'    => 'registered',
+            'order'      => 'DESC',
+            'exclude'    => $ids,
+            'meta_query' => [
+                'relation' => 'OR',
+                [
+                    'key'     => 'first_name',
+                    'value'   => $term,
+                    'compare' => 'LIKE',
+                ],
+                [
+                    'key'     => 'last_name',
+                    'value'   => $term,
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ] );
+        foreach ( (array) $q2->get_results() as $u ) {
+            if ( ! ( $u instanceof WP_User ) ) {
+                continue;
+            }
+            $uid = (int) $u->ID;
+            if ( in_array( $uid, $ids, true ) ) {
+                continue;
+            }
+            $found[] = $u;
+            $ids[]   = $uid;
+            if ( count( $found ) >= $limit ) {
+                break;
+            }
+        }
+
+        return array_slice( $found, 0, $limit );
+    }
+
+    /**
+     * Payload row for one search hit. Encodes whether the viewer may claim.
+     */
+    private function format_claim_candidate( WP_User $user, $viewer_link_tag ) {
+        $user_id      = (int) $user->ID;
+        $link_tags    = $this->get_user_sales_link_tags( $user_id );
+        $is_sales     = ! empty( $this->get_user_sales_parent_codes( $user_id ) );
+        $is_internal  = $this->user_has_tag_label( $user_id, 'INTERNAL' );
+        $is_self      = $user_id === (int) get_current_user_id();
+        $linked_here  = false;
+        $viewer_link_tag = trim( (string) $viewer_link_tag );
+
+        foreach ( $link_tags as $t ) {
+            if ( strcasecmp( $t, $viewer_link_tag ) === 0 ) {
+                $linked_here = true;
+                break;
+            }
+        }
+
+        $can_claim    = false;
+        $block_reason = '';
+
+        if ( $is_self ) {
+            $block_reason = 'This is your own account.';
+        } elseif ( $is_sales ) {
+            $block_reason = 'This user is a sales representative.';
+        } elseif ( $is_internal ) {
+            $block_reason = 'Staff accounts cannot be claimed.';
+        } elseif ( $linked_here ) {
+            $block_reason = 'Already linked to you.';
+        } elseif ( ! empty( $link_tags ) ) {
+            $block_reason = 'Already linked (' . implode( ', ', $link_tags ) . ').';
+        } else {
+            $can_claim = true;
+        }
+
+        $dt_format = trim( sprintf(
+            '%s %s',
+            (string) get_option( 'date_format', 'M j, Y' ),
+            (string) get_option( 'time_format', 'g:i a' )
+        ) );
+        $reg_ts = $user->user_registered ? strtotime( $user->user_registered ) : 0;
+
+        return [
+            'user_id'          => $user_id,
+            'email'            => $user->user_email,
+            'display_name'     => $user->display_name,
+            'first_name'       => $user->first_name,
+            'last_name'        => $user->last_name,
+            'registered'       => $reg_ts ? date_i18n( $dt_format, $reg_ts ) : '',
+            'link_tags'        => $link_tags,
+            'is_sales'         => $is_sales,
+            'is_internal'      => $is_internal,
+            'can_claim'        => $can_claim,
+            'block_reason'     => $block_reason,
+            'linked_to_viewer' => $linked_here,
+        ];
+    }
+
+    /**
+     * AJAX: search members the current sales parent may inspect for claiming.
+     * POST: q (min 3 chars, or a full email)
+     */
+    public function ajax_claim_search() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+
+        $viewer = $this->get_claim_viewer_context();
+        if ( empty( $viewer['can_claim'] ) ) {
+            wp_send_json_error( [ 'message' => 'Only sales representatives can search members to claim.' ], 403 );
+        }
+
+        $q = sanitize_text_field( wp_unslash( $_POST['q'] ?? '' ) );
+        $q = trim( $q );
+        if ( $q === '' || ( strlen( $q ) < 3 && ! is_email( $q ) ) ) {
+            wp_send_json_error( [ 'message' => 'Enter at least 3 characters, or a full email address.' ], 400 );
+        }
+
+        $users = $this->search_users_for_claim( $q, 20 );
+        $rows  = [];
+        foreach ( $users as $u ) {
+            $rows[] = $this->format_claim_candidate( $u, $viewer['link_tag'] );
+        }
+
+        wp_send_json_success( [
+            'q'        => $q,
+            'parent'   => $viewer['parent'],
+            'link_tag' => $viewer['link_tag'],
+            'results'  => $rows,
+        ] );
+    }
+
+    /**
+     * AJAX: apply the viewer's child link tag (SA###-1) to a member.
+     * POST: user_id
+     * Refuses self, sales parents, INTERNAL, and members already linked to anyone.
+     */
+    public function ajax_claim_member() {
+        check_ajax_referer( 'uls_members_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+        }
+        if ( ! function_exists( 'wp_fusion' ) ) {
+            wp_send_json_error( [ 'message' => 'WP Fusion not available' ], 500 );
+        }
+
+        $viewer = $this->get_claim_viewer_context();
+        if ( empty( $viewer['can_claim'] ) || $viewer['link_tag'] === '' ) {
+            wp_send_json_error( [ 'message' => 'Only sales representatives can claim members.' ], 403 );
+        }
+
+        $target_id = (int) ( $_POST['user_id'] ?? 0 );
+        $target    = $target_id ? get_user_by( 'id', $target_id ) : false;
+        if ( ! $target ) {
+            wp_send_json_error( [ 'message' => 'Member not found' ], 404 );
+        }
+
+        $row = $this->format_claim_candidate( $target, $viewer['link_tag'] );
+        if ( empty( $row['can_claim'] ) ) {
+            wp_send_json_error( [
+                'message' => $row['block_reason'] ?: 'This member cannot be claimed.',
+                'member'  => $row,
+            ], 400 );
+        }
+
+        $tag = $viewer['link_tag'];
+        wp_fusion()->user->apply_tags( [ $tag ], $target_id );
+        do_action( 'wpf_apply_tags', [ $tag ], $target_id );
+
+        update_user_meta( $target_id, 'uls_sales_linked_by', (int) $viewer['user_id'] );
+        update_user_meta( $target_id, 'uls_sales_linked_at', current_time( 'mysql' ) );
+        update_user_meta( $target_id, 'uls_sales_linked_tag', $tag );
+
+        bm_log( sprintf(
+            'Claim member: user %d (%s) claimed member %d (%s) with tag %s',
+            (int) $viewer['user_id'],
+            $viewer['parent'],
+            $target_id,
+            $target->user_email,
+            $tag
+        ) );
+
+        $updated = get_user_by( 'id', $target_id );
+        $member  = $this->format_claim_candidate( $updated, $tag );
+        // WPF tag cache can lag one request; force the UI into the linked state.
+        if ( empty( $member['linked_to_viewer'] ) ) {
+            $member['link_tags'][]       = $tag;
+            $member['link_tags']         = array_values( array_unique( $member['link_tags'] ) );
+            $member['linked_to_viewer']  = true;
+            $member['can_claim']         = false;
+            $member['block_reason']      = 'Already linked to you.';
+        }
+        wp_send_json_success( [
+            'message'  => sprintf( 'Linked %s to %s.', $target->user_email, $tag ),
+            'parent'   => $viewer['parent'],
+            'link_tag' => $tag,
+            'member'   => $member,
+        ] );
+    }
+
+    /**
+     * Shortcode: [uls_claim_member]
+     * Sales-portal search + claim. Viewer must hold a parent SA### tag
+     * registered in uls_parent_child_tags. Applies that parent's SA###-1 tag.
+     */
+    public function shortcode_claim_member( $atts ) {
+        if ( ! is_user_logged_in() ) {
+            return '<p>Please log in to claim members.</p>';
+        }
+
+        shortcode_atts( [], $atts, 'uls_claim_member' );
+
+        $viewer = $this->get_claim_viewer_context();
+        if ( empty( $viewer['can_claim'] ) ) {
+            return '<div class="uls-claim" id="uls-claim-member"><p class="uls-claim__placeholder">Only sales representatives can claim unlinked members.</p></div>';
+        }
+
+        ob_start();
+        ?>
+        <div class="uls-claim" id="uls-claim-member"
+             data-parent="<?php echo esc_attr( $viewer['parent'] ); ?>"
+             data-link-tag="<?php echo esc_attr( $viewer['link_tag'] ); ?>">
+            <div class="uls-claim__header">
+                <h4 class="uls-claim__title">Claim unlinked member</h4>
+                <div class="uls-claim__meta">
+                    <span>Your code</span>
+                    <span class="uls-tag-admin__sales-code"><?php echo esc_html( $viewer['parent'] ); ?></span>
+                    <span>will apply</span>
+                    <span class="uls-tag-admin__sales-code"><?php echo esc_html( $viewer['link_tag'] ); ?></span>
+                </div>
+            </div>
+            <p class="uls-claim__hint">Search by email or name. Members who registered without your attribution link can be linked here. Already-linked members cannot be reassigned.</p>
+            <div class="uls-claim__search">
+                <input type="search"
+                       class="uls-claim__input"
+                       id="uls-claim-q"
+                       placeholder="Email or name (min 3 characters)"
+                       autocomplete="off"
+                       maxlength="120">
+                <button type="button" class="uls-tag-admin__btn uls-tag-admin__btn--primary uls-claim__go">Search</button>
+            </div>
+            <div class="uls-claim__message" style="display:none;"></div>
+            <div class="uls-claim__results" aria-live="polite"></div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Shortcode: [uls_member_tag_admin]
+     * Renders the administrative tag panel for the currently selected member.
+     * Listens to the uls:selected-member event and also hydrates from the
+     * persisted selection on page load.
      */
     public function shortcode_member_tag_admin( $atts ) {
         if ( ! is_user_logged_in() ) {
             return '';
         }
 
-        $atts = shortcode_atts( [
-            'tags' => '',
-        ], $atts, 'uls_member_tag_admin' );
-
-        $tag_map     = $this->parse_simple_tag_map( $atts['tags'] );
-        $tags_attr   = implode( ',', array_map( function( $tag, $label ) {
-            return $label . '|' . $tag;
-        }, array_keys( $tag_map ), $tag_map ) );
+        $atts = shortcode_atts( [], $atts, 'uls_member_tag_admin' );
 
         // Always start blank. Panel only populates after an explicit row click
         // (uls:selected-member). Do not hydrate from the persisted selection.
@@ -1698,8 +1977,7 @@ class ULS_Members_Plugin {
         ?>
         <div class="uls-tag-admin" id="uls-tag-admin"
              data-user-id=""
-             data-email=""
-             data-tags="<?php echo esc_attr( $tags_attr ); ?>">
+             data-email="">
             <div class="uls-tag-admin__header">
                 <h4 class="uls-tag-admin__title">Member Tags</h4>
                 <div class="uls-tag-admin__member">
@@ -1716,7 +1994,7 @@ class ULS_Members_Plugin {
                     <div class="uls-tag-admin__section">
                         <h5>Access &amp; Subscriptions</h5>
                         <div class="uls-tag-admin__toggles">
-                            <?php foreach ( $tag_map as $tag => $label ) : ?>
+                            <?php foreach ( $this->get_simple_tag_map() as $tag => $label ) : ?>
                                 <label class="uls-tag-admin__toggle">
                                     <input type="checkbox"
                                            class="uls-tag-toggle"
@@ -2165,6 +2443,119 @@ add_action( 'wp_head', function() {
     .uls-tag-admin.is-loading .uls-tag-admin__content {
         opacity: .55;
         pointer-events: none;
+    }
+
+    /* ---- Claim unlinked member ---- */
+    .uls-claim {
+        margin: 1rem 0;
+        padding: 1rem 1.25rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        max-width: 720px;
+    }
+    .uls-claim__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: .5rem 1rem;
+        margin-bottom: .5rem;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: .5rem;
+    }
+    .uls-claim__title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .uls-claim__meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .35rem .5rem;
+        font-size: .85rem;
+        color: #64748b;
+    }
+    .uls-claim__hint {
+        margin: .5rem 0 .75rem;
+        font-size: .85rem;
+        color: #64748b;
+    }
+    .uls-claim__placeholder {
+        color: #94a3b8;
+        font-style: italic;
+        margin: .5rem 0;
+    }
+    .uls-claim__search {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        align-items: center;
+        margin-bottom: .75rem;
+    }
+    .uls-claim__input {
+        flex: 1 1 240px;
+        max-width: 360px;
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: .95rem;
+    }
+    .uls-claim.is-loading .uls-claim__results {
+        opacity: .55;
+        pointer-events: none;
+    }
+    .uls-claim__message {
+        margin: .35rem 0 .6rem;
+        padding: .4rem .6rem;
+        border-radius: 4px;
+        font-size: .85rem;
+    }
+    .uls-claim__message.is-success {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+    .uls-claim__message.is-error {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+    .uls-claim__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .9rem;
+    }
+    .uls-claim__table th,
+    .uls-claim__table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+        vertical-align: middle;
+    }
+    .uls-claim__table thead th {
+        background: #e2e8f0;
+        font-weight: 600;
+        font-size: .8rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: #475569;
+    }
+    .uls-claim__status {
+        font-size: .8rem;
+        color: #64748b;
+    }
+    .uls-claim__status.is-open {
+        color: #047857;
+        font-weight: 600;
+    }
+    .uls-claim__status.is-yours {
+        color: #0369a1;
+        font-weight: 600;
+    }
+    .uls-claim__empty {
+        font-size: .9rem;
+        color: #64748b;
+        margin: .5rem 0;
     }
 
     </style>

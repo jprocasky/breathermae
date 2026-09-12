@@ -5,8 +5,6 @@
  * - Robust child lookup by data-parent-id + data-user-id
  * Adds a Price column for orders using resp.data[vw_wc_orders_full][i].line_total (text).
  * If the server already formats with wc_price, we output as-is; otherwise, we try to format as currency.
- *
- * v1.7.0: Tag admin panel (INTERNAL / ART / S360 toggles + Make/Remove Sales Person)
  */
 (function ($, W) {
   'use strict';
@@ -14,7 +12,7 @@
   // Elementor guard (optional)
   try { if (window.elementorFrontend && elementorFrontend.isEditMode && elementorFrontend.isEditMode()) { console.info('[uls-members] Elementor edit mode; live handlers enabled but you can disable by returning early.'); } } catch (e) {}
 
-  console.info('[uls-members] replacement JS v3.1 + tag-admin loaded');
+  console.info('[uls-members] replacement JS v3.1 loaded (hierarchy + parent-only paging)');
   if (!W || !W.ajaxurl) console.error('[uls-members] ULS_MEMBERS missing ajaxurl.', W);
 
   var SEL = {
@@ -591,6 +589,9 @@ function updateScopedResultsLink(memberId) {
 
       // Tag admin panel
       initTagAdmin();
+
+      // Claim unlinked member (sales portal)
+      initClaimMember();
   }
 
   $(bindAll);
@@ -640,10 +641,6 @@ function updateScopedResultsLink(memberId) {
 
     var currentUserId = parseInt($panel.data('user-id'), 10) || 0;
 
-    function configuredTags() {
-      return ($panel.attr('data-tags') || '').toString();
-    }
-
     function showMessage(text, isError) {
       var $msg = $panel.find('.uls-tag-admin__message');
       $msg.removeClass('is-success is-error')
@@ -674,14 +671,12 @@ function updateScopedResultsLink(memberId) {
       $panel.find('.uls-tag-admin__content').show();
 
       // Simple toggles
-      var allTags = (status.all_tags || []).map(function(t){ return String(t).toLowerCase(); });
       $panel.find('.uls-tag-toggle').each(function() {
         var $cb = $(this);
-        var tag = ($cb.data('tag') || '').toString();
+        var tag = $cb.data('tag');
         var info = status.simple && status.simple[tag];
-        var has = info ? !!info.has_tag : (allTags.indexOf(tag.toLowerCase()) !== -1);
         $cb.prop('disabled', false);
-        $cb.prop('checked', has);
+        $cb.prop('checked', !!(info && info.has_tag));
       });
 
       // Sales section
@@ -725,8 +720,7 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_get_tag_admin_status',
         nonce: W.nonce,
-        user_id: userId,
-        tags: configuredTags()
+        user_id: userId
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -753,7 +747,6 @@ function updateScopedResultsLink(memberId) {
         nonce: W.nonce,
         user_id: currentUserId,
         tag: tag,
-        tags: configuredTags(),
         action_type: wantAdd ? 'add' : 'remove'
       }).done(function(resp) {
         if (resp && resp.success) {
@@ -781,8 +774,7 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_make_sales_person',
         nonce: W.nonce,
-        user_id: currentUserId,
-        tags: configuredTags()
+        user_id: currentUserId
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -807,8 +799,7 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_remove_sales_person',
         nonce: W.nonce,
-        user_id: currentUserId,
-        tags: configuredTags()
+        user_id: currentUserId
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -841,6 +832,164 @@ function updateScopedResultsLink(memberId) {
     // Start blank; wait for the user to click a row.
 
     console.info('[uls-members] Tag admin panel initialized (blank until selection)');
+  }
+
+  // ==================== CLAIM UNLINKED MEMBER ====================
+  function initClaimMember() {
+    var $panel = $('#uls-claim-member');
+    if (!$panel.length) return;
+    if (!$panel.find('#uls-claim-q').length) return;
+
+    var parentCode = ($panel.data('parent') || '').toString();
+    var linkTag    = ($panel.data('link-tag') || '').toString();
+    var timer      = null;
+
+    function showMessage(text, isError) {
+      var $msg = $panel.find('.uls-claim__message');
+      $msg.removeClass('is-success is-error')
+          .addClass(isError ? 'is-error' : 'is-success')
+          .text(text)
+          .show();
+    }
+
+    function setLoading(on) {
+      $panel.toggleClass('is-loading', !!on);
+      $panel.find('.uls-claim__go').prop('disabled', !!on);
+    }
+
+    function statusHtml(row) {
+      if (row.linked_to_viewer) {
+        return '<span class="uls-claim__status is-yours">Linked to you</span>';
+      }
+      if (row.can_claim) {
+        return '<span class="uls-claim__status is-open">Unassigned</span>';
+      }
+      return '<span class="uls-claim__status">' + escHtml(row.block_reason || 'Not claimable') + '</span>';
+    }
+
+    function actionHtml(row) {
+      if (row.can_claim) {
+        return '<button type="button" class="uls-tag-admin__btn uls-tag-admin__btn--primary uls-claim__btn"' +
+               ' data-user-id="' + String(row.user_id) + '"' +
+               ' data-email="' + escHtml(row.email) + '">Claim</button>';
+      }
+      return '';
+    }
+
+    function renderResults(list) {
+      var $box = $panel.find('.uls-claim__results');
+      if (!Array.isArray(list) || !list.length) {
+        $box.html('<p class="uls-claim__empty">No members matched that search.</p>');
+        return;
+      }
+      var html = '<table class="uls-claim__table"><thead><tr>' +
+                 '<th>Name</th><th>Email</th><th>Registered</th><th>Status</th><th></th>' +
+                 '</tr></thead><tbody>';
+      list.forEach(function(row) {
+        var name = (row.display_name || ((row.first_name || '') + ' ' + (row.last_name || '')).trim() || '—');
+        html += '<tr data-user-id="' + String(row.user_id) + '">' +
+                '<td>' + escHtml(name) + '</td>' +
+                '<td>' + escHtml(row.email || '') + '</td>' +
+                '<td>' + escHtml(row.registered || '') + '</td>' +
+                '<td class="uls-claim__status-cell">' + statusHtml(row) + '</td>' +
+                '<td class="uls-claim__action-cell">' + actionHtml(row) + '</td>' +
+                '</tr>';
+      });
+      html += '</tbody></table>';
+      $box.html(html);
+    }
+
+    function patchRow(member) {
+      if (!member || !member.user_id) return;
+      var $tr = $panel.find('tr[data-user-id="' + member.user_id + '"]');
+      if (!$tr.length) return;
+      $tr.find('.uls-claim__status-cell').html(statusHtml(member));
+      $tr.find('.uls-claim__action-cell').html(actionHtml(member));
+    }
+
+    function runSearch() {
+      var q = ($panel.find('#uls-claim-q').val() || '').toString().trim();
+      if (!q) {
+        $panel.find('.uls-claim__results').empty();
+        $panel.find('.uls-claim__message').hide();
+        return;
+      }
+      if (q.length < 3 && q.indexOf('@') === -1) {
+        showMessage('Enter at least 3 characters, or a full email address.', true);
+        return;
+      }
+      setLoading(true);
+      $panel.find('.uls-claim__message').hide();
+      $.post(W.ajaxurl, {
+        action: 'uls_claim_search',
+        nonce: W.nonce,
+        q: q
+      }).done(function(resp) {
+        if (resp && resp.success) {
+          renderResults(resp.data && resp.data.results);
+        } else {
+          showMessage((resp && resp.data && resp.data.message) || 'Search failed', true);
+        }
+      }).fail(function() {
+        showMessage('AJAX error searching members', true);
+      }).always(function() {
+        setLoading(false);
+      });
+    }
+
+    $panel.find('#uls-claim-q').off('input.ulsClaim keydown.ulsClaim')
+      .on('input.ulsClaim', function() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(runSearch, 350);
+      })
+      .on('keydown.ulsClaim', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (timer) clearTimeout(timer);
+          runSearch();
+        }
+      });
+
+    $panel.off('click.ulsClaim', '.uls-claim__go').on('click.ulsClaim', '.uls-claim__go', function() {
+      if (timer) clearTimeout(timer);
+      runSearch();
+    });
+
+    $panel.off('click.ulsClaim', '.uls-claim__btn').on('click.ulsClaim', '.uls-claim__btn', function() {
+      var $btn = $(this);
+      var userId = parseInt($btn.data('user-id'), 10) || 0;
+      var email  = ($btn.data('email') || '').toString();
+      if (!userId) return;
+      var label = email || ('user #' + userId);
+      if (!confirm('Link ' + label + ' to ' + (linkTag || parentCode) + '?')) return;
+
+      setLoading(true);
+      $.post(W.ajaxurl, {
+        action: 'uls_claim_member',
+        nonce: W.nonce,
+        user_id: userId
+      }).done(function(resp) {
+        if (resp && resp.success) {
+          showMessage((resp.data && resp.data.message) || 'Member linked.', false);
+          if (resp.data && resp.data.member) {
+            patchRow(resp.data.member);
+          } else {
+            runSearch();
+          }
+        } else {
+          showMessage((resp && resp.data && resp.data.message) || 'Claim failed', true);
+          if (resp && resp.data && resp.data.member) {
+            patchRow(resp.data.member);
+          }
+        }
+      }).fail(function() {
+        showMessage('AJAX error claiming member', true);
+      }).always(function() {
+        setLoading(false);
+      });
+    });
+
+    console.info('[uls-members] Claim member panel initialized', parentCode, linkTag);
   }
 
 })(jQuery, window.ULS_MEMBERS || {});
