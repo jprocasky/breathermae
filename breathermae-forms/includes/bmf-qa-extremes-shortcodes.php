@@ -4,6 +4,7 @@
  *
  * [bmf_qa_extremes threshold="0.75" show_scores="0"]
  * [bmf_qa_extremes_link assessment="bsi"]BSI extremes[/bmf_qa_extremes_link]
+ * [bmf_qa_extremes_link assessment="keys"]Key Essentials extremes[/bmf_qa_extremes_link]
  *
  * JS: assets/js/bmf-qa-extremes.js (enqueued, not inlined)
  */
@@ -23,12 +24,66 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 		}
 
 		public static function assessments(): array {
+			$keys = [
+				'label'          => 'Key Essentials',
+				'direction'      => 'high_better',
+				'results_table'  => 'uls_key_essentials',
+				'prefixed'       => false,
+				'date_column'    => 'datetime',
+				'require_final'  => false,
+				'form_slugs'     => [
+					'key-fluid-hydration',
+					'key-food-nutrition',
+					'key-breath-environment',
+					'key-movement',
+					'key-mind-balance',
+					'key-sleep-recovery',
+					'key-nature-connection',
+				],
+			];
 			$defaults = [
 				'bsi'     => [ 'label' => 'BSI', 'direction' => 'low_better', 'results_table' => 'bm_bsi_results', 'form_ids' => [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ] ],
 				'rsi'     => [ 'label' => 'RSI', 'direction' => 'low_better', 'results_table' => 'bm_rsi_results', 'form_ids' => [ 11, 12 ] ],
 				'pillars' => [ 'label' => '8 Pillars', 'direction' => 'high_better', 'results_table' => 'bm_pillars_results', 'form_ids' => [ 18, 19, 20, 21, 22, 23, 24, 25 ], 'show_comparison' => true ],
+				'keys'    => $keys,
 			];
+			// Aliases so assessment="key_essentials" also works.
+			$defaults['key_essentials'] = $keys;
+			$defaults['ke']             = $keys;
 			return apply_filters( 'bmf_qa_assessments', $defaults );
+		}
+
+		/** Normalize link/AJAX key (keys / key_essentials / ke). */
+		public static function normalize_assessment_key( string $key ): string {
+			$key = strtolower( str_replace( '-', '_', sanitize_key( $key ) ) );
+			$aliases = [
+				'key_essentials' => 'keys',
+				'keyessentials'  => 'keys',
+				'ke'             => 'keys',
+			];
+			return $aliases[ $key ] ?? $key;
+		}
+
+		/** Numeric BMF form IDs from hardcoded ids or live slugs. */
+		public static function resolve_form_ids( array $cfg ): array {
+			$ids = [];
+			if ( ! empty( $cfg['form_ids'] ) && is_array( $cfg['form_ids'] ) ) {
+				foreach ( $cfg['form_ids'] as $fid ) {
+					$fid = (int) $fid;
+					if ( $fid > 0 ) {
+						$ids[] = $fid;
+					}
+				}
+			}
+			if ( empty( $ids ) && ! empty( $cfg['form_slugs'] ) && is_array( $cfg['form_slugs'] ) && class_exists( 'BMF_Repository' ) ) {
+				foreach ( $cfg['form_slugs'] as $slug ) {
+					$row = BMF_Repository::get_form_by_slug( sanitize_title( (string) $slug ) );
+					if ( $row && ! empty( $row->id ) ) {
+						$ids[] = (int) $row->id;
+					}
+				}
+			}
+			return array_values( array_unique( $ids ) );
 		}
 
 		private static function should_bail_for_editor(): bool {
@@ -97,17 +152,24 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 		public static function get_final_dates( string $assessment_key, string $email ): array {
 			$map = self::assessments();
-			if ( empty( $map[ $assessment_key ]['results_table'] ) || $email === '' ) {
+			$key = self::normalize_assessment_key( $assessment_key );
+			if ( empty( $map[ $key ]['results_table'] ) || $email === '' ) {
 				return [];
 			}
+			$cfg   = $map[ $key ];
 			global $wpdb;
-			$table = $wpdb->prefix . $map[ $assessment_key ]['results_table'];
-			$rows  = $wpdb->get_col(
-				$wpdb->prepare(
-					"SELECT results_date FROM {$table} WHERE user_email = %s AND is_final = 1 ORDER BY results_date DESC",
-					$email
-				)
-			);
+			$prefixed = array_key_exists( 'prefixed', $cfg ) ? (bool) $cfg['prefixed'] : true;
+			$table    = ( $prefixed ? $wpdb->prefix : '' ) . $cfg['results_table'];
+			$col      = ! empty( $cfg['date_column'] ) ? $cfg['date_column'] : 'results_date';
+			$require  = array_key_exists( 'require_final', $cfg ) ? (bool) $cfg['require_final'] : true;
+
+			$sql = "SELECT `{$col}` FROM {$table} WHERE user_email = %s";
+			if ( $require ) {
+				$sql .= ' AND is_final = 1';
+			}
+			$sql .= " ORDER BY `{$col}` DESC";
+
+			$rows = $wpdb->get_col( $wpdb->prepare( $sql, $email ) );
 			if ( ! $rows ) {
 				return [];
 			}
@@ -146,12 +208,13 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 		public static function build_extremes( int $user_id, string $assessment_key, string $date, string $direction, float $threshold ): array {
 			$map  = self::assessments();
+			$key  = self::normalize_assessment_key( $assessment_key );
 			$date = self::normalize_date( $date );
-			if ( empty( $map[ $assessment_key ] ) ) {
+			if ( empty( $map[ $key ] ) ) {
 				return [ 'rows' => [], 'comparison' => null, 'label' => $assessment_key ];
 			}
-			$cfg      = $map[ $assessment_key ];
-			$form_ids = $cfg['form_ids'] ?? [];
+			$cfg      = $map[ $key ];
+			$form_ids = self::resolve_form_ids( $cfg );
 			$dir      = $direction ?: ( $cfg['direction'] ?? 'low_better' );
 			$rows     = [];
 
@@ -190,9 +253,9 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			return [
 				'rows'       => $rows,
 				'comparison' => $comparison,
-				'label'      => $cfg['label'] ?? $assessment_key,
+				'label'      => $cfg['label'] ?? $key,
 				'direction'  => $dir,
-				'assessment' => $assessment_key,
+				'assessment' => $key,
 				'date'       => $date,
 			];
 		}
@@ -257,7 +320,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 				return is_string( $content ) ? $content : '';
 			}
 			$atts = shortcode_atts( [ 'assessment' => '', 'direction' => '', 'class' => '' ], $atts, 'bmf_qa_extremes_link' );
-			$key  = strtolower( trim( (string) $atts['assessment'] ) );
+			$key  = self::normalize_assessment_key( (string) $atts['assessment'] );
 			if ( $key === '' ) {
 				return is_string( $content ) ? $content : '';
 			}
@@ -311,7 +374,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 
 			$threshold   = self::normalize_threshold( $atts['threshold'] );
 			$show_scores = ( (int) $atts['show_scores'] === 1 );
-			$assessment  = strtolower( trim( (string) $atts['assessment'] ) );
+			$assessment  = self::normalize_assessment_key( (string) $atts['assessment'] );
 			$direction   = $atts['direction'] !== '' ? self::normalize_direction( (string) $atts['direction'] ) : '';
 			$nonce       = wp_create_nonce( 'bmf_qa_nonce' );
 			$ajax_url    = admin_url( 'admin-ajax.php' );
@@ -367,7 +430,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			if ( ! is_user_logged_in() ) {
 				wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
 			}
-			$assessment = strtolower( sanitize_key( $_POST['assessment'] ?? '' ) );
+			$assessment = self::normalize_assessment_key( (string) ( $_POST['assessment'] ?? '' ) );
 			$map        = self::assessments();
 			if ( empty( $map[ $assessment ] ) ) {
 				wp_send_json_error( [ 'message' => 'Unknown assessment: ' . $assessment ], 400 );
@@ -393,7 +456,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			if ( ! is_user_logged_in() ) {
 				wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
 			}
-			$assessment = strtolower( sanitize_key( $_POST['assessment'] ?? '' ) );
+			$assessment = self::normalize_assessment_key( (string) ( $_POST['assessment'] ?? '' ) );
 			$date       = self::normalize_date( wp_unslash( $_POST['date'] ?? '' ) );
 			$threshold  = self::normalize_threshold( $_POST['threshold'] ?? 0.75 );
 			$direction  = isset( $_POST['direction'] ) ? self::normalize_direction( (string) $_POST['direction'] ) : '';

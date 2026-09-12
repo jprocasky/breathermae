@@ -58,6 +58,44 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			return $fallback_to_self ? (int) get_current_user_id() : 0;
 		}
 
+		/**
+		 * Aliases so provider links can use uls_key_essentials form_id,
+		 * short names, or BMF import slugs / tags.
+		 */
+		private static function form_alias_map(): array {
+			return [
+				// Key Essentials (high_better Likert 1–5)
+				'fluid'                 => 'key-fluid-hydration',
+				'key_fluid_form'        => 'key-fluid-hydration',
+				'key-fluid-hydration'   => 'key-fluid-hydration',
+				'keyfluid'              => 'key-fluid-hydration',
+				'food'                  => 'key-food-nutrition',
+				'key_food_form'         => 'key-food-nutrition',
+				'key-food-nutrition'    => 'key-food-nutrition',
+				'keyfood'               => 'key-food-nutrition',
+				'breath'                => 'key-breath-environment',
+				'key_breath_form'       => 'key-breath-environment',
+				'key-breath-environment'=> 'key-breath-environment',
+				'keybreath'             => 'key-breath-environment',
+				'movement'              => 'key-movement',
+				'key_movement_form'     => 'key-movement',
+				'key-movement'          => 'key-movement',
+				'keymovement'           => 'key-movement',
+				'mind'                  => 'key-mind-balance',
+				'key_mind_form'         => 'key-mind-balance',
+				'key-mind-balance'      => 'key-mind-balance',
+				'keymind'               => 'key-mind-balance',
+				'sleep'                 => 'key-sleep-recovery',
+				'key_sleep_form'        => 'key-sleep-recovery',
+				'key-sleep-recovery'    => 'key-sleep-recovery',
+				'keysleep'              => 'key-sleep-recovery',
+				'nature'                => 'key-nature-connection',
+				'key_nature_form'       => 'key-nature-connection',
+				'key-nature-connection' => 'key-nature-connection',
+				'keynature'             => 'key-nature-connection',
+			];
+		}
+
 		private static function resolve_form_id( string $form_attr ): int {
 			$form_attr = trim( $form_attr );
 			if ( $form_attr === '' ) {
@@ -66,8 +104,24 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			if ( ctype_digit( $form_attr ) ) {
 				return (int) $form_attr;
 			}
-			$row = BMF_Repository::get_form_by_slug( sanitize_title( $form_attr ) );
-			return $row ? (int) $row->id : 0;
+
+			$raw  = strtolower( $form_attr );
+			$map  = self::form_alias_map();
+			$slug = $map[ $raw ] ?? $map[ str_replace( '_', '-', $raw ) ] ?? sanitize_title( $form_attr );
+
+			$row = BMF_Repository::get_form_by_slug( $slug );
+			if ( $row ) {
+				return (int) $row->id;
+			}
+
+			// Fallback: form_tag (KEYFLUID, KEYFOOD, …)
+			global $wpdb;
+			$t   = $wpdb->prefix . 'bm_forms';
+			$tag = strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $form_attr ) );
+			$id  = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT id FROM {$t} WHERE UPPER(REPLACE(form_tag, '-', '')) = %s LIMIT 1", $tag )
+			);
+			return $id;
 		}
 
 		private static function normalize_direction( string $dir ): string {
@@ -169,8 +223,16 @@ if ( ! class_exists( 'BMF_QA_Shortcodes' ) ) {
 			}
 
 			$dir_attr = '';
-			if ( $atts['direction'] !== '' ) {
-				$dir_attr = ' data-bmf-qa-direction="' . esc_attr( self::normalize_direction( $atts['direction'] ) ) . '"';
+			$dir      = trim( (string) $atts['direction'] );
+			if ( $dir === '' ) {
+				$raw = strtolower( $form );
+				$map = self::form_alias_map();
+				if ( isset( $map[ $raw ] ) || isset( $map[ str_replace( '_', '-', $raw ) ] ) ) {
+					$dir = 'high_better';
+				}
+			}
+			if ( $dir !== '' ) {
+				$dir_attr = ' data-bmf-qa-direction="' . esc_attr( self::normalize_direction( $dir ) ) . '"';
 			}
 
 			wp_enqueue_style( 'bmf-qa' );

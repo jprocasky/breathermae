@@ -1,8 +1,9 @@
 /**
- * ULS Members – client-side replacement (v3.1)
+ * ULS Members – client-side replacement (v3.2)
  * - Hierarchy: children initially hidden; toggle via first-column icon
  * - Paging operates on parent rows only (children stay grouped under parents)
  * - Robust child lookup by data-parent-id + data-user-id
+ * - Key Essentials latest values fill <span class="uls-member-field" data-src="keys">
  * Adds a Price column for orders using resp.data[vw_wc_orders_full][i].line_total (text).
  * If the server already formats with wc_price, we output as-is; otherwise, we try to format as currency.
  */
@@ -12,7 +13,7 @@
   // Elementor guard (optional)
   try { if (window.elementorFrontend && elementorFrontend.isEditMode && elementorFrontend.isEditMode()) { console.info('[uls-members] Elementor edit mode; live handlers enabled but you can disable by returning early.'); } } catch (e) {}
 
-  console.info('[uls-members] replacement JS v3.1 loaded (hierarchy + parent-only paging)');
+  console.info('[uls-members] replacement JS v3.2 loaded (hierarchy + keys spans)');
   if (!W || !W.ajaxurl) console.error('[uls-members] ULS_MEMBERS missing ajaxurl.', W);
 
   var SEL = {
@@ -235,22 +236,66 @@ function updateScopedResultsLink(memberId) {
     });
 }
 
+  function formatScore15(v) {
+    var n = parseFloat(v);
+    if (!Number.isFinite(n)) return '';
+    return (Math.round(n * 10) / 10).toFixed(1);
+  }
+
+  function formatMemberValue(val, fmt, src) {
+    if (val == null || val === '') return '';
+    fmt = (fmt || '').toString().trim().toLowerCase();
+    if (!fmt || fmt === 'raw' || fmt === 'text') return String(val).trim();
+
+    var num = parseFloat(val);
+    var isNum = Number.isFinite(num);
+
+    if (fmt === 'percent-int' || fmt === 'percent' || fmt === 'pct') {
+      if (!isNum) return String(val).trim();
+      // BSI stored 0–1; Key Essentials stored 1–5; already-percent left as-is.
+      if ((src === 'bsi' || src === 'rsi') && num > 0 && num <= 1) num = num * 100;
+      else if ((src === 'keys' || src === 'key_essentials' || src === 'uls_key_essentials') && num > 0 && num <= 5) num = (num / 5) * 100;
+      return String(Math.round(num));
+    }
+    if (fmt === 'percent-1') {
+      if (!isNum) return String(val).trim();
+      if ((src === 'bsi' || src === 'rsi') && num > 0 && num <= 1) num = num * 100;
+      else if ((src === 'keys' || src === 'key_essentials' || src === 'uls_key_essentials') && num > 0 && num <= 5) num = (num / 5) * 100;
+      return (Math.round(num * 10) / 10).toFixed(1);
+    }
+    if (fmt === 'score' || fmt === 'number-1') {
+      if (!isNum) return String(val).trim();
+      return formatScore15(num);
+    }
+    if (fmt === 'number-2') {
+      if (!isNum) return String(val).trim();
+      return (Math.round(num * 100) / 100).toFixed(2);
+    }
+    return String(val).trim();
+  }
+
+  function isKeysSrc(src) {
+    return src === 'keys' || src === 'key_essentials' || src === 'uls_key_essentials';
+  }
+
   function renderKeysTable(list){
     var $box = $(SEL.keysTarget); if (!$box.length) return;
     var html = '<table class="uls-members__table uls-keys__table" cellspacing="0" cellpadding="0">';
     html += '<thead><tr>' +
             '<th>Datetime</th>' +
             '<th>Form</th>' +
-            '<th>Average Score</th>' +
+            '<th>Score (1–5)</th>' +
             '</tr></thead><tbody>';
     if (Array.isArray(list) && list.length){
       list.forEach(function(r){
-        var avg = r['Average Score'] || '';
-        var cls = pctClass(avg, 30, 70);
+        var avg = r.average_score != null ? r.average_score : (r['Average Score'] || r.Average_Score || '');
+        var label = r.form_label || r['Form Label'] || r.Form_Id || r.form_id || '';
+        var dt = r.datetime || r.Datetime || '';
+        var cls = pctClass((parseFloat(avg) / 5) * 100, 50, 90);
         html += '<tr>' +
-                '<td>' + escHtml(r.Datetime) + '</td>' +
-                '<td>' + escHtml(r['Form Label']) + '</td>' +
-                '<td><span class="pct ' + cls + '" data-low="30" data-high="70">' + escHtml(avg) + '</span></td>' +
+                '<td>' + escHtml(dt) + '</td>' +
+                '<td>' + escHtml(label) + '</td>' +
+                '<td><span class="pct ' + cls + '">' + escHtml(formatScore15(avg) || avg) + '</span></td>' +
                 '</tr>';
       });
     } else {
@@ -317,6 +362,8 @@ function updateScopedResultsLink(memberId) {
       const dataProfile = resp.data?.uls_uls_cf_bio            || {};
       var dataOrders  = resp.data['vw_wc_orders_full']         || [];
       var dataKeys    = resp.data['uls_key_essentials']        || [];
+      var dataKeysLatest = resp.data['uls_key_essentials_latest'] || {};
+      var keysColors  = resp.data['uls_key_essentials_colors'] || {};
       var dataBsi     = resp.data['uls_bm_bsi_results_latest'] || null;
       var dataRsi = resp.data['uls_bm_rsi_results_latest'] || null;
       var bsiColors = resp.data['uls_bm_bsi_colors'] || {};
@@ -346,7 +393,10 @@ function updateScopedResultsLink(memberId) {
         }
         if (src === 'rsi' && key && rsiColors[key]) {
             $el.css('color', rsiColors[key]);
-        }        
+        }
+        if (isKeysSrc(src) && key && keysColors[key]) {
+            $el.css('color', keysColors[key]);
+        }
 
         var val = '';
 
@@ -354,17 +404,26 @@ function updateScopedResultsLink(memberId) {
         else if (src === 'uls_ULS_CF_BIO') val = read(dataProfile, key);
         else if (src === 'bsi')            val = read(dataBsi || {}, key);
         else if (src === 'rsi')            val = read(dataRsi || {}, key);
+        else if (isKeysSrc(src))           val = read(dataKeysLatest || {}, key);
         else if (src === 'uls_rewards')    val = read(dataRewards, key);
-        else if (src === 'usermeta')       val = read(resp.data.usermeta || {}, key);  // ← NEW
+        else if (src === 'usermeta')       val = read(resp.data.usermeta || {}, key);
         else                               val = read(dataWptm, key);  // fallback
 
-        // Normalize BSI/RSI percentages (unchanged)
-        if (src === 'bsi' || src === 'rsi') {
+        // Normalize BSI/RSI percentages when no explicit data-format is set
+        var fmt = ($el.data('format') || '').toString().trim();
+        if (!fmt && (src === 'bsi' || src === 'rsi')) {
             var num = parseFloat(val);
             if (Number.isFinite(num)) {
                 if (src === 'bsi' && num > 0 && num <= 1) num = num * 100;
                 val = Math.round(num);
             }
+        }
+        if (!fmt && isKeysSrc(src) && key && key.indexOf('_band') === -1 && key.indexOf('datetime') === -1 && key !== 'complete' && key !== 'complete_of') {
+            var kn = parseFloat(val);
+            if (Number.isFinite(kn) && kn <= 5) val = formatScore15(kn);
+        }
+        if (fmt) {
+            val = formatMemberValue(val, fmt, src);
         }
 
         var out = (val == null ? '' : String(val)).trim();

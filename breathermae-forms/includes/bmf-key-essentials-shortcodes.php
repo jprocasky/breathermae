@@ -5,8 +5,9 @@
  * [bmf_key_essentials] — dark results card with the latest score for each of the
  * seven Key Essentials assessments (from uls_key_essentials).
  *
- * Reads the same table written by the Elementor hook and the BMF bridge in
- * uls-custom. Latest row per form_id for the current user (by email).
+ * Reads uls_key_essentials. Rows are written on BMF submit
+ * (bmf_response_submitted) and historically by the Elementor
+ * elementor_pro/forms/new_record hook in uls-custom.
  *
  * Attrs:
  *   user_id  – optional WP user ID (default: current user)
@@ -146,6 +147,186 @@ class BMF_Key_Essentials_Service {
 		}
 		return 'Needs attention';
 	}
+
+	/**
+	 * BMF slug / tag / legacy Elementor form_name → uls_key_essentials.form_id.
+	 */
+	public static function legacy_form_id_map() {
+		return [
+			'key-fluid-hydration'    => 'key_fluid_form',
+			'keyfluid'               => 'key_fluid_form',
+			'key_fluid_form'         => 'key_fluid_form',
+			'key-food-nutrition'     => 'key_food_form',
+			'keyfood'                => 'key_food_form',
+			'key_food_form'          => 'key_food_form',
+			'key-breath-environment' => 'key_breath_form',
+			'keybreath'              => 'key_breath_form',
+			'key_breath_form'        => 'key_breath_form',
+			'key-movement'           => 'key_movement_form',
+			'keymovement'            => 'key_movement_form',
+			'key_movement_form'      => 'key_movement_form',
+			'key-mind-balance'       => 'key_mind_form',
+			'keymind'                => 'key_mind_form',
+			'key_mind_form'          => 'key_mind_form',
+			'key-sleep-recovery'     => 'key_sleep_form',
+			'keysleep'               => 'key_sleep_form',
+			'key_sleep_form'         => 'key_sleep_form',
+			'key-nature-connection'  => 'key_nature_form',
+			'keynature'              => 'key_nature_form',
+			'key_nature_form'        => 'key_nature_form',
+		];
+	}
+
+	public static function resolve_legacy_form_id( $slug = '', $form_tag = '' ) {
+		$map  = self::legacy_form_id_map();
+		$slug = strtolower( trim( (string) $slug ) );
+		$tag  = strtolower( preg_replace( '/[^A-Za-z0-9]/', '', (string) $form_tag ) );
+		if ( $slug !== '' && isset( $map[ $slug ] ) ) {
+			return $map[ $slug ];
+		}
+		if ( $tag !== '' && isset( $map[ $tag ] ) ) {
+			return $map[ $tag ];
+		}
+		$slug_us = str_replace( '-', '_', $slug );
+		if ( $slug_us !== '' && isset( $map[ $slug_us ] ) ) {
+			return $map[ $slug_us ];
+		}
+		return '';
+	}
+}
+
+/**
+ * Write uls_key_essentials when a BMF Key Essentials form is submitted.
+ * Replaces the Elementor-only path in uls-custom.
+ */
+class BMF_Key_Essentials_Saver {
+
+	public static function init() {
+		add_action( 'bmf_response_submitted', [ __CLASS__, 'on_response_submitted' ], 30, 1 );
+	}
+
+	public static function on_response_submitted( $response_id ) {
+		$response_id = (int) $response_id;
+		if ( $response_id <= 0 ) {
+			return;
+		}
+
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT r.id, r.user_id, r.form_id, r.submitted_at, f.slug, f.form_tag
+				 FROM {$wpdb->prefix}bm_responses r
+				 INNER JOIN {$wpdb->prefix}bm_forms f ON f.id = r.form_id
+				 WHERE r.id = %d
+				 LIMIT 1",
+				$response_id
+			),
+			ARRAY_A
+		);
+		if ( ! $row ) {
+			return;
+		}
+
+		$legacy_id = BMF_Key_Essentials_Service::resolve_legacy_form_id(
+			(string) ( $row['slug'] ?? '' ),
+			(string) ( $row['form_tag'] ?? '' )
+		);
+		if ( $legacy_id === '' ) {
+			return;
+		}
+
+		$user_id = (int) ( $row['user_id'] ?? 0 );
+		if ( $user_id <= 0 ) {
+			$user_id = get_current_user_id();
+		}
+		$email = BMF_Key_Essentials_Service::resolve_email( $user_id );
+		if ( $email === '' ) {
+			return;
+		}
+
+		$scores = self::score_response( $response_id );
+		if ( $scores['count'] <= 0 ) {
+			if ( function_exists( 'bm_log' ) ) {
+				bm_log( 'KEY ESSENTIALS SAVE SKIP | no numeric answers | response_id=' . $response_id );
+			}
+			return;
+		}
+
+		$datetime = ! empty( $row['submitted_at'] ) ? (string) $row['submitted_at'] : current_time( 'mysql' );
+
+		$ok = $wpdb->insert(
+			'uls_key_essentials',
+			[
+				'unique_id'     => uniqid( 'survey_', true ),
+				'form_id'       => $legacy_id,
+				'datetime'      => $datetime,
+				'user_email'    => $email,
+				'total_score'   => $scores['total'],
+				'average_score' => $scores['average'],
+			],
+			[ '%s', '%s', '%s', '%s', '%f', '%f' ]
+		);
+
+		if ( function_exists( 'bm_log' ) ) {
+			bm_log(
+				'KEY ESSENTIALS SAVE | response_id=' . $response_id
+				. ' | form=' . $legacy_id
+				. ' | email=' . $email
+				. ' | n=' . $scores['count']
+				. ' | total=' . $scores['total']
+				. ' | avg=' . $scores['average']
+				. ' | insert=' . ( $ok ? 'ok' : ( $wpdb->last_error ?: 'fail' ) )
+			);
+		}
+	}
+
+	/**
+	 * Sum / average of numeric choice_value on the response (1–5 Likert).
+	 * Strips the "value|{json}" payload BMF sometimes stores.
+	 */
+	public static function score_response( $response_id ) {
+		global $wpdb;
+		$vals = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT choice_value FROM {$wpdb->prefix}bm_response_items WHERE response_id = %d",
+				(int) $response_id
+			)
+		);
+
+		$total = 0.0;
+		$count = 0;
+		if ( is_array( $vals ) ) {
+			foreach ( $vals as $raw ) {
+				$n = self::numeric_choice( $raw );
+				if ( $n === null ) {
+					continue;
+				}
+				$total += $n;
+				$count++;
+			}
+		}
+
+		return [
+			'total'   => $total,
+			'count'   => $count,
+			'average' => $count > 0 ? round( $total / $count, 2 ) : 0.0,
+		];
+	}
+
+	private static function numeric_choice( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( $raw === '' ) {
+			return null;
+		}
+		if ( strpos( $raw, '|' ) !== false ) {
+			$raw = trim( explode( '|', $raw, 2 )[0] );
+		}
+		if ( class_exists( 'BMF_Repository' ) && method_exists( 'BMF_Repository', 'resolve_numeric_choice' ) ) {
+			$n = BMF_Repository::resolve_numeric_choice( $raw );
+			return $n !== null ? (float) $n : null;
+		}
+		return is_numeric( $raw ) ? (float) $raw : null;
+	}
 }
 
 /**
@@ -155,6 +336,7 @@ class BMF_Key_Essentials_Shortcodes {
 
 	public static function init() {
 		add_shortcode( 'bmf_key_essentials', [ __CLASS__, 'render' ] );
+		BMF_Key_Essentials_Saver::init();
 	}
 
 	/**

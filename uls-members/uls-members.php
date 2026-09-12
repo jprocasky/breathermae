@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS Members (Parent→Child Tag Relations)
  * Description: Displays a "members" table filtered by WP Fusion tag relations (parent→child wildcard). Includes per-row selection, multi-table AJAX details, and selected-user persistence. Values shown in <span class="uls-member-field"> are colorized client-side (0–100) with configurable thresholds via data-low/data-high.
- * Version: 1.8.0
+ * Version: 1.8.1
  * Author: Jeff Procasky
  * License: GPLv2 or later
  */
@@ -255,11 +255,11 @@ class ULS_Members_Plugin {
     /** Front-end assets (CSS+JS). */
     public function enqueue_assets() {
         // Basic styles for the table
-        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.8.0' );
+        wp_register_style( 'uls-members-css', plugins_url( 'uls-members.css', __FILE__ ), [], '1.8.1' );
         wp_enqueue_style( 'uls-members-css' );
 
         // JS for row selection + AJAX + pagination + tag admin + claim
-        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.8.0', true );
+        wp_register_script( 'uls-members-js', plugins_url( 'uls-members.js', __FILE__ ), [ 'jquery' ], '1.8.1', true );
         wp_localize_script( 'uls-members-js', 'ULS_MEMBERS', [
             'ajaxurl'           => admin_url( 'admin-ajax.php' ),
             'detailsAction'     => $this->ajax_action_details,
@@ -1201,14 +1201,177 @@ class ULS_Members_Plugin {
         );
 
         return $row ?: null;
-    }    
+    }
+
+    /**
+     * Key Essentials form_id → label + short alias for provider-portal spans.
+     * Scores in uls_key_essentials.average_score are 1–5 (not 0–100).
+     */
+    private function get_key_essentials_catalog() {
+        return [
+            'key_fluid_form'    => [ 'label' => 'Fluid & Hydration',    'alias' => 'fluid' ],
+            'key_food_form'     => [ 'label' => 'Food & Nutrition',     'alias' => 'food' ],
+            'key_breath_form'   => [ 'label' => 'Breath & Environment', 'alias' => 'breath' ],
+            'key_movement_form' => [ 'label' => 'Movement',             'alias' => 'movement' ],
+            'key_mind_form'     => [ 'label' => 'Mind Balance',         'alias' => 'mind' ],
+            'key_sleep_form'    => [ 'label' => 'Sleep & Recovery',     'alias' => 'sleep' ],
+            'key_nature_form'   => [ 'label' => 'Nature & Connection',  'alias' => 'nature' ],
+        ];
+    }
+
+    /**
+     * Band for a 1–5 Key Essentials average (same cutovers as [bmf_key_essentials]).
+     */
+    private function get_key_essentials_band( $score ) {
+        $score = (float) $score;
+        if ( $score >= 4.5 ) {
+            return [ 'key' => 'excellent', 'label' => 'Excellent',   'color' => '#0070c0' ];
+        }
+        if ( $score >= 3.5 ) {
+            return [ 'key' => 'strong',    'label' => 'Strong',      'color' => '#3b7e23' ];
+        }
+        if ( $score >= 2.5 ) {
+            return [ 'key' => 'building',  'label' => 'Building',    'color' => '#c47b00' ];
+        }
+        return [ 'key' => 'focus',         'label' => 'Needs focus', 'color' => '#ff0000' ];
+    }
+
+    /**
+     * Latest Key Essentials row per form_id for an email.
+     * Returns history (optional table), latest flat map (spans), and colors.
+     */
+    private function get_key_essentials_for_email( $email ) {
+        $catalog = $this->get_key_essentials_catalog();
+        $empty   = [ 'history' => [], 'latest' => [], 'colors' => [] ];
+
+        if ( empty( $email ) || ! is_email( $email ) ) {
+            return $empty;
+        }
+
+        global $wpdb;
+        $table = 'uls_key_essentials';
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, form_id, datetime, total_score, average_score
+                 FROM `{$table}`
+                 WHERE user_email = %s
+                 ORDER BY datetime DESC, id DESC
+                 LIMIT 200",
+                $email
+            ),
+            ARRAY_A
+        );
+
+        if ( ! is_array( $rows ) || empty( $rows ) ) {
+            return $empty;
+        }
+
+        $history   = [];
+        $by_form   = [];
+        $sum       = 0.0;
+        $n         = 0;
+        $latest_ts = 0;
+        $latest_dt = '';
+
+        foreach ( $rows as $row ) {
+            $fid   = (string) ( $row['form_id'] ?? '' );
+            $score = isset( $row['average_score'] ) && $row['average_score'] !== '' && $row['average_score'] !== null
+                ? (float) $row['average_score']
+                : null;
+            $meta  = $catalog[ $fid ] ?? [ 'label' => $fid, 'alias' => $fid ];
+            $pct   = ( $score !== null ) ? (int) round( ( $score / 5.0 ) * 100 ) : null;
+
+            $history[] = [
+                'id'                => (int) ( $row['id'] ?? 0 ),
+                'form_id'           => $fid,
+                'form_label'        => $meta['label'],
+                'datetime'          => (string) ( $row['datetime'] ?? '' ),
+                'average_score'     => $score,
+                'average_score_pct' => $pct,
+                'total_score'       => isset( $row['total_score'] ) ? (float) $row['total_score'] : null,
+            ];
+
+            if ( $fid === '' || isset( $by_form[ $fid ] ) ) {
+                continue;
+            }
+
+            $by_form[ $fid ] = [
+                'form_id'       => $fid,
+                'label'         => $meta['label'],
+                'alias'         => $meta['alias'],
+                'average_score' => $score,
+                'datetime'      => (string) ( $row['datetime'] ?? '' ),
+                'total_score'   => isset( $row['total_score'] ) ? (float) $row['total_score'] : null,
+            ];
+
+            if ( $score !== null ) {
+                $sum += $score;
+                $n++;
+            }
+            if ( ! empty( $row['datetime'] ) ) {
+                $ts = strtotime( (string) $row['datetime'] );
+                if ( $ts && $ts > $latest_ts ) {
+                    $latest_ts = $ts;
+                    $latest_dt = (string) $row['datetime'];
+                }
+            }
+        }
+
+        $latest = [];
+        $colors = [];
+
+        foreach ( $catalog as $fid => $meta ) {
+            $row   = $by_form[ $fid ] ?? null;
+            $score = ( $row && $row['average_score'] !== null ) ? (float) $row['average_score'] : null;
+            $alias = $meta['alias'];
+            $dt    = $row['datetime'] ?? '';
+
+            if ( $score === null ) {
+                continue;
+            }
+
+            $band = $this->get_key_essentials_band( $score );
+            $pct  = (int) round( ( $score / 5.0 ) * 100 );
+
+            $latest[ $fid ]                = $score;
+            $latest[ $fid . '_pct' ]       = $pct;
+            $latest[ $fid . '_datetime' ]  = $dt;
+            $latest[ $fid . '_band' ]      = $band['label'];
+            $colors[ $fid ]                = $band['color'];
+
+            $latest[ $alias ]               = $score;
+            $latest[ $alias . '_pct' ]      = $pct;
+            $latest[ $alias . '_datetime' ] = $dt;
+            $latest[ $alias . '_band' ]     = $band['label'];
+            $colors[ $alias ]               = $band['color'];
+        }
+
+        if ( $n > 0 ) {
+            $overall = round( $sum / $n, 2 );
+            $oband   = $this->get_key_essentials_band( $overall );
+            $latest['overall']      = $overall;
+            $latest['overall_pct']  = (int) round( ( $overall / 5.0 ) * 100 );
+            $latest['overall_band'] = $oband['label'];
+            $latest['datetime']     = $latest_dt;
+            $latest['complete']     = $n;
+            $latest['complete_of']  = count( $catalog );
+            $colors['overall']      = $oband['color'];
+        }
+
+        return [
+            'history' => $history,
+            'latest'  => $latest,
+            'colors'  => $colors,
+        ];
+    }
 
     /**
      * AJAX: get details for a selected member by email from:
      * - uls_wptm_tbl_4 (col2 = Email)
      * - uls_ULS_CF_BIO (Email = Email)
      * - vw_wc_orders_full (billing_email = Email) → list of rows with order_date, product_id, product_name
-     * - uls_key_essentials ("User Email" = Email) → list with Datetime, Form Id (transformed), Average Score (0–100%)
+     * - uls_key_essentials (user_email) → latest-per-form map + history list
      */
     /**
      * AJAX: get details for a selected member by email
@@ -1275,15 +1438,10 @@ class ULS_Members_Plugin {
             unset( $o );
         }
 
-        $raw_keys = $wpdb->get_results( $wpdb->prepare(
-            "SELECT `Datetime`, `Form_Id`, `Average_Score`
-            FROM `uls_key_essentials`
-            WHERE `User_Email` = %s
-            ORDER BY `Datetime` DESC
-            LIMIT 200", $email
-        ), ARRAY_A );
-
-        $keys = is_array( $raw_keys ) ? $raw_keys : [];
+        $keys_pack = $this->get_key_essentials_for_email( $email );
+        $keys      = $keys_pack['history'];
+        $keys_latest = $keys_pack['latest'];
+        $keys_colors = $keys_pack['colors'];
 
         // === EXISTING REWARDS ===
         $uls_rewards = [
@@ -1316,6 +1474,8 @@ class ULS_Members_Plugin {
             'uls_uls_cf_bio'            => $row_profile,
             'vw_wc_orders_full'         => is_array( $orders ) ? $orders : [],
             'uls_key_essentials'        => $keys,
+            'uls_key_essentials_latest' => $keys_latest,
+            'uls_key_essentials_colors' => $keys_colors,
             'uls_bm_rsi_results_latest' => $latest_rsi ?: [],
             'uls_bm_rsi_colors'         => $rsi_colors,
             'uls_bm_bsi_results_latest' => $latest_bsi ?: [],
@@ -2114,6 +2274,9 @@ class ULS_Members_Plugin {
                     $row = $this->get_latest_bsi_by_email( $selected_email );
                 }elseif ( $src === 'uls_bm_rsi_results' ) {
                     $row = $this->get_latest_rsi_by_email( $selected_email );
+                } elseif ( $src === 'keys' || $src === 'uls_key_essentials' || $src === 'key_essentials' ) {
+                    $pack = $this->get_key_essentials_for_email( $selected_email );
+                    $row  = $pack['latest'];
                 }
                 if ( $row && array_key_exists( $key, $row ) ) {
                     return esc_html( (string) $row[ $key ] );
