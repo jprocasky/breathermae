@@ -1,0 +1,111 @@
+{
+  "map_version": "v1",
+  "plugin": "0.1.0-poc",
+  "generated_at": "2026-09-12T21:00:00+00:00",
+  "is_fixture": true,
+  "voice": "member",
+  "user": {
+    "id": 0,
+    "email": "fixture@breathermae.com",
+    "label": "Sample member"
+  },
+  "sources": {
+    "rsi": {
+      "key": "rsi",
+      "label": "RSI",
+      "enabled": true,
+      "clock": "pulse",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-09-08",
+      "age_days": 4,
+      "scores": [
+        {"code": "R11", "label": "Core", "value": 31.2, "scale": 100, "direction": "low_better", "band": {"key": "moderate", "label": "Moderate", "ratio": 0.312}, "domains": ["core_regulation"], "engagement": ""},
+        {"code": "R12", "label": "Performance", "value": 58.4, "scale": 100, "direction": "low_better", "band": {"key": "elevated", "label": "Elevated", "ratio": 0.584}, "domains": ["performance_load"], "engagement": ""}
+      ]
+    },
+    "pillars": {
+      "key": "pillars",
+      "label": "8 Pillars",
+      "enabled": true,
+      "clock": "cycle",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-07-20",
+      "age_days": 54,
+      "master": 61.4,
+      "scores": [
+        {"code": "physical", "label": "Physical", "value": 68.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.68}, "domains": ["sleep_recovery", "movement"]},
+        {"code": "mental", "label": "Mental", "value": 54.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.54}, "domains": ["mind_emotion"]},
+        {"code": "emotional", "label": "Emotional", "value": 49.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.49}, "domains": ["mind_emotion"]},
+        {"code": "financial", "label": "Financial", "value": 72.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.72}, "domains": ["resources"]},
+        {"code": "occupational", "label": "Occupational", "value": 41.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.41}, "domains": ["occupational_demand"]},
+        {"code": "environmental", "label": "Environmental", "value": 63.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.63}, "domains": ["environment_breath"]},
+        {"code": "spiritual", "label": "Spiritual", "value": 70.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.7}, "domains": ["connection_meaning"]},
+        {"code": "social", "label": "Social", "value": 58.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.58}, "domains": ["resources", "connection_meaning"]}
+      ],
+      "comparison": {
+        "master": 61.4,
+        "items": [
+          {"perceived": "Occupational", "actual": "Financial", "score": 72.0, "diff": 2},
+          {"perceived": "Physical", "actual": "Spiritual", "score": 70.0, "diff": -1},
+          {"perceived": "Financial", "actual": "Physical", "score": 68.0, "diff": 2}
+        ]
+      }
+    },
+    "keys": {
+      "key": "keys",
+      "label": "Key Essentials",
+      "enabled": true,
+      "clock": "state",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-09-01",
+      "age_days": 11,
+      "scores": [
+        {"code": "key_fluid_form", "label": "Fluid & Hydration", "value": 3.6, "scale": 5, "percent": 72, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.72}, "domains": ["fuel"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
+        {"code": "key_food_form", "label": "Food & Nutrition", "value": 3.2, "scale": 5, "percent": 64, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.64}, "domains": ["fuel", "digestive"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
+        {"code": "key_breath_form", "label": "Breath & Environment", "value": 3.8, "scale": 5, "percent": 76, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.76}, "domains": ["environment_breath"], "date": "2026-08-18", "status": "aging", "age_days": 25},
+        {"code": "key_movement_form", "label": "Movement", "value": 2.2, "scale": 5, "percent": 44, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.44}, "domains": ["movement"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
+        {"code": "key_mind_form", "label": "Mind Balance", "value": 2.6, "scale": 5, "percent": 52, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.52}, "domains": ["mind_emotion"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
+        {"code": "key_sleep_form", "label": "Sleep & Recovery", "value": 2.1, "scale": 5, "percent": 42, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.42}, "domains": ["sleep_recovery"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
+        {"code": "key_nature_form", "label": "Nature & Connection", "value": 3.4, "scale": 5, "percent": 68, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.68}, "domains": ["connection_meaning", "environment_breath"], "date": "2026-08-04", "status": "stale", "age_days": 39}
+      ]
+    },
+    "bsi": {"key": "bsi", "label": "BSI", "enabled": false, "clock": "cycle", "present": false, "status": "reserved", "date": "", "age_days": null, "scores": []},
+    "biovoice": {"key": "biovoice", "label": "BioVoicePrint", "enabled": false, "clock": "state", "present": false, "status": "reserved", "date": "", "age_days": null, "scores": []},
+    "fitbit": {"key": "fitbit", "label": "Fitbit", "enabled": false, "clock": "state", "present": false, "status": "reserved", "date": "", "age_days": null, "scores": []}
+  },
+  "highlights": [
+    {"source": "keys", "form": "Sleep & Recovery", "section": "", "prompt": "I wake feeling restored.", "answer_label": "Rarely", "score": 2, "scale_max": 5, "date": "2026-09-01"},
+    {"source": "keys", "form": "Movement", "section": "", "prompt": "I move with intention most days.", "answer_label": "Seldom", "score": 2, "scale_max": 5, "date": "2026-09-01"},
+    {"source": "rsi", "form": "Performance", "section": "", "prompt": "Work demand outruns recovery.", "answer_label": "Often", "score": 4, "scale_max": 5, "date": "2026-09-08"}
+  ],
+  "patterns": [
+    {
+      "code": "rsi_performance_elevated",
+      "severity": "watch",
+      "title": "Performance load is elevated",
+      "member": "Your latest RSI Performance score is in an elevated range. That is a pulse signal, not a diagnosis — worth pairing with sleep and work demand.",
+      "provider": "RSI R12 (Performance) ≥50. Pulse clock. Confirm against Keys movement/sleep and, when present, BSI F5/F3.",
+      "evidence": {"rsi.R12": 58.4}
+    },
+    {
+      "code": "keys_sleep_low",
+      "severity": "watch",
+      "title": "Sleep & recovery choices are off",
+      "member": "Sleep & Recovery is one of the weaker Key Essentials right now. That is a daily-choice signal on a 14-day clock.",
+      "provider": "Keys sleep average ≤2.5/5. State clock. Ask schedule vs environment vs mind load before attributing to physiology.",
+      "evidence": {"keys.key_sleep_form": 2.1}
+    },
+    {
+      "code": "choice_vs_capacity_movement",
+      "severity": "info",
+      "title": "Movement looks like choice, not capacity",
+      "member": "Your physical pillar is holding up better than your recent movement choices. This is usually a schedule or habit gap, not a capacity gap.",
+      "provider": "Keys movement ≤2.5/5 while Pillars physical ≥60. Choice vs capacity pattern.",
+      "evidence": {"keys.movement": 2.2, "pillars.physical": 68.0}
+    }
+  ],
+  "disclaimer": "Self-assessment snapshot only. Not a diagnosis or treatment plan."
+}
