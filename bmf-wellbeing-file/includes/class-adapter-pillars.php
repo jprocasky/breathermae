@@ -76,8 +76,41 @@ class BMF_Wellbeing_Adapter_Pillars {
 			'scores'      => $scores,
 			'master'      => $master,
 			'comparison'  => $comparison,
+			'history'     => self::history( $email ),
 			'raw_id'      => isset( $row['id'] ) ? (int) $row['id'] : 0,
 		] );
+	}
+
+	private static function history( string $email ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'bm_pillars_results';
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT results_date, master_score FROM {$table}
+				 WHERE user_email = %s AND is_final = 1
+				 ORDER BY results_date ASC, id ASC",
+				$email
+			),
+			ARRAY_A
+		);
+		if ( ! $rows ) {
+			return [];
+		}
+		if ( count( $rows ) > 8 ) {
+			$rows = array_slice( $rows, -8 );
+		}
+		$out = [];
+		foreach ( $rows as $r ) {
+			$d = BMF_Wellbeing_Freshness::normalize_date( $r['results_date'] ?? '' );
+			if ( $d === '' ) {
+				continue;
+			}
+			$out[] = [
+				'date'   => $d,
+				'master' => BMF_Wellbeing_Freshness::to_percent( $r['master_score'] ?? null, 100 ),
+			];
+		}
+		return $out;
 	}
 
 	private static function rank_comparison( array $row, array $scores ): ?array {
@@ -124,6 +157,7 @@ class BMF_Wellbeing_Adapter_Pillars {
 			'scores'      => [],
 			'master'      => null,
 			'comparison'  => null,
+			'history'     => [],
 		];
 	}
 }

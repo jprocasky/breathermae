@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS CF Forms — Per-form Tables with Locking + Prefill (PHP + JS)
  * Description: Elementor Pro forms whose Form Name starts with "ULS_CF_": per-form tables, lock/unlock, update or insert; supports shortcodes for single-value defaults AND auto-prefill via render filters when no editor default is set. Adds JS fallback to reliably prefill all fields after widget render and popup show.
- * Version: 0.9.8
+ * Version: 0.9.9
  * Author: Jeff Procasky
  * License: GPL-2.0-or-later
  */
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * ------------------------------- */
 define( 'ULS_CF_PREFIX', 'ULS_CF_' );          // Elementor Form Name must start with this
 define( 'ULS_CF_TABLE_PREFIX', 'ulscf_' );     // legacy table prefix (kept for fallback reads)
-define( 'ULS_CF_VERSION', '0.9.8' );
+define( 'ULS_CF_VERSION', '0.9.9' );
 if ( ! defined( 'ULS_CF_DEBUG' ) ) define( 'ULS_CF_DEBUG', false );         // error_log traces
 if ( ! defined( 'ULS_CF_FORCE_PREFILL' ) ) define( 'ULS_CF_FORCE_PREFILL', false ); // testing flag
 function ulscf_dbg( $msg ) { if ( ULS_CF_DEBUG ) error_log( '[ULS_CF] ' . $msg ); }
@@ -149,14 +149,71 @@ function ulscf_resolve_table_name( $form_name ) {
   return $t_new;
 }
 
-/** Create/evolve the per-form table via dbDelta(). */
+/** Reserved form-control keys that are not f_* data columns. */
+function ulscf_is_control_field_id( $id ) {
+  $id = strtolower( (string) $id );
+  return in_array( $id, array( 'email', 'user_id', 'entry_mode', 'locked' ), true );
+}
+
+/** Existing column names for a table (lowercase). */
+function ulscf_get_table_columns( $table_name ) {
+  global $wpdb;
+  $cols = $wpdb->get_col( "SHOW COLUMNS FROM `{$table_name}`", 0 );
+  if ( ! is_array( $cols ) ) {
+    return array();
+  }
+  return array_map( 'strtolower', $cols );
+}
+
+/**
+ * ADD COLUMN for any submitted field that is not yet on the table.
+ * Does not drop or rename columns. Safe to call on every submission.
+ */
+function ulscf_add_missing_columns( $table_name, $fields_raw ) {
+  global $wpdb;
+
+  $existing = ulscf_get_table_columns( $table_name );
+  if ( empty( $existing ) ) {
+    return;
+  }
+
+  foreach ( $fields_raw as $id => $field ) {
+    if ( ulscf_is_control_field_id( $id ) ) {
+      continue;
+    }
+    $fid  = ulscf_pick_field_id( $id, is_array( $field ) ? $field : array() );
+    $col  = 'f_' . ulscf_slug( $fid );
+    if ( $col === 'f_' || in_array( strtolower( $col ), $existing, true ) ) {
+      continue;
+    }
+    $type = ulscf_sql_type_for_field( ( is_array( $field ) && isset( $field['type'] ) ) ? $field['type'] : 'text' );
+    // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- identifiers only
+    $ok = $wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN `{$col}` {$type} NULL" );
+    if ( false === $ok ) {
+      error_log( '[ULSCF] ALTER ADD COLUMN failed: ' . $table_name . '.' . $col . ' — ' . $wpdb->last_error );
+    } else {
+      $existing[] = strtolower( $col );
+      ulscf_dbg( "added column {$table_name}.{$col} {$type}" );
+    }
+  }
+}
+
+/**
+ * Create the per-form table if missing; otherwise add any new field columns.
+ * dbDelta is used only for first create. Existing tables are evolved with ALTER
+ * so we do not depend on dbDelta matching the original CREATE statement.
+ */
 function ulscf_ensure_table( $form_name, $fields_raw ) {
   global $wpdb;
-  $table_name = ulscf_table_name_new( $form_name ); // always create/upgrade new scheme
 
-    if ( ulscf_table_exists( $table_name ) ) {
-        return; // ✅ Do NOT run dbDelta again
-    }
+  $table_name = ulscf_resolve_table_name( $form_name );
+
+  if ( ulscf_table_exists( $table_name ) ) {
+    ulscf_add_missing_columns( $table_name, $fields_raw );
+    return;
+  }
+
+  $table_name = ulscf_table_name_new( $form_name );
 
   $cols = array(
     "id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT",
@@ -167,6 +224,9 @@ function ulscf_ensure_table( $form_name, $fields_raw ) {
     "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
   );
   foreach ( $fields_raw as $id => $field ) {
+    if ( ulscf_is_control_field_id( $id ) ) {
+      continue;
+    }
     $fid  = ulscf_pick_field_id( $id, $field );
     $col  = 'f_' . ulscf_slug( $fid );
     $type = ulscf_sql_type_for_field( isset( $field['type'] ) ? $field['type'] : 'text' );
@@ -184,6 +244,23 @@ function ulscf_ensure_table( $form_name, $fields_raw ) {
 
   require_once ABSPATH . 'wp-admin/includes/upgrade.php';
   dbDelta( $sql );
+}
+
+/** Drop keys from $data that are not real columns on $table_name. */
+function ulscf_filter_data_to_columns( $table_name, $data ) {
+  $existing = ulscf_get_table_columns( $table_name );
+  if ( empty( $existing ) ) {
+    return $data;
+  }
+  $out = array();
+  foreach ( $data as $col => $val ) {
+    if ( in_array( strtolower( (string) $col ), $existing, true ) ) {
+      $out[ $col ] = $val;
+    } else {
+      ulscf_dbg( "skipping unknown column {$table_name}.{$col}" );
+    }
+  }
+  return $out;
 }
 
 /** Arrays → newline-joined string (legacy-compatible storage). */
@@ -382,6 +459,8 @@ add_action(
 
         $data[ $col ] = ulscf_normalize_value( $val );
       }
+
+      $data = ulscf_filter_data_to_columns( $table_name, $data );
 
       $latest_any      = ulscf_get_latest_row( $table_name, $email, false );
       $latest_unlocked = ulscf_get_latest_row( $table_name, $email, true );

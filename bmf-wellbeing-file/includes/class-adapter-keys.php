@@ -74,7 +74,62 @@ class BMF_Wellbeing_Adapter_Keys {
 		return array_merge( $empty, $fresh, [
 			'present' => true,
 			'scores'  => $scores,
+			'history' => self::history( $rows, array_keys( $metrics ) ),
 		] );
+	}
+
+	/**
+	 * Overall essentials 0–100 as-of each distinct date (latest row per form on or before that date).
+	 */
+	private static function history( array $rows, array $form_codes ): array {
+		if ( ! $rows ) {
+			return [];
+		}
+		$dates = [];
+		foreach ( $rows as $row ) {
+			$d = BMF_Wellbeing_Freshness::normalize_date( $row['datetime'] ?? '' );
+			if ( $d !== '' ) {
+				$dates[ $d ] = true;
+			}
+		}
+		$dates = array_keys( $dates );
+		sort( $dates );
+		if ( count( $dates ) > 16 ) {
+			$dates = array_slice( $dates, -16 );
+		}
+		$out = [];
+		foreach ( $dates as $d ) {
+			$latest = [];
+			foreach ( $rows as $row ) {
+				$rd = BMF_Wellbeing_Freshness::normalize_date( $row['datetime'] ?? '' );
+				if ( $rd === '' || $rd > $d ) {
+					continue;
+				}
+				$fid = (string) ( $row['form_id'] ?? '' );
+				if ( $fid === '' || ! in_array( $fid, $form_codes, true ) ) {
+					continue;
+				}
+				if ( ! isset( $latest[ $fid ] ) || $rd >= BMF_Wellbeing_Freshness::normalize_date( $latest[ $fid ]['datetime'] ?? '' ) ) {
+					$latest[ $fid ] = $row;
+				}
+			}
+			$vals = [];
+			foreach ( $latest as $row ) {
+				if ( $row['average_score'] !== '' && $row['average_score'] !== null ) {
+					$vals[] = (float) $row['average_score'];
+				}
+			}
+			if ( ! $vals ) {
+				continue;
+			}
+			$avg = array_sum( $vals ) / count( $vals );
+			$out[] = [
+				'date'    => $d,
+				'overall' => (int) round( ( $avg / 5 ) * 100 ),
+				'n'       => count( $vals ),
+			];
+		}
+		return $out;
 	}
 
 	private static function shell( array $cfg ): array {
@@ -88,6 +143,7 @@ class BMF_Wellbeing_Adapter_Keys {
 			'date'     => '',
 			'age_days' => null,
 			'scores'   => [],
+			'history'  => [],
 		];
 	}
 }

@@ -1,6 +1,6 @@
 {
   "map_version": "v1",
-  "plugin": "0.1.0-poc",
+  "plugin": "0.1.7-poc",
   "generated_at": "2026-09-12T21:00:00+00:00",
   "is_fixture": true,
   "voice": "member",
@@ -20,8 +20,65 @@
       "date": "2026-09-08",
       "age_days": 4,
       "scores": [
-        {"code": "R11", "label": "Core", "value": 31.2, "scale": 100, "direction": "low_better", "band": {"key": "moderate", "label": "Moderate", "ratio": 0.312}, "domains": ["core_regulation"], "engagement": ""},
-        {"code": "R12", "label": "Performance", "value": 58.4, "scale": 100, "direction": "low_better", "band": {"key": "elevated", "label": "Elevated", "ratio": 0.584}, "domains": ["performance_load"], "engagement": ""}
+        {
+          "code": "R11",
+          "label": "Core",
+          "value": 31.2,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.312
+          },
+          "domains": [
+            "core_regulation"
+          ],
+          "engagement": ""
+        },
+        {
+          "code": "R12",
+          "label": "Performance",
+          "value": 58.4,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "elevated",
+            "label": "Elevated",
+            "ratio": 0.584
+          },
+          "domains": [
+            "performance_load"
+          ],
+          "engagement": ""
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-06-16",
+          "core": 28.0,
+          "performance": 44.0
+        },
+        {
+          "date": "2026-07-07",
+          "core": 30.1,
+          "performance": 49.5
+        },
+        {
+          "date": "2026-07-28",
+          "core": 33.4,
+          "performance": 55.0
+        },
+        {
+          "date": "2026-08-18",
+          "core": 32.0,
+          "performance": 57.2
+        },
+        {
+          "date": "2026-09-08",
+          "core": 31.2,
+          "performance": 58.4
+        }
       ]
     },
     "pillars": {
@@ -35,23 +92,166 @@
       "age_days": 54,
       "master": 61.4,
       "scores": [
-        {"code": "physical", "label": "Physical", "value": 68.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.68}, "domains": ["sleep_recovery", "movement"]},
-        {"code": "mental", "label": "Mental", "value": 54.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.54}, "domains": ["mind_emotion"]},
-        {"code": "emotional", "label": "Emotional", "value": 49.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.49}, "domains": ["mind_emotion"]},
-        {"code": "financial", "label": "Financial", "value": 72.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.72}, "domains": ["resources"]},
-        {"code": "occupational", "label": "Occupational", "value": 41.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.41}, "domains": ["occupational_demand"]},
-        {"code": "environmental", "label": "Environmental", "value": 63.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.63}, "domains": ["environment_breath"]},
-        {"code": "spiritual", "label": "Spiritual", "value": 70.0, "scale": 100, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.7}, "domains": ["connection_meaning"]},
-        {"code": "social", "label": "Social", "value": 58.0, "scale": 100, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.58}, "domains": ["resources", "connection_meaning"]}
+        {
+          "code": "physical",
+          "label": "Physical",
+          "value": 68.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.68
+          },
+          "domains": [
+            "sleep_recovery",
+            "movement"
+          ]
+        },
+        {
+          "code": "mental",
+          "label": "Mental",
+          "value": 54.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.54
+          },
+          "domains": [
+            "mind_emotion"
+          ]
+        },
+        {
+          "code": "emotional",
+          "label": "Emotional",
+          "value": 49.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.49
+          },
+          "domains": [
+            "mind_emotion"
+          ]
+        },
+        {
+          "code": "financial",
+          "label": "Financial",
+          "value": 72.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.72
+          },
+          "domains": [
+            "resources"
+          ]
+        },
+        {
+          "code": "occupational",
+          "label": "Occupational",
+          "value": 41.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.41
+          },
+          "domains": [
+            "occupational_demand"
+          ]
+        },
+        {
+          "code": "environmental",
+          "label": "Environmental",
+          "value": 63.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.63
+          },
+          "domains": [
+            "environment_breath"
+          ]
+        },
+        {
+          "code": "spiritual",
+          "label": "Spiritual",
+          "value": 70.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.7
+          },
+          "domains": [
+            "connection_meaning"
+          ]
+        },
+        {
+          "code": "social",
+          "label": "Social",
+          "value": 58.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.58
+          },
+          "domains": [
+            "resources",
+            "connection_meaning"
+          ]
+        }
       ],
       "comparison": {
         "master": 61.4,
         "items": [
-          {"perceived": "Occupational", "actual": "Financial", "score": 72.0, "diff": 2},
-          {"perceived": "Physical", "actual": "Spiritual", "score": 70.0, "diff": -1},
-          {"perceived": "Financial", "actual": "Physical", "score": 68.0, "diff": 2}
+          {
+            "perceived": "Occupational",
+            "actual": "Financial",
+            "score": 72.0,
+            "diff": 2
+          },
+          {
+            "perceived": "Physical",
+            "actual": "Spiritual",
+            "score": 70.0,
+            "diff": -1
+          },
+          {
+            "perceived": "Financial",
+            "actual": "Physical",
+            "score": 68.0,
+            "diff": 2
+          }
         ]
-      }
+      },
+      "history": [
+        {
+          "date": "2026-01-18",
+          "master": 58.2
+        },
+        {
+          "date": "2026-04-20",
+          "master": 60.1
+        },
+        {
+          "date": "2026-07-20",
+          "master": 61.4
+        }
+      ]
     },
     "keys": {
       "key": "keys",
@@ -63,48 +263,684 @@
       "date": "2026-09-01",
       "age_days": 11,
       "scores": [
-        {"code": "key_fluid_form", "label": "Fluid & Hydration", "value": 3.6, "scale": 5, "percent": 72, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.72}, "domains": ["fuel"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
-        {"code": "key_food_form", "label": "Food & Nutrition", "value": 3.2, "scale": 5, "percent": 64, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.64}, "domains": ["fuel", "digestive"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
-        {"code": "key_breath_form", "label": "Breath & Environment", "value": 3.8, "scale": 5, "percent": 76, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.76}, "domains": ["environment_breath"], "date": "2026-08-18", "status": "aging", "age_days": 25},
-        {"code": "key_movement_form", "label": "Movement", "value": 2.2, "scale": 5, "percent": 44, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.44}, "domains": ["movement"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
-        {"code": "key_mind_form", "label": "Mind Balance", "value": 2.6, "scale": 5, "percent": 52, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.52}, "domains": ["mind_emotion"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
-        {"code": "key_sleep_form", "label": "Sleep & Recovery", "value": 2.1, "scale": 5, "percent": 42, "direction": "high_better", "band": {"key": "watch", "label": "Watch", "ratio": 0.42}, "domains": ["sleep_recovery"], "date": "2026-09-01", "status": "fresh", "age_days": 11},
-        {"code": "key_nature_form", "label": "Nature & Connection", "value": 3.4, "scale": 5, "percent": 68, "direction": "high_better", "band": {"key": "building", "label": "Building", "ratio": 0.68}, "domains": ["connection_meaning", "environment_breath"], "date": "2026-08-04", "status": "stale", "age_days": 39}
+        {
+          "code": "key_fluid_form",
+          "label": "Fluid & Hydration",
+          "value": 3.6,
+          "scale": 5,
+          "percent": 72,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.72
+          },
+          "domains": [
+            "fuel"
+          ],
+          "date": "2026-09-01",
+          "status": "fresh",
+          "age_days": 11
+        },
+        {
+          "code": "key_food_form",
+          "label": "Food & Nutrition",
+          "value": 3.2,
+          "scale": 5,
+          "percent": 64,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.64
+          },
+          "domains": [
+            "fuel",
+            "digestive"
+          ],
+          "date": "2026-09-01",
+          "status": "fresh",
+          "age_days": 11
+        },
+        {
+          "code": "key_breath_form",
+          "label": "Breath & Environment",
+          "value": 3.8,
+          "scale": 5,
+          "percent": 76,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.76
+          },
+          "domains": [
+            "environment_breath"
+          ],
+          "date": "2026-08-18",
+          "status": "aging",
+          "age_days": 25
+        },
+        {
+          "code": "key_movement_form",
+          "label": "Movement",
+          "value": 2.2,
+          "scale": 5,
+          "percent": 44,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.44
+          },
+          "domains": [
+            "movement"
+          ],
+          "date": "2026-09-01",
+          "status": "fresh",
+          "age_days": 11
+        },
+        {
+          "code": "key_mind_form",
+          "label": "Mind Balance",
+          "value": 2.6,
+          "scale": 5,
+          "percent": 52,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.52
+          },
+          "domains": [
+            "mind_emotion"
+          ],
+          "date": "2026-09-01",
+          "status": "fresh",
+          "age_days": 11
+        },
+        {
+          "code": "key_sleep_form",
+          "label": "Sleep & Recovery",
+          "value": 2.1,
+          "scale": 5,
+          "percent": 42,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.42
+          },
+          "domains": [
+            "sleep_recovery"
+          ],
+          "date": "2026-09-01",
+          "status": "fresh",
+          "age_days": 11
+        },
+        {
+          "code": "key_nature_form",
+          "label": "Nature & Connection",
+          "value": 3.4,
+          "scale": 5,
+          "percent": 68,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.68
+          },
+          "domains": [
+            "connection_meaning",
+            "environment_breath"
+          ],
+          "date": "2026-08-04",
+          "status": "stale",
+          "age_days": 39
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-06-09",
+          "overall": 58,
+          "n": 7
+        },
+        {
+          "date": "2026-06-23",
+          "overall": 56,
+          "n": 7
+        },
+        {
+          "date": "2026-07-07",
+          "overall": 54,
+          "n": 7
+        },
+        {
+          "date": "2026-07-21",
+          "overall": 55,
+          "n": 7
+        },
+        {
+          "date": "2026-08-04",
+          "overall": 53,
+          "n": 6
+        },
+        {
+          "date": "2026-08-18",
+          "overall": 54,
+          "n": 7
+        },
+        {
+          "date": "2026-09-01",
+          "overall": 52,
+          "n": 7
+        }
       ]
     },
-    "bsi": {"key": "bsi", "label": "BSI", "enabled": false, "clock": "cycle", "present": false, "status": "reserved", "date": "", "age_days": null, "scores": []},
-    "biovoice": {"key": "biovoice", "label": "BioVoicePrint", "enabled": false, "clock": "state", "present": false, "status": "reserved", "date": "", "age_days": null, "scores": []},
-    "fitbit": {"key": "fitbit", "label": "Fitbit", "enabled": false, "clock": "state", "present": false, "status": "reserved", "date": "", "age_days": null, "scores": []}
+    "bsi": {
+      "key": "bsi",
+      "label": "BSI",
+      "enabled": true,
+      "clock": "cycle",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-07-15",
+      "age_days": 60,
+      "scores": [
+        {
+          "code": "drivers",
+          "label": "Drivers",
+          "value": 46.2,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.462
+          }
+        },
+        {
+          "code": "mediators",
+          "label": "Mediators",
+          "value": 54.8,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "elevated",
+            "label": "Elevated",
+            "ratio": 0.548
+          }
+        },
+        {
+          "code": "outcomes",
+          "label": "Outcomes",
+          "value": 38.1,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.381
+          }
+        }
+      ],
+      "forms": [
+        {
+          "code": "F1",
+          "label": "Biological",
+          "value": 41.0,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.41
+          },
+          "composite": "outcomes"
+        },
+        {
+          "code": "F2",
+          "label": "Metabolic",
+          "value": 48.0,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.48
+          },
+          "composite": "mediators"
+        },
+        {
+          "code": "F3",
+          "label": "Inflammatory",
+          "value": 57.0,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "elevated",
+            "label": "Elevated",
+            "ratio": 0.57
+          },
+          "composite": "mediators"
+        },
+        {
+          "code": "F4",
+          "label": "Digestive",
+          "value": 44.0,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.44
+          },
+          "composite": "drivers"
+        },
+        {
+          "code": "F5",
+          "label": "Neuro-emotional",
+          "value": 59.5,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "elevated",
+            "label": "Elevated",
+            "ratio": 0.595
+          },
+          "composite": "mediators"
+        },
+        {
+          "code": "F6",
+          "label": "Recovery",
+          "value": 36.0,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.36
+          },
+          "composite": "outcomes"
+        },
+        {
+          "code": "F7",
+          "label": "Environmental",
+          "value": 42.0,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.42
+          },
+          "composite": "drivers"
+        },
+        {
+          "code": "F8",
+          "label": "Lifecycle",
+          "value": 52.5,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "elevated",
+            "label": "Elevated",
+            "ratio": 0.525
+          },
+          "composite": "drivers"
+        },
+        {
+          "code": "F9",
+          "label": "Adaptive Capacity",
+          "value": 37.2,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Moderate",
+            "ratio": 0.372
+          },
+          "composite": "outcomes"
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-01-16",
+          "drivers": 49.0,
+          "mediators": 58.0,
+          "outcomes": 42.0
+        },
+        {
+          "date": "2026-04-14",
+          "drivers": 47.1,
+          "mediators": 55.4,
+          "outcomes": 40.2
+        },
+        {
+          "date": "2026-07-15",
+          "drivers": 46.2,
+          "mediators": 54.8,
+          "outcomes": 38.1
+        }
+      ]
+    },
+    "biovoice": {
+      "key": "biovoice",
+      "label": "BioVoicePrint",
+      "enabled": true,
+      "clock": "state",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-08-25",
+      "age_days": 19,
+      "scores": [
+        {
+          "code": "rdi",
+          "label": "RDI (shift)",
+          "value": 21.8,
+          "scale": 100,
+          "direction": "low_better",
+          "band": {
+            "key": "moderate",
+            "label": "Minimal Shift",
+            "ratio": 0.218
+          }
+        }
+      ],
+      "summary": "Sample BioVoicePrint shows a stable overall pattern with small localized shifts. RDI 21.8/100 is Minimal Shift versus personal baseline.",
+      "markers": [
+        {
+          "label": "frequency spread",
+          "score": 48.3,
+          "band": "Moderate Pattern Shift",
+          "note": "How widely voice energy spreads across frequencies."
+        },
+        {
+          "label": "tiny volume variation",
+          "score": 45.4,
+          "band": "Moderate Pattern Shift",
+          "note": "Tiny volume variations during sustained voice."
+        }
+      ],
+      "progress": {
+        "baseline_final": 3,
+        "comparison_final": 2,
+        "device_mismatch": false
+      },
+      "history": [
+        {
+          "date": "2026-07-02",
+          "rdi": 18.4
+        },
+        {
+          "date": "2026-07-28",
+          "rdi": 22.1
+        },
+        {
+          "date": "2026-08-25",
+          "rdi": 21.8
+        }
+      ]
+    },
+    "fitbit": {
+      "key": "fitbit",
+      "label": "Fitbit",
+      "enabled": true,
+      "clock": "state",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-09-12",
+      "age_days": 1,
+      "scores": [
+        {
+          "code": "last_night",
+          "label": "Last night (hrs)",
+          "value": 5.9,
+          "scale": 8,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.7375
+          }
+        },
+        {
+          "code": "sleep_7d",
+          "label": "7-night avg (hrs)",
+          "value": 6.2,
+          "scale": 8,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.775
+          }
+        },
+        {
+          "code": "efficiency_7d",
+          "label": "7-night efficiency",
+          "value": 84,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.84
+          }
+        }
+      ],
+      "nights_7d": 7,
+      "short_nights": 4,
+      "history": [
+        {
+          "date": "2026-08-30",
+          "sleep_hours": 7.2,
+          "sleep_pct": 90,
+          "efficiency": 88
+        },
+        {
+          "date": "2026-08-31",
+          "sleep_hours": 6.8,
+          "sleep_pct": 85,
+          "efficiency": 86
+        },
+        {
+          "date": "2026-09-01",
+          "sleep_hours": 5.4,
+          "sleep_pct": 68,
+          "efficiency": 79
+        },
+        {
+          "date": "2026-09-02",
+          "sleep_hours": 7.1,
+          "sleep_pct": 89,
+          "efficiency": 90
+        },
+        {
+          "date": "2026-09-03",
+          "sleep_hours": 4.9,
+          "sleep_pct": 61,
+          "efficiency": 74
+        },
+        {
+          "date": "2026-09-04",
+          "sleep_hours": 6.0,
+          "sleep_pct": 75,
+          "efficiency": 82
+        },
+        {
+          "date": "2026-09-05",
+          "sleep_hours": 5.5,
+          "sleep_pct": 69,
+          "efficiency": 80
+        },
+        {
+          "date": "2026-09-06",
+          "sleep_hours": 7.4,
+          "sleep_pct": 92,
+          "efficiency": 91
+        },
+        {
+          "date": "2026-09-07",
+          "sleep_hours": 6.9,
+          "sleep_pct": 86,
+          "efficiency": 87
+        },
+        {
+          "date": "2026-09-08",
+          "sleep_hours": 5.8,
+          "sleep_pct": 72,
+          "efficiency": 81
+        },
+        {
+          "date": "2026-09-09",
+          "sleep_hours": 6.2,
+          "sleep_pct": 78,
+          "efficiency": 84
+        },
+        {
+          "date": "2026-09-10",
+          "sleep_hours": 5.1,
+          "sleep_pct": 64,
+          "efficiency": 76
+        },
+        {
+          "date": "2026-09-11",
+          "sleep_hours": 6.4,
+          "sleep_pct": 80,
+          "efficiency": 85
+        },
+        {
+          "date": "2026-09-12",
+          "sleep_hours": 5.9,
+          "sleep_pct": 74,
+          "efficiency": 83
+        }
+      ]
+    },
+    "profile": {
+      "key": "profile",
+      "label": "Profile",
+      "enabled": true,
+      "clock": "context",
+      "present": true,
+      "status": "present",
+      "date": "2026-08-01",
+      "age_days": null,
+      "strip": "Age 47 (45\u201359) \u00b7 Female \u00b7 5'6\" \u00b7 148 lb \u00b7 BMI mid range \u00b7 Diet: Mediterranean \u00b7 Food sensitivity on file \u00b7 Work: full-time \u00b7 Care load: 2",
+      "facts": {
+        "age": 47,
+        "age_band": "45\u201359",
+        "sex": "Female",
+        "height_in": 66,
+        "weight_lb": 148,
+        "bmi": 23.9,
+        "bmi_band": "mid range",
+        "diet": "Mediterranean",
+        "food_sensitivity": true,
+        "employment": "full-time",
+        "dependents": 2,
+        "care_load": true
+      },
+      "scores": [],
+      "history": []
+    }
   },
   "highlights": [
-    {"source": "keys", "form": "Sleep & Recovery", "section": "", "prompt": "I wake feeling restored.", "answer_label": "Rarely", "score": 2, "scale_max": 5, "date": "2026-09-01"},
-    {"source": "keys", "form": "Movement", "section": "", "prompt": "I move with intention most days.", "answer_label": "Seldom", "score": 2, "scale_max": 5, "date": "2026-09-01"},
-    {"source": "rsi", "form": "Performance", "section": "", "prompt": "Work demand outruns recovery.", "answer_label": "Often", "score": 4, "scale_max": 5, "date": "2026-09-08"}
+    {
+      "source": "keys",
+      "form": "Sleep & Recovery",
+      "section": "",
+      "prompt": "I wake feeling restored.",
+      "answer_label": "Rarely",
+      "score": 2,
+      "scale_max": 5,
+      "date": "2026-09-01"
+    },
+    {
+      "source": "keys",
+      "form": "Movement",
+      "section": "",
+      "prompt": "I move with intention most days.",
+      "answer_label": "Seldom",
+      "score": 2,
+      "scale_max": 5,
+      "date": "2026-09-01"
+    },
+    {
+      "source": "rsi",
+      "form": "Performance",
+      "section": "",
+      "prompt": "Work demand outruns recovery.",
+      "answer_label": "Often",
+      "score": 4,
+      "scale_max": 5,
+      "date": "2026-09-08"
+    }
   ],
   "patterns": [
     {
       "code": "rsi_performance_elevated",
       "severity": "watch",
       "title": "Performance load is elevated",
-      "member": "Your latest RSI Performance score is in an elevated range. That is a pulse signal, not a diagnosis — worth pairing with sleep and work demand.",
-      "provider": "RSI R12 (Performance) ≥50. Pulse clock. Confirm against Keys movement/sleep and, when present, BSI F5/F3.",
-      "evidence": {"rsi.R12": 58.4}
+      "member": "Your latest RSI Performance score is in an elevated range. That is a pulse signal, not a diagnosis \u2014 worth pairing with sleep and work demand.",
+      "provider": "RSI R12 (Performance) \u226550. Pulse clock. Confirm against Keys movement/sleep and, when present, BSI F5/F3.",
+      "evidence": {
+        "rsi.R12": 58.4
+      }
     },
     {
       "code": "keys_sleep_low",
       "severity": "watch",
       "title": "Sleep & recovery choices are off",
       "member": "Sleep & Recovery is one of the weaker Key Essentials right now. That is a daily-choice signal on a 14-day clock.",
-      "provider": "Keys sleep average ≤2.5/5. State clock. Ask schedule vs environment vs mind load before attributing to physiology.",
-      "evidence": {"keys.key_sleep_form": 2.1}
+      "provider": "Keys sleep average \u22642.5/5. State clock. Ask schedule vs environment vs mind load before attributing to physiology.",
+      "evidence": {
+        "keys.key_sleep_form": 2.1
+      }
     },
     {
       "code": "choice_vs_capacity_movement",
       "severity": "info",
       "title": "Movement looks like choice, not capacity",
       "member": "Your physical pillar is holding up better than your recent movement choices. This is usually a schedule or habit gap, not a capacity gap.",
-      "provider": "Keys movement ≤2.5/5 while Pillars physical ≥60. Choice vs capacity pattern.",
-      "evidence": {"keys.movement": 2.2, "pillars.physical": 68.0}
+      "provider": "Keys movement \u22642.5/5 while Pillars physical \u226560. Choice vs capacity pattern.",
+      "evidence": {
+        "keys.movement": 2.2,
+        "pillars.physical": 68.0
+      }
+    },
+    {
+      "code": "bsi_mediators_elevated",
+      "severity": "watch",
+      "title": "BSI Mediators are elevated",
+      "member": "Your latest BSI Mediators composite is in an elevated range. That is a 90-day physiological cycle signal \u2014 pair it with sleep, mind, and daily choices rather than treating it as a diagnosis.",
+      "provider": "BSI Mediators \u226550 on the current final cycle. Cross-check RSI pulse and Keys state before attributing cause.",
+      "evidence": {
+        "bsi.mediators": 54.8
+      }
+    },
+    {
+      "code": "fitbit_short_sleep",
+      "severity": "watch",
+      "title": "Recent nights are running short",
+      "member": "Fitbit shows several nights under 6 hours in the last week. That is a nightly state signal \u2014 pair it with Key Essentials sleep, not a quarterly type.",
+      "provider": "4 of last 7 Fitbit nights < 6 hours. State clock. Do not let this veto a fresh BSI cycle; use it to confirm Keys sleep.",
+      "evidence": {
+        "short_nights": 4,
+        "nights_7d": 7
+      }
+    },
+    {
+      "code": "profile_care_sleep",
+      "severity": "info",
+      "title": "Care load sits next to short nights",
+      "member": "Your profile lists care responsibilities and recent nights have been shorter. That is often schedule, not a quarterly physiology signal.",
+      "provider": "Profile care_load + Fitbit short nights \u22653. Ask schedule before attributing to BSI F6 or Keys sleep alone.",
+      "evidence": {
+        "care_load": true,
+        "short_nights": 4
+      }
     }
   ],
   "disclaimer": "Self-assessment snapshot only. Not a diagnosis or treatment plan."

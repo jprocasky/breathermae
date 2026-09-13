@@ -47,8 +47,43 @@ class BMF_Wellbeing_Adapter_RSI {
 		return array_merge( $empty, $fresh, [
 			'present' => true,
 			'scores'  => $scores,
+			'history' => self::history( $email ),
 			'raw_id'  => isset( $row['id'] ) ? (int) $row['id'] : 0,
 		] );
+	}
+
+	/** Last N final RSI rows for sparkline (core + performance, 0–100). */
+	private static function history( string $email ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'bm_rsi_results';
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT results_date, R11, R12 FROM {$table}
+				 WHERE user_email = %s AND is_final = 1
+				 ORDER BY results_date ASC, id ASC",
+				$email
+			),
+			ARRAY_A
+		);
+		if ( ! $rows ) {
+			return [];
+		}
+		if ( count( $rows ) > 16 ) {
+			$rows = array_slice( $rows, -16 );
+		}
+		$out = [];
+		foreach ( $rows as $r ) {
+			$d = BMF_Wellbeing_Freshness::normalize_date( $r['results_date'] ?? '' );
+			if ( $d === '' ) {
+				continue;
+			}
+			$out[] = [
+				'date'        => $d,
+				'core'        => BMF_Wellbeing_Freshness::to_percent( $r['R11'] ?? null, 100 ),
+				'performance' => BMF_Wellbeing_Freshness::to_percent( $r['R12'] ?? null, 100 ),
+			];
+		}
+		return $out;
 	}
 
 	private static function shell( array $cfg ): array {
@@ -62,6 +97,7 @@ class BMF_Wellbeing_Adapter_RSI {
 			'date'      => '',
 			'age_days'  => null,
 			'scores'    => [],
+			'history'   => [],
 		];
 	}
 }

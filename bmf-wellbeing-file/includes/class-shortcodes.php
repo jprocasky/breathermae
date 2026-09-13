@@ -22,9 +22,16 @@ class BMF_Wellbeing_Shortcodes {
 			file_exists( $css ) ? (string) filemtime( $css ) : BMF_WELLBEING_VERSION
 		);
 		wp_register_script(
+			'chartjs',
+			'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+			[],
+			'4.4.1',
+			true
+		);
+		wp_register_script(
 			'bmf-wellbeing',
 			BMF_WELLBEING_URL . 'assets/js/wellbeing.js',
-			[],
+			[ 'chartjs' ],
 			file_exists( $js ) ? (string) filemtime( $js ) : BMF_WELLBEING_VERSION,
 			true
 		);
@@ -32,6 +39,7 @@ class BMF_Wellbeing_Shortcodes {
 
 	private static function enqueue( array $cfg ) {
 		wp_enqueue_style( 'bmf-wellbeing' );
+		wp_enqueue_script( 'chartjs' );
 		wp_enqueue_script( 'bmf-wellbeing' );
 		wp_localize_script( 'bmf-wellbeing', 'bmfWellbeingCfg', $cfg );
 	}
@@ -152,21 +160,30 @@ class BMF_Wellbeing_Shortcodes {
 		$fix   = ! empty( $brief['is_fixture'] ) ? '<span class="bmf-wb-badge">Sample</span>' : '';
 		$html  = '<div class="bmf-wb-card bmf-wb-brief" data-voice="' . esc_attr( $voice ) . '">';
 		$html .= '<div class="bmf-wb-head"><h4>Systems snapshot</h4><span class="bmf-wb-member">' . $label . ' ' . $fix . '</span></div>';
-		$html .= '<p class="bmf-wb-sub">Pulse = RSI · Cycle = Pillars · State = Key Essentials. Map ' . esc_html( $brief['map_version'] ?? 'v1' ) . '.</p>';
+		$html .= '<p class="bmf-wb-sub">Pulse = RSI · Cycle = Pillars + BSI · State = Keys + BioVoice + Fitbit. Map ' . esc_html( $brief['map_version'] ?? 'v1' ) . '.</p>';
 
 		$html .= '<div class="bmf-wb-grid">';
-		foreach ( [ 'rsi', 'pillars', 'keys', 'bsi', 'biovoice', 'fitbit' ] as $k ) {
+		foreach ( [ 'rsi', 'pillars', 'keys', 'bsi', 'biovoice', 'fitbit', 'profile' ] as $k ) {
 			if ( isset( $brief['sources'][ $k ] ) ) {
 				$html .= self::source_chip( $brief['sources'][ $k ] );
 			}
 		}
 		$html .= '</div>';
+		$strip = trim( (string) ( $brief['sources']['profile']['strip'] ?? '' ) );
+		if ( $strip !== '' ) {
+			$html .= '<p class="bmf-wb-profile">' . esc_html( $strip ) . '</p>';
+		}
+		$html .= self::markup_history( $brief );
 
 		if ( ! empty( $brief['patterns'] ) ) {
 			$html .= '<h5 class="bmf-wb-h">Themes</h5><ul class="bmf-wb-patterns">';
 			foreach ( $brief['patterns'] as $p ) {
 				$copy = $voice === 'provider' ? ( $p['provider'] ?? '' ) : ( $p['member'] ?? '' );
-				$html .= '<li class="sev-' . esc_attr( $p['severity'] ?? 'info' ) . '"><strong>' . esc_html( $p['title'] ?? '' ) . '</strong> ' . esc_html( $copy ) . '</li>';
+				$title = trim( (string) ( $p['title'] ?? '' ) );
+				if ( $title !== '' && ! preg_match( '/[.!?:;—–-]$/u', $title ) ) {
+					$title .= ' —';
+				}
+				$html .= '<li class="sev-' . esc_attr( $p['severity'] ?? 'info' ) . '"><strong>' . esc_html( $title ) . '</strong> ' . esc_html( $copy ) . '</li>';
 			}
 			$html .= '</ul>';
 		}
@@ -177,6 +194,21 @@ class BMF_Wellbeing_Shortcodes {
 			$html .= '<p class="bmf-wb-note">Pillars master score: ' . esc_html( (string) $brief['sources']['pillars']['master'] ) . '</p>';
 		}
 		$html .= self::score_block( 'Key Essentials (state)', $brief['sources']['keys']['scores'] ?? [], 'high_better' );
+		$html .= self::score_block( 'BSI composites (cycle)', $brief['sources']['bsi']['scores'] ?? [], 'low_better' );
+		$html .= self::score_block( 'BSI F1–F9 (cycle)', $brief['sources']['bsi']['forms'] ?? [], 'low_better', 'is-bsi' );
+		$html .= self::score_block( 'BioVoicePrint (state)', $brief['sources']['biovoice']['scores'] ?? [], 'low_better' );
+		$bv = $brief['sources']['biovoice'] ?? [];
+		if ( ! empty( $bv['summary'] ) ) {
+			$html .= '<p class="bmf-wb-note">' . esc_html( $bv['summary'] ) . '</p>';
+		}
+		if ( ! empty( $bv['progress'] ) && ( $bv['progress']['baseline_final'] || $bv['progress']['comparison_final'] ) ) {
+			$html .= '<p class="bmf-wb-note">Groups: baseline ' . (int) $bv['progress']['baseline_final'] . ' · comparison ' . (int) $bv['progress']['comparison_final'] . '</p>';
+		}
+		$html .= self::score_block( 'Fitbit nights (state)', $brief['sources']['fitbit']['scores'] ?? [], 'high_better' );
+		$fb = $brief['sources']['fitbit'] ?? [];
+		if ( ! empty( $fb['present'] ) ) {
+			$html .= '<p class="bmf-wb-note">Last 7 nights with data: ' . (int) ( $fb['nights_7d'] ?? 0 ) . ' · under 6 hours: ' . (int) ( $fb['short_nights'] ?? 0 ) . '</p>';
+		}
 
 		if ( ! empty( $brief['highlights'] ) ) {
 			$html .= '<h5 class="bmf-wb-h">Highlight items</h5><ul class="bmf-wb-hi">';
@@ -196,6 +228,106 @@ class BMF_Wellbeing_Shortcodes {
 		return $html;
 	}
 
+	private static function markup_history( array $brief ): string {
+		$panels = [];
+
+		$rsi = $brief['sources']['rsi']['history'] ?? [];
+		if ( count( $rsi ) >= 2 ) {
+			$panels[] = [
+				'title'   => 'RSI pulse',
+				'sub'     => 'Core · Performance  (lower is better)',
+				'series'  => [
+					[ 'label' => 'Core', 'color' => '#22d3ee', 'points' => self::hist_xy( $rsi, 'core' ) ],
+					[ 'label' => 'Performance', 'color' => '#e91e8c', 'points' => self::hist_xy( $rsi, 'performance' ) ],
+				],
+			];
+		}
+
+		$pil = $brief['sources']['pillars']['history'] ?? [];
+		if ( count( $pil ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'Pillars cycle',
+				'sub'    => 'Master score  (higher is better)',
+				'series' => [
+					[ 'label' => 'Master', 'color' => '#6ec1e4', 'points' => self::hist_xy( $pil, 'master' ) ],
+				],
+			];
+		}
+
+		$keys = $brief['sources']['keys']['history'] ?? [];
+		if ( count( $keys ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'Keys state',
+				'sub'    => 'Overall essentials  (higher is better)',
+				'series' => [
+					[ 'label' => 'Overall', 'color' => '#4ade80', 'points' => self::hist_xy( $keys, 'overall' ) ],
+				],
+			];
+		}
+
+		$bsi = $brief['sources']['bsi']['history'] ?? [];
+		if ( count( $bsi ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'BSI cycle',
+				'sub'    => 'Drivers · Mediators · Outcomes  (lower is better)',
+				'series' => [
+					[ 'label' => 'Drivers', 'color' => '#e91e8c', 'points' => self::hist_xy( $bsi, 'drivers' ) ],
+					[ 'label' => 'Mediators', 'color' => '#3b82f6', 'points' => self::hist_xy( $bsi, 'mediators' ) ],
+					[ 'label' => 'Outcomes', 'color' => '#22d3ee', 'points' => self::hist_xy( $bsi, 'outcomes' ) ],
+				],
+			];
+		}
+
+		$bv_hist = $brief['sources']['biovoice']['history'] ?? [];
+		if ( count( $bv_hist ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'BioVoice state',
+				'sub'    => 'RDI vs personal baseline  (lower is closer)',
+				'series' => [
+					[ 'label' => 'RDI', 'color' => '#a78bfa', 'points' => self::hist_xy( $bv_hist, 'rdi' ) ],
+				],
+			];
+		}
+
+		$fb_hist = $brief['sources']['fitbit']['history'] ?? [];
+		if ( count( $fb_hist ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'Fitbit nights',
+				'sub'    => 'Sleep vs 8h · efficiency  (higher is better)',
+				'series' => [
+					[ 'label' => 'Sleep / 8h', 'color' => '#38bdf8', 'points' => self::hist_xy( $fb_hist, 'sleep_pct' ) ],
+					[ 'label' => 'Efficiency', 'color' => '#34d399', 'points' => self::hist_xy( $fb_hist, 'efficiency' ) ],
+				],
+			];
+		}
+
+		if ( ! $panels ) {
+			return '';
+		}
+
+		$html = '<h5 class="bmf-wb-h">History</h5><div class="bmf-wb-history">';
+		foreach ( $panels as $p ) {
+			$html .= '<div class="bmf-wb-hpanel">';
+			$html .= '<div class="bmf-wb-hpanel-t">' . esc_html( $p['title'] ) . '</div>';
+			$html .= '<div class="bmf-wb-hpanel-s">' . esc_html( $p['sub'] ) . '</div>';
+			$html .= '<div class="bmf-wb-hchart"><canvas class="bmf-wb-canvas" data-wb-chart="' . esc_attr( wp_json_encode( $p['series'] ) ) . '"></canvas></div>';
+			$html .= '</div>';
+		}
+		$html .= '</div>';
+		return $html;
+	}
+
+	private static function hist_xy( array $rows, string $field ): array {
+		$out = [];
+		foreach ( $rows as $r ) {
+			if ( ! isset( $r[ $field ] ) || $r[ $field ] === null || empty( $r['date'] ) ) {
+				continue;
+			}
+			$out[] = [ 'x' => $r['date'], 'y' => (float) $r[ $field ] ];
+		}
+		return $out;
+	}
+
 	private static function source_chip( array $src ): string {
 		$status = $src['status'] ?? 'missing';
 		$date   = $src['date'] ?? '';
@@ -203,6 +335,8 @@ class BMF_Wellbeing_Shortcodes {
 		$meta   = '—';
 		if ( $status === 'reserved' ) {
 			$meta = 'Reserved';
+		} elseif ( ( $src['clock'] ?? '' ) === 'context' ) {
+			$meta = $status === 'present' ? 'Context' : ( $status === 'incomplete' ? 'Incomplete' : 'No profile row' );
 		} elseif ( $date !== '' ) {
 			$meta = $date . ( $age !== null ? ' · ' . (int) $age . 'd' : '' );
 		} elseif ( empty( $src['enabled'] ) ) {

@@ -20,6 +20,8 @@
 .bmf-wb-chip.st-stale .st{color:#fb7185}
 .bmf-wb-chip.st-missing .st{color:#94a3b8}
 .bmf-wb-chip.st-reserved .st{color:#6ec1e4}
+.bmf-wb-chip.st-present .st{color:#86efac}
+.bmf-wb-chip.st-incomplete .st{color:#fbbf24}
 .bmf-wb-scores{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .bmf-wb-scores.is-pillars{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
 .bmf-wb-scores.is-pillars .bmf-wb-score{padding:6px 6px;align-items:center;text-align:center;min-width:0}
@@ -32,6 +34,13 @@
 @media (max-width:560px){
 	.bmf-wb-scores.is-pillars{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+.bmf-wb-scores.is-bsi{grid-template-columns:repeat(9,minmax(0,1fr));gap:5px}
+.bmf-wb-scores.is-bsi .bmf-wb-score{padding:6px 4px;align-items:center;text-align:center;min-width:0}
+.bmf-wb-scores.is-bsi .lb{font-size:.62rem;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bmf-wb-scores.is-bsi .vl{font-size:.88rem}
+.bmf-wb-scores.is-bsi .bd{font-size:.58rem}
+@media (max-width:1100px){.bmf-wb-scores.is-bsi{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media (max-width:560px){.bmf-wb-scores.is-bsi{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .bmf-wb-score{background:#102448;border:1px solid #233b6d;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
 .bmf-wb-score .lb{font-size:.78rem;color:#cfe6ff}
 .bmf-wb-score .vl{font-size:1.05rem;font-weight:600;color:#fff}
@@ -45,4 +54,10 @@
 .bmf-wb-patterns strong,.bmf-wb-hi strong,.bmf-wb-card strong{color:#fff;font-weight:600}
 .bmf-wb-hi em,.bmf-wb-card em{color:#cfe6ff;font-style:italic}
 .bmf-wb-hi .src{display:inline-block;min-width:52px;font-size:.68rem;font-weight:700;color:#6ec1e4}
+.bmf-wb-history{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0 4px}
+.bmf-wb-hpanel{background:#102448;border:1px solid #233b6d;border-radius:8px;padding:8px 10px 10px}
+.bmf-wb-hpanel-t{color:#fff;font-size:.82rem;font-weight:600}
+.bmf-wb-hpanel-s{color:#9db0d0;font-size:.68rem;margin:0 0 6px}
+.bmf-wb-hchart{position:relative;height:140px}
+.bmf-wb-profile{margin:10px 0 4px;padding:8px 10px;background:#102448;border:1px solid #233b6d;border-radius:8px;color:#cfe6ff;font-size:.8rem;line-height:1.4}
 .bmf-wb-empty,.bmf-wb-editor{padding:16px;border:1px dashed #233b6d;border-radius:8px;color:#9db0d0;background:#0b1b3a}
