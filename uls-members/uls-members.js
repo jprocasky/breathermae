@@ -1,11 +1,12 @@
 /**
- * ULS Members – client-side replacement (v3.2)
+ * ULS Members – client-side replacement (v3.1)
  * - Hierarchy: children initially hidden; toggle via first-column icon
  * - Paging operates on parent rows only (children stay grouped under parents)
  * - Robust child lookup by data-parent-id + data-user-id
- * - Key Essentials latest values fill <span class="uls-member-field" data-src="keys">
  * Adds a Price column for orders using resp.data[vw_wc_orders_full][i].line_total (text).
  * If the server already formats with wc_price, we output as-is; otherwise, we try to format as currency.
+ *
+ * v1.7.0: Tag admin panel (INTERNAL / ART / S360 toggles + Make/Remove Sales Person)
  */
 (function ($, W) {
   'use strict';
@@ -13,7 +14,7 @@
   // Elementor guard (optional)
   try { if (window.elementorFrontend && elementorFrontend.isEditMode && elementorFrontend.isEditMode()) { console.info('[uls-members] Elementor edit mode; live handlers enabled but you can disable by returning early.'); } } catch (e) {}
 
-  console.info('[uls-members] replacement JS v3.2 loaded (hierarchy + keys spans)');
+  console.info('[uls-members] replacement JS v3.1 + tag-admin loaded');
   if (!W || !W.ajaxurl) console.error('[uls-members] ULS_MEMBERS missing ajaxurl.', W);
 
   var SEL = {
@@ -236,66 +237,22 @@ function updateScopedResultsLink(memberId) {
     });
 }
 
-  function formatScore15(v) {
-    var n = parseFloat(v);
-    if (!Number.isFinite(n)) return '';
-    return (Math.round(n * 10) / 10).toFixed(1);
-  }
-
-  function formatMemberValue(val, fmt, src) {
-    if (val == null || val === '') return '';
-    fmt = (fmt || '').toString().trim().toLowerCase();
-    if (!fmt || fmt === 'raw' || fmt === 'text') return String(val).trim();
-
-    var num = parseFloat(val);
-    var isNum = Number.isFinite(num);
-
-    if (fmt === 'percent-int' || fmt === 'percent' || fmt === 'pct') {
-      if (!isNum) return String(val).trim();
-      // BSI stored 0–1; Key Essentials stored 1–5; already-percent left as-is.
-      if ((src === 'bsi' || src === 'rsi') && num > 0 && num <= 1) num = num * 100;
-      else if ((src === 'keys' || src === 'key_essentials' || src === 'uls_key_essentials') && num > 0 && num <= 5) num = (num / 5) * 100;
-      return String(Math.round(num));
-    }
-    if (fmt === 'percent-1') {
-      if (!isNum) return String(val).trim();
-      if ((src === 'bsi' || src === 'rsi') && num > 0 && num <= 1) num = num * 100;
-      else if ((src === 'keys' || src === 'key_essentials' || src === 'uls_key_essentials') && num > 0 && num <= 5) num = (num / 5) * 100;
-      return (Math.round(num * 10) / 10).toFixed(1);
-    }
-    if (fmt === 'score' || fmt === 'number-1') {
-      if (!isNum) return String(val).trim();
-      return formatScore15(num);
-    }
-    if (fmt === 'number-2') {
-      if (!isNum) return String(val).trim();
-      return (Math.round(num * 100) / 100).toFixed(2);
-    }
-    return String(val).trim();
-  }
-
-  function isKeysSrc(src) {
-    return src === 'keys' || src === 'key_essentials' || src === 'uls_key_essentials';
-  }
-
   function renderKeysTable(list){
     var $box = $(SEL.keysTarget); if (!$box.length) return;
     var html = '<table class="uls-members__table uls-keys__table" cellspacing="0" cellpadding="0">';
     html += '<thead><tr>' +
             '<th>Datetime</th>' +
             '<th>Form</th>' +
-            '<th>Score (1–5)</th>' +
+            '<th>Average Score</th>' +
             '</tr></thead><tbody>';
     if (Array.isArray(list) && list.length){
       list.forEach(function(r){
-        var avg = r.average_score != null ? r.average_score : (r['Average Score'] || r.Average_Score || '');
-        var label = r.form_label || r['Form Label'] || r.Form_Id || r.form_id || '';
-        var dt = r.datetime || r.Datetime || '';
-        var cls = pctClass((parseFloat(avg) / 5) * 100, 50, 90);
+        var avg = r['Average Score'] || '';
+        var cls = pctClass(avg, 30, 70);
         html += '<tr>' +
-                '<td>' + escHtml(dt) + '</td>' +
-                '<td>' + escHtml(label) + '</td>' +
-                '<td><span class="pct ' + cls + '">' + escHtml(formatScore15(avg) || avg) + '</span></td>' +
+                '<td>' + escHtml(r.Datetime) + '</td>' +
+                '<td>' + escHtml(r['Form Label']) + '</td>' +
+                '<td><span class="pct ' + cls + '" data-low="30" data-high="70">' + escHtml(avg) + '</span></td>' +
                 '</tr>';
       });
     } else {
@@ -362,8 +319,6 @@ function updateScopedResultsLink(memberId) {
       const dataProfile = resp.data?.uls_uls_cf_bio            || {};
       var dataOrders  = resp.data['vw_wc_orders_full']         || [];
       var dataKeys    = resp.data['uls_key_essentials']        || [];
-      var dataKeysLatest = resp.data['uls_key_essentials_latest'] || {};
-      var keysColors  = resp.data['uls_key_essentials_colors'] || {};
       var dataBsi     = resp.data['uls_bm_bsi_results_latest'] || null;
       var dataRsi = resp.data['uls_bm_rsi_results_latest'] || null;
       var bsiColors = resp.data['uls_bm_bsi_colors'] || {};
@@ -393,10 +348,7 @@ function updateScopedResultsLink(memberId) {
         }
         if (src === 'rsi' && key && rsiColors[key]) {
             $el.css('color', rsiColors[key]);
-        }
-        if (isKeysSrc(src) && key && keysColors[key]) {
-            $el.css('color', keysColors[key]);
-        }
+        }        
 
         var val = '';
 
@@ -404,26 +356,17 @@ function updateScopedResultsLink(memberId) {
         else if (src === 'uls_ULS_CF_BIO') val = read(dataProfile, key);
         else if (src === 'bsi')            val = read(dataBsi || {}, key);
         else if (src === 'rsi')            val = read(dataRsi || {}, key);
-        else if (isKeysSrc(src))           val = read(dataKeysLatest || {}, key);
         else if (src === 'uls_rewards')    val = read(dataRewards, key);
-        else if (src === 'usermeta')       val = read(resp.data.usermeta || {}, key);
+        else if (src === 'usermeta')       val = read(resp.data.usermeta || {}, key);  // ← NEW
         else                               val = read(dataWptm, key);  // fallback
 
-        // Normalize BSI/RSI percentages when no explicit data-format is set
-        var fmt = ($el.data('format') || '').toString().trim();
-        if (!fmt && (src === 'bsi' || src === 'rsi')) {
+        // Normalize BSI/RSI percentages (unchanged)
+        if (src === 'bsi' || src === 'rsi') {
             var num = parseFloat(val);
             if (Number.isFinite(num)) {
                 if (src === 'bsi' && num > 0 && num <= 1) num = num * 100;
                 val = Math.round(num);
             }
-        }
-        if (!fmt && isKeysSrc(src) && key && key.indexOf('_band') === -1 && key.indexOf('datetime') === -1 && key !== 'complete' && key !== 'complete_of') {
-            var kn = parseFloat(val);
-            if (Number.isFinite(kn) && kn <= 5) val = formatScore15(kn);
-        }
-        if (fmt) {
-            val = formatMemberValue(val, fmt, src);
         }
 
         var out = (val == null ? '' : String(val)).trim();
@@ -648,9 +591,6 @@ function updateScopedResultsLink(memberId) {
 
       // Tag admin panel
       initTagAdmin();
-
-      // Claim unlinked member (sales portal)
-      initClaimMember();
   }
 
   $(bindAll);
@@ -700,6 +640,10 @@ function updateScopedResultsLink(memberId) {
 
     var currentUserId = parseInt($panel.data('user-id'), 10) || 0;
 
+    function configuredTags() {
+      return ($panel.attr('data-tags') || '').toString();
+    }
+
     function showMessage(text, isError) {
       var $msg = $panel.find('.uls-tag-admin__message');
       $msg.removeClass('is-success is-error')
@@ -730,12 +674,14 @@ function updateScopedResultsLink(memberId) {
       $panel.find('.uls-tag-admin__content').show();
 
       // Simple toggles
+      var allTags = (status.all_tags || []).map(function(t){ return String(t).toLowerCase(); });
       $panel.find('.uls-tag-toggle').each(function() {
         var $cb = $(this);
-        var tag = $cb.data('tag');
+        var tag = ($cb.data('tag') || '').toString();
         var info = status.simple && status.simple[tag];
+        var has = info ? !!info.has_tag : (allTags.indexOf(tag.toLowerCase()) !== -1);
         $cb.prop('disabled', false);
-        $cb.prop('checked', !!(info && info.has_tag));
+        $cb.prop('checked', has);
       });
 
       // Sales section
@@ -779,7 +725,8 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_get_tag_admin_status',
         nonce: W.nonce,
-        user_id: userId
+        user_id: userId,
+        tags: configuredTags()
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -806,6 +753,7 @@ function updateScopedResultsLink(memberId) {
         nonce: W.nonce,
         user_id: currentUserId,
         tag: tag,
+        tags: configuredTags(),
         action_type: wantAdd ? 'add' : 'remove'
       }).done(function(resp) {
         if (resp && resp.success) {
@@ -833,7 +781,8 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_make_sales_person',
         nonce: W.nonce,
-        user_id: currentUserId
+        user_id: currentUserId,
+        tags: configuredTags()
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -858,7 +807,8 @@ function updateScopedResultsLink(memberId) {
       $.post(W.ajaxurl, {
         action: 'uls_remove_sales_person',
         nonce: W.nonce,
-        user_id: currentUserId
+        user_id: currentUserId,
+        tags: configuredTags()
       }).done(function(resp) {
         if (resp && resp.success) {
           renderStatus(resp.data);
@@ -891,164 +841,6 @@ function updateScopedResultsLink(memberId) {
     // Start blank; wait for the user to click a row.
 
     console.info('[uls-members] Tag admin panel initialized (blank until selection)');
-  }
-
-  // ==================== CLAIM UNLINKED MEMBER ====================
-  function initClaimMember() {
-    var $panel = $('#uls-claim-member');
-    if (!$panel.length) return;
-    if (!$panel.find('#uls-claim-q').length) return;
-
-    var parentCode = ($panel.data('parent') || '').toString();
-    var linkTag    = ($panel.data('link-tag') || '').toString();
-    var timer      = null;
-
-    function showMessage(text, isError) {
-      var $msg = $panel.find('.uls-claim__message');
-      $msg.removeClass('is-success is-error')
-          .addClass(isError ? 'is-error' : 'is-success')
-          .text(text)
-          .show();
-    }
-
-    function setLoading(on) {
-      $panel.toggleClass('is-loading', !!on);
-      $panel.find('.uls-claim__go').prop('disabled', !!on);
-    }
-
-    function statusHtml(row) {
-      if (row.linked_to_viewer) {
-        return '<span class="uls-claim__status is-yours">Linked to you</span>';
-      }
-      if (row.can_claim) {
-        return '<span class="uls-claim__status is-open">Unassigned</span>';
-      }
-      return '<span class="uls-claim__status">' + escHtml(row.block_reason || 'Not claimable') + '</span>';
-    }
-
-    function actionHtml(row) {
-      if (row.can_claim) {
-        return '<button type="button" class="uls-tag-admin__btn uls-tag-admin__btn--primary uls-claim__btn"' +
-               ' data-user-id="' + String(row.user_id) + '"' +
-               ' data-email="' + escHtml(row.email) + '">Claim</button>';
-      }
-      return '';
-    }
-
-    function renderResults(list) {
-      var $box = $panel.find('.uls-claim__results');
-      if (!Array.isArray(list) || !list.length) {
-        $box.html('<p class="uls-claim__empty">No members matched that search.</p>');
-        return;
-      }
-      var html = '<table class="uls-claim__table"><thead><tr>' +
-                 '<th>Name</th><th>Email</th><th>Registered</th><th>Status</th><th></th>' +
-                 '</tr></thead><tbody>';
-      list.forEach(function(row) {
-        var name = (row.display_name || ((row.first_name || '') + ' ' + (row.last_name || '')).trim() || '—');
-        html += '<tr data-user-id="' + String(row.user_id) + '">' +
-                '<td>' + escHtml(name) + '</td>' +
-                '<td>' + escHtml(row.email || '') + '</td>' +
-                '<td>' + escHtml(row.registered || '') + '</td>' +
-                '<td class="uls-claim__status-cell">' + statusHtml(row) + '</td>' +
-                '<td class="uls-claim__action-cell">' + actionHtml(row) + '</td>' +
-                '</tr>';
-      });
-      html += '</tbody></table>';
-      $box.html(html);
-    }
-
-    function patchRow(member) {
-      if (!member || !member.user_id) return;
-      var $tr = $panel.find('tr[data-user-id="' + member.user_id + '"]');
-      if (!$tr.length) return;
-      $tr.find('.uls-claim__status-cell').html(statusHtml(member));
-      $tr.find('.uls-claim__action-cell').html(actionHtml(member));
-    }
-
-    function runSearch() {
-      var q = ($panel.find('#uls-claim-q').val() || '').toString().trim();
-      if (!q) {
-        $panel.find('.uls-claim__results').empty();
-        $panel.find('.uls-claim__message').hide();
-        return;
-      }
-      if (q.length < 3 && q.indexOf('@') === -1) {
-        showMessage('Enter at least 3 characters, or a full email address.', true);
-        return;
-      }
-      setLoading(true);
-      $panel.find('.uls-claim__message').hide();
-      $.post(W.ajaxurl, {
-        action: 'uls_claim_search',
-        nonce: W.nonce,
-        q: q
-      }).done(function(resp) {
-        if (resp && resp.success) {
-          renderResults(resp.data && resp.data.results);
-        } else {
-          showMessage((resp && resp.data && resp.data.message) || 'Search failed', true);
-        }
-      }).fail(function() {
-        showMessage('AJAX error searching members', true);
-      }).always(function() {
-        setLoading(false);
-      });
-    }
-
-    $panel.find('#uls-claim-q').off('input.ulsClaim keydown.ulsClaim')
-      .on('input.ulsClaim', function() {
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(runSearch, 350);
-      })
-      .on('keydown.ulsClaim', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          if (timer) clearTimeout(timer);
-          runSearch();
-        }
-      });
-
-    $panel.off('click.ulsClaim', '.uls-claim__go').on('click.ulsClaim', '.uls-claim__go', function() {
-      if (timer) clearTimeout(timer);
-      runSearch();
-    });
-
-    $panel.off('click.ulsClaim', '.uls-claim__btn').on('click.ulsClaim', '.uls-claim__btn', function() {
-      var $btn = $(this);
-      var userId = parseInt($btn.data('user-id'), 10) || 0;
-      var email  = ($btn.data('email') || '').toString();
-      if (!userId) return;
-      var label = email || ('user #' + userId);
-      if (!confirm('Link ' + label + ' to ' + (linkTag || parentCode) + '?')) return;
-
-      setLoading(true);
-      $.post(W.ajaxurl, {
-        action: 'uls_claim_member',
-        nonce: W.nonce,
-        user_id: userId
-      }).done(function(resp) {
-        if (resp && resp.success) {
-          showMessage((resp.data && resp.data.message) || 'Member linked.', false);
-          if (resp.data && resp.data.member) {
-            patchRow(resp.data.member);
-          } else {
-            runSearch();
-          }
-        } else {
-          showMessage((resp && resp.data && resp.data.message) || 'Claim failed', true);
-          if (resp && resp.data && resp.data.member) {
-            patchRow(resp.data.member);
-          }
-        }
-      }).fail(function() {
-        showMessage('AJAX error claiming member', true);
-      }).always(function() {
-        setLoading(false);
-      });
-    });
-
-    console.info('[uls-members] Claim member panel initialized', parentCode, linkTag);
   }
 
 })(jQuery, window.ULS_MEMBERS || {});

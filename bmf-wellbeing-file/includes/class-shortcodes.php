@@ -188,6 +188,19 @@ class BMF_Wellbeing_Shortcodes {
 			$html .= '</ul>';
 		}
 
+		if ( ! empty( $brief['highlights'] ) ) {
+			$html .= '<h5 class="bmf-wb-h">Highlighted items</h5><ul class="bmf-wb-hi">';
+			foreach ( array_slice( $brief['highlights'], 0, 12 ) as $h ) {
+				$html .= '<li><span class="src">' . esc_html( strtoupper( $h['source'] ?? '' ) ) . '</span> ';
+				$html .= esc_html( $h['prompt'] ?? '' );
+				if ( ! empty( $h['answer_label'] ) ) {
+					$html .= ' — <em>' . esc_html( $h['answer_label'] ) . '</em>';
+				}
+				$html .= '</li>';
+			}
+			$html .= '</ul>';
+		}
+
 		$html .= self::score_block( 'RSI (pulse)', $brief['sources']['rsi']['scores'] ?? [], 'low_better' );
 		$html .= self::score_block( '8 Pillars (cycle)', $brief['sources']['pillars']['scores'] ?? [], 'high_better', 'is-pillars' );
 		if ( ! empty( $brief['sources']['pillars']['master'] ) ) {
@@ -208,19 +221,6 @@ class BMF_Wellbeing_Shortcodes {
 		$fb = $brief['sources']['fitbit'] ?? [];
 		if ( ! empty( $fb['present'] ) ) {
 			$html .= '<p class="bmf-wb-note">Last 7 nights with data: ' . (int) ( $fb['nights_7d'] ?? 0 ) . ' · under 6 hours: ' . (int) ( $fb['short_nights'] ?? 0 ) . '</p>';
-		}
-
-		if ( ! empty( $brief['highlights'] ) ) {
-			$html .= '<h5 class="bmf-wb-h">Highlight items</h5><ul class="bmf-wb-hi">';
-			foreach ( array_slice( $brief['highlights'], 0, 12 ) as $h ) {
-				$html .= '<li><span class="src">' . esc_html( strtoupper( $h['source'] ?? '' ) ) . '</span> ';
-				$html .= esc_html( $h['prompt'] ?? '' );
-				if ( ! empty( $h['answer_label'] ) ) {
-					$html .= ' — <em>' . esc_html( $h['answer_label'] ) . '</em>';
-				}
-				$html .= '</li>';
-			}
-			$html .= '</ul>';
 		}
 
 		$html .= '<p class="bmf-wb-disc">' . esc_html( $brief['disclaimer'] ?? '' ) . '</p>';

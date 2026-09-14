@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.7-poc
+Stable tag: 0.1.8-poc
 License: GPLv2 or later
 
 Canonical wellbeing brief assembled from entry-level self-assessments. WP Fusion gates the page.
@@ -42,6 +42,9 @@ Map version: wellbeing_map_v1 in includes/class-map.php
 3. Add shortcodes on a WP Fusion-gated page
 
 == Changelog ==
+
+= 0.1.8-poc =
+* Highlighted items sit under Themes, before detailed score blocks
 
 = 0.1.7-poc =
 * Profile adapter from uls_ULS_CF_BIO: context strip + cross-source themes
