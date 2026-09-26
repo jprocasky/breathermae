@@ -5,6 +5,18 @@
  * [bmf_key_essentials] — dark results card with the latest score for each of the
  * seven Key Essentials assessments (from uls_key_essentials).
  *
+ * [bmf_key_essentials_trend_chart height="360"] — 7-series Chart.js line trend
+ * (one line per Key Essential). High-better 1–5 scale. No RSI-style groupings.
+ *
+ * [bmf_key_essentials_delta form_id="27"] — current vs previous average for one
+ * Key Essential. form_id may be BMF id 27–33, legacy key_*_form, or slug/alias.
+ * form_id="overall" (or 0 / all) = mean of available Keys as-of the selected
+ * date vs the previous assessment date. High-better: up = green, down = red.
+ *
+ * [bmf_key_essentials_history_select] — date dropdown; sets ?keys_date=YYYY-MM-DD
+ * (same pattern as [bmf_rsi_history_select] / ?rsi_date=). Per-form and overall
+ * deltas plus [bmf_key_essentials] honor that date. Trend chart stays full history.
+ *
  * Reads uls_key_essentials. Rows are written on BMF submit
  * (bmf_response_submitted) and historically by the Elementor
  * elementor_pro/forms/new_record hook in uls-custom.
@@ -48,15 +60,18 @@ class BMF_Key_Essentials_Service {
 	 * Latest row per form_id for a user email.
 	 *
 	 * @param string $email
+	 * @param string $as_of optional Y-m-d or datetime; rows after this day are ignored
 	 * @return array form_id => [ 'average_score'=>float, 'total_score'=>float, 'datetime'=>string, 'id'=>int ]
 	 */
-	public static function get_latest_by_form( $email ) {
+	public static function get_latest_by_form( $email, $as_of = '' ) {
 		global $wpdb;
 
 		$email = trim( (string) $email );
 		if ( $email === '' ) {
 			return [];
 		}
+
+		$cutoff = self::end_of_day( $as_of );
 
 		// Table name matches the legacy insert path in uls-custom (no $wpdb->prefix).
 		$table = 'uls_key_essentials';
@@ -82,15 +97,134 @@ class BMF_Key_Essentials_Service {
 			if ( $fid === '' || isset( $latest[ $fid ] ) ) {
 				continue; // already have a newer row for this form
 			}
+			$dt = (string) ( $row['datetime'] ?? '' );
+			if ( $cutoff !== '' && $dt !== '' && strcmp( $dt, $cutoff ) > 0 ) {
+				continue;
+			}
 			$latest[ $fid ] = [
 				'id'            => (int) $row['id'],
 				'average_score' => isset( $row['average_score'] ) ? (float) $row['average_score'] : null,
 				'total_score'   => isset( $row['total_score'] ) ? (float) $row['total_score'] : null,
-				'datetime'      => (string) ( $row['datetime'] ?? '' ),
+				'datetime'      => $dt,
 			];
 		}
 
 		return $latest;
+	}
+
+	/**
+	 * Distinct assessment days (Y-m-d), newest first.
+	 *
+	 * @return string[]
+	 */
+	public static function get_assessment_dates( $email ) {
+		$history = self::get_history_by_form( $email );
+		$seen    = [];
+		foreach ( $history as $pts ) {
+			foreach ( $pts as $pt ) {
+				$d = $pt['date'] ?? '';
+				if ( $d !== '' ) {
+					$seen[ $d ] = true;
+				}
+			}
+		}
+		$dates = array_keys( $seen );
+		rsort( $dates );
+		return $dates;
+	}
+
+	/** ?keys_date=YYYY-MM-DD from the history select, or empty. */
+	public static function request_as_of_date() {
+		if ( ! isset( $_GET['keys_date'] ) ) {
+			return '';
+		}
+		$raw = sanitize_text_field( wp_unslash( $_GET['keys_date'] ) );
+		$ts  = strtotime( $raw );
+		return $ts ? date( 'Y-m-d', $ts ) : '';
+	}
+
+	/** Inclusive end-of-day mysql datetime, or '' if $as_of empty/invalid. */
+	public static function end_of_day( $as_of ) {
+		$as_of = trim( (string) $as_of );
+		if ( $as_of === '' ) {
+			return '';
+		}
+		$ts = strtotime( $as_of );
+		return $ts ? date( 'Y-m-d 23:59:59', $ts ) : '';
+	}
+
+	/**
+	 * Mean of available Key scores as-of a day vs the previous assessment day.
+	 * Carry-forward: a form completed earlier still counts until it is retaken.
+	 *
+	 * @return array{current:?float,previous:?float,current_date:string,previous_date:string,n_current:int,n_previous:int}
+	 */
+	public static function get_overall_current_and_previous( $email, $as_of = '' ) {
+		$empty = [
+			'current'       => null,
+			'previous'      => null,
+			'current_date'  => '',
+			'previous_date' => '',
+			'n_current'     => 0,
+			'n_previous'    => 0,
+		];
+		$dates = self::get_assessment_dates( $email );
+		if ( empty( $dates ) ) {
+			return $empty;
+		}
+
+		$as_of = trim( (string) $as_of );
+		if ( $as_of !== '' && in_array( $as_of, $dates, true ) ) {
+			$current_date = $as_of;
+		} else {
+			$current_date = $dates[0]; // newest
+		}
+
+		$previous_date = '';
+		foreach ( $dates as $d ) {
+			if ( $d < $current_date ) {
+				$previous_date = $d;
+				break;
+			}
+		}
+
+		$cur_avg = self::overall_as_of( $email, $current_date );
+		$prv_avg = $previous_date !== '' ? self::overall_as_of( $email, $previous_date ) : [ 'average' => null, 'n' => 0 ];
+
+		return [
+			'current'       => $cur_avg['average'],
+			'previous'      => $prv_avg['average'],
+			'current_date'  => $current_date,
+			'previous_date' => $previous_date,
+			'n_current'     => $cur_avg['n'],
+			'n_previous'    => $prv_avg['n'],
+		];
+	}
+
+	/**
+	 * Mean of latest-per-form scores on or before $as_of.
+	 *
+	 * @return array{average:?float,n:int}
+	 */
+	public static function overall_as_of( $email, $as_of ) {
+		$latest = self::get_latest_by_form( $email, $as_of );
+		$vals   = [];
+		foreach ( self::form_catalog() as $fid => $_label ) {
+			$row = $latest[ $fid ] ?? null;
+			if ( $row && $row['average_score'] !== null ) {
+				$vals[] = (float) $row['average_score'];
+			}
+		}
+		$n = count( $vals );
+		return [
+			'average' => $n > 0 ? round( array_sum( $vals ) / $n, 2 ) : null,
+			'n'       => $n,
+		];
+	}
+
+	public static function is_overall_form_attr( $raw ) {
+		$raw = strtolower( trim( (string) $raw ) );
+		return in_array( $raw, [ 'overall', 'all', '0', 'avg', 'average' ], true );
 	}
 
 	/**
@@ -192,6 +326,219 @@ class BMF_Key_Essentials_Service {
 			return $map[ $slug_us ];
 		}
 		return '';
+	}
+
+	/**
+	 * BMF numeric form ids 27–33 → uls_key_essentials.form_id.
+	 * Live slug lookup is preferred when BMF_Repository is available.
+	 */
+	public static function numeric_form_map() {
+		return [
+			27 => 'key_fluid_form',
+			28 => 'key_food_form',
+			29 => 'key_breath_form',
+			30 => 'key_movement_form',
+			31 => 'key_mind_form',
+			32 => 'key_sleep_form',
+			33 => 'key_nature_form',
+		];
+	}
+
+	/**
+	 * Line colors for the 7-series trend (distinct, dark-theme).
+	 */
+	public static function series_colors() {
+		return [
+			'key_fluid_form'    => '#38bdf8',
+			'key_food_form'     => '#34d399',
+			'key_breath_form'   => '#22d3ee',
+			'key_movement_form' => '#fbbf24',
+			'key_mind_form'     => '#a78bfa',
+			'key_sleep_form'    => '#818cf8',
+			'key_nature_form'   => '#4ade80',
+		];
+	}
+
+	/**
+	 * Resolve any form attr (27, key_fluid_form, key-fluid-hydration, fluid)
+	 * to a catalog key used in uls_key_essentials.form_id.
+	 */
+	public static function resolve_catalog_form_id( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( $raw === '' ) {
+			return '';
+		}
+
+		$catalog = self::form_catalog();
+		if ( isset( $catalog[ $raw ] ) ) {
+			return $raw;
+		}
+
+		$legacy = self::resolve_legacy_form_id( $raw, $raw );
+		if ( $legacy !== '' && isset( $catalog[ $legacy ] ) ) {
+			return $legacy;
+		}
+
+		if ( ctype_digit( $raw ) ) {
+			$n   = (int) $raw;
+			$map = self::numeric_form_map();
+			if ( isset( $map[ $n ] ) ) {
+				return $map[ $n ];
+			}
+			if ( class_exists( 'BMF_Repository' ) && method_exists( 'BMF_Repository', 'get_form' ) ) {
+				$form = BMF_Repository::get_form( $n );
+				if ( $form ) {
+					$slug = is_object( $form ) ? ( $form->slug ?? '' ) : ( $form['slug'] ?? '' );
+					$tag  = is_object( $form ) ? ( $form->form_tag ?? '' ) : ( $form['form_tag'] ?? '' );
+					$hit  = self::resolve_legacy_form_id( $slug, $tag );
+					if ( $hit !== '' && isset( $catalog[ $hit ] ) ) {
+						return $hit;
+					}
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Full history per catalog form_id, oldest first.
+	 * Same-day duplicates keep the latest id.
+	 *
+	 * @return array form_id => [ ['date'=>'Y-m-d','datetime'=>...,'average_score'=>float], ... ]
+	 */
+	public static function get_history_by_form( $email ) {
+		global $wpdb;
+
+		$email = trim( (string) $email );
+		if ( $email === '' ) {
+			return [];
+		}
+
+		$table = 'uls_key_essentials';
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, form_id, datetime, average_score
+				 FROM {$table}
+				 WHERE user_email = %s
+				 ORDER BY datetime ASC, id ASC",
+				$email
+			),
+			ARRAY_A
+		);
+		if ( ! $rows ) {
+			return [];
+		}
+
+		$catalog = self::form_catalog();
+		$by_form = [];
+		foreach ( $rows as $row ) {
+			$fid = (string) ( $row['form_id'] ?? '' );
+			if ( $fid === '' || ! isset( $catalog[ $fid ] ) ) {
+				continue;
+			}
+			$dt = (string) ( $row['datetime'] ?? '' );
+			$ts = $dt ? strtotime( $dt ) : false;
+			if ( ! $ts ) {
+				continue;
+			}
+			$day = date( 'Y-m-d', $ts );
+			if ( ! isset( $by_form[ $fid ] ) ) {
+				$by_form[ $fid ] = [];
+			}
+			// Collapse same calendar day to the latest row.
+			$by_form[ $fid ][ $day ] = [
+				'date'          => $day,
+				'datetime'      => $dt,
+				'average_score' => isset( $row['average_score'] ) ? (float) $row['average_score'] : null,
+			];
+		}
+
+		$out = [];
+		foreach ( $catalog as $fid => $_label ) {
+			if ( empty( $by_form[ $fid ] ) ) {
+				$out[ $fid ] = [];
+				continue;
+			}
+			ksort( $by_form[ $fid ] );
+			$out[ $fid ] = array_values( $by_form[ $fid ] );
+		}
+		return $out;
+	}
+
+	/**
+	 * Current + previous average_score for one form.
+	 * $as_of is Y-m-d or mysql datetime; empty = latest.
+	 *
+	 * @return array{current:?float,previous:?float,current_date:string,previous_date:string}
+	 */
+	public static function get_current_and_previous( $email, $legacy_form_id, $as_of = '' ) {
+		$empty = [
+			'current'       => null,
+			'previous'      => null,
+			'current_date'  => '',
+			'previous_date' => '',
+		];
+		$email          = trim( (string) $email );
+		$legacy_form_id = (string) $legacy_form_id;
+		if ( $email === '' || $legacy_form_id === '' ) {
+			return $empty;
+		}
+
+		global $wpdb;
+		$table = 'uls_key_essentials';
+
+		$as_of = trim( (string) $as_of );
+		$as_of_sql = '';
+		if ( $as_of !== '' ) {
+			$ts = strtotime( $as_of );
+			if ( $ts ) {
+				// Inclusive end of the given day.
+				$as_of_sql = date( 'Y-m-d 23:59:59', $ts );
+			}
+		}
+
+		if ( $as_of_sql !== '' ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT datetime, average_score
+					 FROM {$table}
+					 WHERE user_email = %s AND form_id = %s AND datetime <= %s
+					 ORDER BY datetime DESC, id DESC
+					 LIMIT 2",
+					$email,
+					$legacy_form_id,
+					$as_of_sql
+				),
+				ARRAY_A
+			);
+		} else {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT datetime, average_score
+					 FROM {$table}
+					 WHERE user_email = %s AND form_id = %s
+					 ORDER BY datetime DESC, id DESC
+					 LIMIT 2",
+					$email,
+					$legacy_form_id
+				),
+				ARRAY_A
+			);
+		}
+
+		if ( empty( $rows ) ) {
+			return $empty;
+		}
+
+		$cur = $rows[0];
+		$prv = $rows[1] ?? null;
+		return [
+			'current'       => isset( $cur['average_score'] ) && $cur['average_score'] !== '' ? (float) $cur['average_score'] : null,
+			'previous'      => ( $prv && isset( $prv['average_score'] ) && $prv['average_score'] !== '' ) ? (float) $prv['average_score'] : null,
+			'current_date'  => (string) ( $cur['datetime'] ?? '' ),
+			'previous_date' => $prv ? (string) ( $prv['datetime'] ?? '' ) : '',
+		];
 	}
 }
 
@@ -335,8 +682,19 @@ class BMF_Key_Essentials_Saver {
 class BMF_Key_Essentials_Shortcodes {
 
 	public static function init() {
-		add_shortcode( 'bmf_key_essentials', [ __CLASS__, 'render' ] );
+		add_shortcode( 'bmf_key_essentials',               [ __CLASS__, 'render' ] );
+		add_shortcode( 'bmf_key_essentials_trend_chart',   [ __CLASS__, 'shortcode_trend_chart' ] );
+		add_shortcode( 'bmf_key_essentials_delta',         [ __CLASS__, 'shortcode_delta' ] );
+		add_shortcode( 'bmf_key_essentials_history_select',[ __CLASS__, 'shortcode_history_select' ] );
 		BMF_Key_Essentials_Saver::init();
+	}
+
+	private static function should_bail_for_editor(): bool {
+		$disable = apply_filters( 'bmf/shortcodes/disable_in_elementor', true );
+		if ( ! $disable ) {
+			return false;
+		}
+		return function_exists( 'bmf_in_elementor_editor' ) && bmf_in_elementor_editor();
 	}
 
 	/**
@@ -363,7 +721,8 @@ class BMF_Key_Essentials_Shortcodes {
 		}
 
 		$catalog = BMF_Key_Essentials_Service::form_catalog();
-		$latest  = BMF_Key_Essentials_Service::get_latest_by_form( $email );
+		$as_of   = BMF_Key_Essentials_Service::request_as_of_date();
+		$latest  = BMF_Key_Essentials_Service::get_latest_by_form( $email, $as_of );
 
 		$items        = [];
 		$sum          = 0.0;
@@ -482,6 +841,458 @@ class BMF_Key_Essentials_Shortcodes {
 		</article>
 		<?php
 		return ob_get_clean();
+	}
+
+	/**
+	 * [bmf_key_essentials_history_select user_id="" email=""]
+	 *
+	 * Dropdown of distinct Key Essentials days. On change, sets ?keys_date=
+	 * and reloads — same mechanism as [bmf_rsi_history_select] / rsi_date.
+	 */
+	public static function shortcode_history_select( $atts ) {
+		if ( self::should_bail_for_editor() ) {
+			return '';
+		}
+
+		$atts = shortcode_atts(
+			[
+				'user_id' => get_current_user_id(),
+				'email'   => '',
+			],
+			$atts,
+			'bmf_key_essentials_history_select'
+		);
+
+		if ( ! is_user_logged_in() && empty( $atts['email'] ) && empty( $atts['user_id'] ) ) {
+			return '';
+		}
+
+		$email = BMF_Key_Essentials_Service::resolve_email( $atts['user_id'], $atts['email'] );
+		if ( $email === '' ) {
+			return '';
+		}
+
+		$dates = BMF_Key_Essentials_Service::get_assessment_dates( $email );
+		if ( empty( $dates ) ) {
+			return '';
+		}
+
+		$selected = BMF_Key_Essentials_Service::request_as_of_date();
+		if ( $selected === '' || ! in_array( $selected, $dates, true ) ) {
+			$selected = $dates[0];
+		}
+
+		$uid = 'bmf_ke_date_select_' . wp_unique_id();
+
+		ob_start();
+		?>
+		<div class="bmf-ke-history-select" style="margin-bottom:10px; font-size:0.9rem; color:#001d50; display:flex; align-items:center; gap:8px;">
+			<b style="white-space:nowrap;">Assessment Date:</b>
+			<select id="<?php echo esc_attr( $uid ); ?>" style="padding:4px 8px; font-size:0.9rem; border:1px solid #001d50; border-radius:4px; width:150px;">
+				<?php foreach ( $dates as $d ) : ?>
+					<option value="<?php echo esc_attr( $d ); ?>" <?php selected( $selected, $d ); ?>>
+						<?php echo esc_html( date( 'M j, Y', strtotime( $d ) ) ); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+		<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var el = document.getElementById(<?php echo wp_json_encode( $uid ); ?>);
+			if (!el) return;
+			el.addEventListener('change', function() {
+				var selected = this.value;
+				var url = new URL(window.location.href);
+				if (selected) {
+					url.searchParams.set('keys_date', selected);
+				} else {
+					url.searchParams.delete('keys_date');
+				}
+				window.location.href = url.toString();
+			});
+		});
+		</script>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * [bmf_key_essentials_trend_chart height="360" user_id="" email=""]
+	 *
+	 * Seven independent lines (no driver/mediator/outcome rollup).
+	 * Y = average_score 1–5, high better. X = calendar dates of submissions.
+	 */
+	public static function shortcode_trend_chart( $atts ) {
+		if ( self::should_bail_for_editor() ) {
+			return '<div style="padding:20px;background:#0b1220;color:#94a3b8;border-radius:12px;">Key Essentials trend preview</div>';
+		}
+
+		$atts = shortcode_atts(
+			[
+				'user_id' => get_current_user_id(),
+				'email'   => '',
+				'height'  => '360',
+			],
+			$atts,
+			'bmf_key_essentials_trend_chart'
+		);
+
+		if ( ! is_user_logged_in() && empty( $atts['email'] ) && empty( $atts['user_id'] ) ) {
+			return '<p class="bmf-ke-login">Please log in to view your Key Essentials trend.</p>';
+		}
+
+		$email = BMF_Key_Essentials_Service::resolve_email( $atts['user_id'], $atts['email'] );
+		if ( $email === '' ) {
+			return '<p class="bmf-ke-empty">Unable to resolve user for Key Essentials trend.</p>';
+		}
+
+		$catalog = BMF_Key_Essentials_Service::form_catalog();
+		$colors  = BMF_Key_Essentials_Service::series_colors();
+		$history = BMF_Key_Essentials_Service::get_history_by_form( $email );
+
+		$series = [];
+		$latest = [];
+		$min_ts = null;
+		$max_ts = null;
+		$n_pts  = 0;
+		foreach ( $catalog as $fid => $label ) {
+			$series[ $fid ] = [];
+			$latest[ $fid ] = null;
+			foreach ( $history[ $fid ] ?? [] as $pt ) {
+				if ( $pt['average_score'] === null ) {
+					continue;
+				}
+				$ts = strtotime( $pt['date'] . ' 00:00:00' );
+				if ( ! $ts ) {
+					continue;
+				}
+				$series[ $fid ][] = [ 'x' => $ts * 1000, 'y' => round( (float) $pt['average_score'], 2 ) ];
+				$latest[ $fid ]   = round( (float) $pt['average_score'], 2 );
+				$n_pts++;
+				if ( $min_ts === null || $ts < $min_ts ) {
+					$min_ts = $ts;
+				}
+				if ( $max_ts === null || $ts > $max_ts ) {
+					$max_ts = $ts;
+				}
+			}
+		}
+
+		if ( $n_pts === 0 ) {
+			return '<div class="bmf-ke-trend-empty" style="padding:24px;text-align:center;color:#8892a4;background:#0b1220;border-radius:12px;">No historical Key Essentials data</div>';
+		}
+
+		// Pad the window; keep at least ~90 days so a couple of points are readable.
+		$pad     = 7 * DAY_IN_SECONDS;
+		$x_min   = ( $min_ts - $pad ) * 1000;
+		$span    = max( 1, $max_ts - $min_ts );
+		$min_win = 90 * DAY_IN_SECONDS;
+		if ( $span < $min_win ) {
+			$x_max = ( $min_ts + $min_win + $pad ) * 1000;
+		} else {
+			$x_max = ( $max_ts + $pad ) * 1000;
+		}
+
+		$height       = max( 240, (int) $atts['height'] );
+		$point_radius = ( $n_pts > 48 ) ? 2.5 : ( ( $n_pts > 21 ) ? 3.5 : 5 );
+		$point_hover  = $point_radius + 2;
+		$uid          = 'bmf_ke_trend_' . (int) $atts['user_id'] . '_' . wp_unique_id();
+
+		$datasets = [];
+		foreach ( $catalog as $fid => $label ) {
+			$c = $colors[ $fid ] ?? '#94a3b8';
+			$datasets[] = [
+				'key'   => $fid,
+				'label' => $label,
+				'color' => $c,
+				'data'  => $series[ $fid ],
+			];
+		}
+
+		ob_start();
+		?>
+<div class="bmf-ke-trend-wrap" style="background:#0b1220;border-radius:16px;padding:20px 16px 16px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+    <div>
+      <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#38bdf8;">Key Essentials</div>
+      <div style="font-size:1.05rem;font-weight:650;color:#f8fafc;">History trend</div>
+    </div>
+    <div style="font-size:0.78rem;color:#94a3b8;">1–5 scale · higher is better · click a name to hide</div>
+  </div>
+  <div style="position:relative;height:<?php echo (int) $height; ?>px;">
+    <canvas id="<?php echo esc_attr( $uid ); ?>"></canvas>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:12px 16px;justify-content:center;margin-top:14px;font-size:0.8rem;">
+    <?php foreach ( $datasets as $ds ) : ?>
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:3px;background:<?php echo esc_attr( $ds['color'] ); ?>;border-radius:2px;display:inline-block;"></span>
+      <?php echo esc_html( $ds['label'] ); ?>
+      <?php if ( $latest[ $ds['key'] ] !== null ) : ?>
+        <strong style="color:<?php echo esc_attr( $ds['color'] ); ?>;"><?php echo esc_html( number_format( $latest[ $ds['key'] ], 2 ) ); ?></strong>
+      <?php endif; ?>
+    </span>
+    <?php endforeach; ?>
+  </div>
+</div>
+<script>
+(function(){
+  var canvasId = <?php echo wp_json_encode( $uid ); ?>;
+  var datasetsIn = <?php echo wp_json_encode( $datasets ); ?>;
+  var xMin = <?php echo (int) $x_min; ?>;
+  var xMax = <?php echo (int) $x_max; ?>;
+  var ptRadius = <?php echo (float) $point_radius; ?>;
+  var ptHover = <?php echo (float) $point_hover; ?>;
+
+  function loadScript(src, cb) {
+    if (document.querySelector('script[src="'+src+'"]')) { cb(); return; }
+    var s = document.createElement('script');
+    s.src = src; s.onload = cb; document.head.appendChild(s);
+  }
+
+  function boot() {
+    loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', function(){
+      loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js', function(){
+        render();
+      });
+    });
+  }
+
+  function render() {
+    var ctx = document.getElementById(canvasId);
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    var zonePlugin = {
+      id: 'bmfKeZones',
+      beforeDraw: function(chart) {
+        var y = chart.scales.y;
+        var x = chart.scales.x;
+        var areas = [
+          { from: 4.5, to: 5.0, color: 'rgba(52,211,153,0.12)' },
+          { from: 3.5, to: 4.5, color: 'rgba(34,211,238,0.10)' },
+          { from: 2.5, to: 3.5, color: 'rgba(96,165,250,0.08)' },
+          { from: 1.0, to: 2.5, color: 'rgba(251,191,36,0.10)' }
+        ];
+        var ctx2 = chart.ctx;
+        areas.forEach(function(a){
+          var y1 = y.getPixelForValue(a.to);
+          var y2 = y.getPixelForValue(a.from);
+          ctx2.fillStyle = a.color;
+          ctx2.fillRect(x.left, y1, x.right - x.left, y2 - y1);
+        });
+      }
+    };
+
+    var glowPlugin = {
+      id: 'bmfKeGlow',
+      beforeDatasetDraw: function(chart, args) {
+        var ctx2 = chart.ctx;
+        var ds   = chart.data.datasets[args.index];
+        if (!ds) return;
+        ctx2.save();
+        ctx2.shadowColor   = ds.borderColor || 'rgba(255,255,255,0.4)';
+        ctx2.shadowBlur    = 6;
+        ctx2.shadowOffsetX = 0;
+        ctx2.shadowOffsetY = 3;
+      },
+      afterDatasetDraw: function(chart) {
+        chart.ctx.restore();
+      }
+    };
+
+    var datasets = datasetsIn.map(function(ds){
+      return {
+        label: ds.label,
+        data: ds.data,
+        borderColor: ds.color,
+        backgroundColor: ds.color,
+        borderWidth: 2.25,
+        pointRadius: ptRadius,
+        pointHoverRadius: ptHover,
+        pointBackgroundColor: '#0b1220',
+        pointBorderColor: ds.color,
+        pointBorderWidth: 2,
+        tension: 0.35,
+        spanGaps: true
+      };
+    });
+
+    new Chart(ctx, {
+      type: 'line',
+      data: { datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: '#cbd5e1', boxWidth: 12, font: { size: 11 }, padding: 12 }
+          },
+          tooltip: {
+            backgroundColor: '#121a2b',
+            titleColor: '#e2e8f0',
+            bodyColor: '#cbd5e1',
+            borderColor: '#1e2a44',
+            borderWidth: 1,
+            callbacks: {
+              title: function(items) {
+                if (!items.length) return '';
+                var d = new Date(items[0].parsed.x);
+                return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+              },
+              label: function(item) {
+                var v = item.parsed.y;
+                return item.dataset.label + ': ' + (v == null ? '—' : Number(v).toFixed(2));
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            min: xMin,
+            max: xMax,
+            time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+            grid: { color: 'rgba(30,42,68,0.8)', drawBorder: false },
+            ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+          },
+          y: {
+            min: 1,
+            max: 5,
+            grid: { color: 'rgba(30,42,68,0.6)', drawBorder: false },
+            ticks: {
+              stepSize: 1,
+              color: function(ctx) {
+                var v = ctx.tick && ctx.tick.value;
+                if (v === 5) return '#34d399';
+                if (v === 4) return '#22d3ee';
+                if (v === 3) return '#60a5fa';
+                if (v === 2) return '#fbbf24';
+                if (v === 1) return '#f59e0b';
+                return '#94a3b8';
+              },
+              callback: function(v) {
+                if (v === 5) return '5  EXCELLENT';
+                if (v === 4) return '4  STRONG';
+                if (v === 3) return '3  BUILDING';
+                if (v === 2) return '2  EARLY';
+                if (v === 1) return '1  FOCUS';
+                return v;
+              }
+            }
+          }
+        }
+      },
+      plugins: [ zonePlugin, glowPlugin ]
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * [bmf_key_essentials_delta form_id="27" user_id="" decimals="2" show_arrow="1" show_sign="1" colorize="1"]
+	 *
+	 * Current vs previous average_score for one Key Essential.
+	 * High-better: increase = green ↑, decrease = red ↓.
+	 * form_id accepts 27–33, key_fluid_form, key-fluid-hydration, fluid, etc.
+	 * Optional ?keys_date=YYYY-MM-DD pins "current" to that date.
+	 */
+	public static function shortcode_delta( $atts ) {
+		if ( self::should_bail_for_editor() ) {
+			return '';
+		}
+
+		$atts = shortcode_atts(
+			[
+				'form_id'    => '',
+				'form'       => '',
+				'user_id'    => get_current_user_id(),
+				'email'      => '',
+				'decimals'   => '2',
+				'show_arrow' => '1',
+				'show_sign'  => '1',
+				'colorize'   => '1',
+			],
+			$atts,
+			'bmf_key_essentials_delta'
+		);
+
+		$form_raw = trim( (string) $atts['form_id'] );
+		if ( $form_raw === '' ) {
+			$form_raw = trim( (string) $atts['form'] );
+		}
+
+		$email = BMF_Key_Essentials_Service::resolve_email( $atts['user_id'], $atts['email'] );
+		if ( $email === '' ) {
+			return '';
+		}
+
+		$as_of = BMF_Key_Essentials_Service::request_as_of_date();
+		$is_overall = BMF_Key_Essentials_Service::is_overall_form_attr( $form_raw );
+
+		if ( $is_overall ) {
+			$pair = BMF_Key_Essentials_Service::get_overall_current_and_previous( $email, $as_of );
+		} else {
+			$legacy = BMF_Key_Essentials_Service::resolve_catalog_form_id( $form_raw );
+			if ( $legacy === '' ) {
+				return '';
+			}
+			$pair = BMF_Key_Essentials_Service::get_current_and_previous( $email, $legacy, $as_of );
+		}
+		if ( $pair['current'] === null ) {
+			return '0';
+		}
+		if ( $pair['previous'] === null ) {
+			$out = '0';
+			if ( (int) $atts['colorize'] === 1 ) {
+				$out = '<span style="color:#888888;">' . $out . '</span>';
+			}
+			return $out;
+		}
+
+		$delta = (float) $pair['current'] - (float) $pair['previous'];
+		$dec   = max( 0, (int) $atts['decimals'] );
+		$num   = number_format( abs( $delta ), $dec, '.', ',' );
+
+		$sign = '';
+		if ( (int) $atts['show_sign'] === 1 ) {
+			if ( $delta > 0 ) {
+				$sign = '+';
+			} elseif ( $delta < 0 ) {
+				$sign = '−';
+			}
+		}
+		$arrow = '';
+		if ( (int) $atts['show_arrow'] === 1 ) {
+			if ( $delta > 0 ) {
+				$arrow = ' ↑';
+			} elseif ( $delta < 0 ) {
+				$arrow = ' ↓';
+			}
+		}
+		$out = $sign . $num . $arrow;
+
+		// High-better: up is good.
+		if ( (int) $atts['colorize'] === 1 ) {
+			if ( $delta > 0 ) {
+				$color = '#44dd30';
+			} elseif ( $delta < 0 ) {
+				$color = '#c62828';
+			} else {
+				$color = '#888888';
+			}
+			$out = '<span style="color:' . esc_attr( $color ) . ';">' . $out . '</span>';
+		}
+		return $out;
 	}
 
 	/**
