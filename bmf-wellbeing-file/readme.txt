@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.8-poc
+Stable tag: 0.1.9-poc
 License: GPLv2 or later
 
 Canonical wellbeing brief assembled from entry-level self-assessments. WP Fusion gates the page.
@@ -42,6 +42,11 @@ Map version: wellbeing_map_v1 in includes/class-map.php
 3. Add shortcodes on a WP Fusion-gated page
 
 == Changelog ==
+
+= 0.1.9-poc =
+* Systems snapshot grouped by membership: Complementary / Art of Wellness / 360
+* Rapid 8 Pillars is its own weekly source (series=rapid); Complete 8 Pillars stays 90-day
+* Thin divider between membership groups; score blocks and history follow the same order
 
 = 0.1.8-poc =
 * Highlighted items sit under Themes, before detailed score blocks

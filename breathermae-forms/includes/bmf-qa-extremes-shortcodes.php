@@ -167,6 +167,9 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			if ( $require ) {
 				$sql .= ' AND is_final = 1';
 			}
+			if ( $key === 'pillars' ) {
+				$sql .= " AND ( series = 'full' OR series IS NULL OR series = '' )";
+			}
 			$sql .= " ORDER BY `{$col}` DESC";
 
 			$rows = $wpdb->get_col( $wpdb->prepare( $sql, $email ) );
@@ -270,7 +273,7 @@ if ( ! class_exists( 'BMF_QA_Extremes_Shortcodes' ) ) {
 			$t   = $wpdb->prefix . 'bm_pillars_results';
 			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT * FROM {$t} WHERE user_email = %s AND results_date = %s AND is_final = 1 ORDER BY id DESC LIMIT 1",
+					"SELECT * FROM {$t} WHERE user_email = %s AND results_date = %s AND is_final = 1 AND ( series = 'full' OR series IS NULL OR series = '' ) ORDER BY id DESC LIMIT 1",
 					$user->user_email, $date
 				),
 				ARRAY_A

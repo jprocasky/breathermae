@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Breathermae Forms
  * Description: Dynamic multi-step forms with section-level choices, CSV importer, autosave, and scoring.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Jeff Procasky - Breathermae
  */
 if (!defined('ABSPATH')) exit;
@@ -72,7 +72,28 @@ private function __construct() {
 
             $GLOBALS['bmf_last_interpretation'] = $interp;
 
-            update_user_meta($user_id, 'bmf_interpretation', wp_json_encode($interp));
+            $form_id_for_interp = 0;
+            if ( $response_id ) {
+                global $wpdb;
+                $form_id_for_interp = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT form_id FROM {$wpdb->prefix}bm_responses WHERE id = %d",
+                        $response_id
+                    )
+                );
+            }
+
+            $is_rapid = class_exists('BMF_Pillars_Saver')
+                && BMF_Pillars_Saver::is_rapid_form( $form_id_for_interp );
+
+            if ( $is_rapid ) {
+                BMF_Pillars_Saver::save_rapid_from_response( $user_id, $response_id, $interp );
+                if ( ! empty( $interp ) ) {
+                    update_user_meta( $user_id, 'bmf_interpretation_rapid', wp_json_encode( $interp ) );
+                }
+            } elseif ( is_array( $interp ) && ! empty( $interp['summary'] ) ) {
+                update_user_meta( $user_id, 'bmf_interpretation', wp_json_encode( $interp ) );
+            }
 
             bm_log('INTERPRETATION RESULT | ' . json_encode($interp));            
 
@@ -243,6 +264,12 @@ private function __construct() {
     }
 
     public function init() {
+        if ( class_exists( 'BMF_Repository' ) ) {
+            BMF_Repository::maybe_upgrade_pillars_schema();
+            if ( is_admin() && class_exists( 'BMF_Pillars_Saver' ) ) {
+                BMF_Pillars_Saver::backfill_rapid_rows();
+            }
+        }
         BMF_Shortcodes::register();
     }
 

@@ -1,6 +1,6 @@
 {
-  "map_version": "v1",
-  "plugin": "0.1.7-poc",
+  "map_version": "v1.1",
+  "plugin": "0.1.9-poc",
   "generated_at": "2026-09-12T21:00:00+00:00",
   "is_fixture": true,
   "voice": "member",
@@ -81,27 +81,27 @@
         }
       ]
     },
-    "pillars": {
-      "key": "pillars",
-      "label": "8 Pillars",
+    "pillars_rapid": {
+      "key": "pillars_rapid",
+      "label": "Rapid 8 Pillars",
       "enabled": true,
-      "clock": "cycle",
+      "clock": "pulse",
       "present": true,
       "status": "fresh",
-      "date": "2026-07-20",
-      "age_days": 54,
-      "master": 61.4,
+      "date": "2026-09-10",
+      "age_days": 2,
+      "master": 56.0,
       "scores": [
         {
           "code": "physical",
           "label": "Physical",
-          "value": 68.0,
+          "value": 62.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "building",
             "label": "Building",
-            "ratio": 0.68
+            "ratio": 0.62
           },
           "domains": [
             "sleep_recovery",
@@ -111,13 +111,13 @@
         {
           "code": "mental",
           "label": "Mental",
-          "value": 54.0,
+          "value": 51.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "watch",
             "label": "Watch",
-            "ratio": 0.54
+            "ratio": 0.51
           },
           "domains": [
             "mind_emotion"
@@ -126,13 +126,13 @@
         {
           "code": "emotional",
           "label": "Emotional",
-          "value": 49.0,
+          "value": 47.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "watch",
             "label": "Watch",
-            "ratio": 0.49
+            "ratio": 0.47
           },
           "domains": [
             "mind_emotion"
@@ -141,13 +141,13 @@
         {
           "code": "financial",
           "label": "Financial",
-          "value": 72.0,
+          "value": 69.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "building",
             "label": "Building",
-            "ratio": 0.72
+            "ratio": 0.69
           },
           "domains": [
             "resources"
@@ -156,13 +156,13 @@
         {
           "code": "occupational",
           "label": "Occupational",
-          "value": 41.0,
+          "value": 38.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "watch",
             "label": "Watch",
-            "ratio": 0.41
+            "ratio": 0.38
           },
           "domains": [
             "occupational_demand"
@@ -171,13 +171,13 @@
         {
           "code": "environmental",
           "label": "Environmental",
-          "value": 63.0,
+          "value": 60.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "building",
             "label": "Building",
-            "ratio": 0.63
+            "ratio": 0.6
           },
           "domains": [
             "environment_breath"
@@ -186,13 +186,13 @@
         {
           "code": "spiritual",
           "label": "Spiritual",
-          "value": 70.0,
+          "value": 66.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "building",
             "label": "Building",
-            "ratio": 0.7
+            "ratio": 0.66
           },
           "domains": [
             "connection_meaning"
@@ -201,13 +201,13 @@
         {
           "code": "social",
           "label": "Social",
-          "value": 58.0,
+          "value": 55.0,
           "scale": 100,
           "direction": "high_better",
           "band": {
             "key": "watch",
             "label": "Watch",
-            "ratio": 0.58
+            "ratio": 0.55
           },
           "domains": [
             "resources",
@@ -216,46 +216,54 @@
         }
       ],
       "comparison": {
-        "master": 61.4,
+        "master": 56.0,
         "items": [
           {
             "perceived": "Occupational",
             "actual": "Financial",
-            "score": 72.0,
+            "score": 69.0,
             "diff": 2
           },
           {
             "perceived": "Physical",
             "actual": "Spiritual",
-            "score": 70.0,
+            "score": 66.0,
             "diff": -1
           },
           {
             "perceived": "Financial",
             "actual": "Physical",
-            "score": 68.0,
+            "score": 62.0,
             "diff": 2
           }
         ]
       },
       "history": [
         {
-          "date": "2026-01-18",
-          "master": 58.2
+          "date": "2026-08-13",
+          "master": 53.0
         },
         {
-          "date": "2026-04-20",
-          "master": 60.1
+          "date": "2026-08-20",
+          "master": 54.5
         },
         {
-          "date": "2026-07-20",
-          "master": 61.4
+          "date": "2026-08-27",
+          "master": 55.2
+        },
+        {
+          "date": "2026-09-03",
+          "master": 54.8
+        },
+        {
+          "date": "2026-09-10",
+          "master": 56.0
         }
       ]
     },
     "keys": {
       "key": "keys",
-      "label": "Key Essentials",
+      "label": "Key Life Essentials",
       "enabled": true,
       "clock": "state",
       "present": true,
@@ -434,6 +442,178 @@
           "date": "2026-09-01",
           "overall": 52,
           "n": 7
+        }
+      ]
+    },
+    "pillars": {
+      "key": "pillars",
+      "label": "Complete 8 Pillars",
+      "enabled": true,
+      "clock": "cycle",
+      "present": true,
+      "status": "fresh",
+      "date": "2026-07-20",
+      "age_days": 54,
+      "master": 61.4,
+      "scores": [
+        {
+          "code": "physical",
+          "label": "Physical",
+          "value": 68.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.68
+          },
+          "domains": [
+            "sleep_recovery",
+            "movement"
+          ]
+        },
+        {
+          "code": "mental",
+          "label": "Mental",
+          "value": 54.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.54
+          },
+          "domains": [
+            "mind_emotion"
+          ]
+        },
+        {
+          "code": "emotional",
+          "label": "Emotional",
+          "value": 49.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.49
+          },
+          "domains": [
+            "mind_emotion"
+          ]
+        },
+        {
+          "code": "financial",
+          "label": "Financial",
+          "value": 72.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.72
+          },
+          "domains": [
+            "resources"
+          ]
+        },
+        {
+          "code": "occupational",
+          "label": "Occupational",
+          "value": 41.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.41
+          },
+          "domains": [
+            "occupational_demand"
+          ]
+        },
+        {
+          "code": "environmental",
+          "label": "Environmental",
+          "value": 63.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.63
+          },
+          "domains": [
+            "environment_breath"
+          ]
+        },
+        {
+          "code": "spiritual",
+          "label": "Spiritual",
+          "value": 70.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "building",
+            "label": "Building",
+            "ratio": 0.7
+          },
+          "domains": [
+            "connection_meaning"
+          ]
+        },
+        {
+          "code": "social",
+          "label": "Social",
+          "value": 58.0,
+          "scale": 100,
+          "direction": "high_better",
+          "band": {
+            "key": "watch",
+            "label": "Watch",
+            "ratio": 0.58
+          },
+          "domains": [
+            "resources",
+            "connection_meaning"
+          ]
+        }
+      ],
+      "comparison": {
+        "master": 61.4,
+        "items": [
+          {
+            "perceived": "Occupational",
+            "actual": "Financial",
+            "score": 72.0,
+            "diff": 2
+          },
+          {
+            "perceived": "Physical",
+            "actual": "Spiritual",
+            "score": 70.0,
+            "diff": -1
+          },
+          {
+            "perceived": "Financial",
+            "actual": "Physical",
+            "score": 68.0,
+            "diff": 2
+          }
+        ]
+      },
+      "history": [
+        {
+          "date": "2026-01-18",
+          "master": 58.2
+        },
+        {
+          "date": "2026-04-20",
+          "master": 60.1
+        },
+        {
+          "date": "2026-07-20",
+          "master": 61.4
         }
       ]
     },
@@ -908,6 +1088,26 @@
       "evidence": {
         "keys.movement": 2.2,
         "pillars.physical": 68.0
+      }
+    },
+    {
+      "code": "pillars_awareness_gap",
+      "severity": "info",
+      "title": "Perceived vs scored pillar rank differs",
+      "member": "How you ranked your Complete 8 Pillars and how they scored are not the same. That gap is useful \u2014 it often points at what you notice versus what is carrying load.",
+      "provider": "Two or more Complete 8 Pillars differ by \u22652 rank positions (perceived vs scored). Treat as awareness gap, not inconsistency.",
+      "evidence": {
+        "mismatch_count": 2
+      }
+    },
+    {
+      "code": "pillars_rapid_awareness_gap",
+      "severity": "info",
+      "title": "Rapid snapshot rank differs from scores",
+      "member": "Your Rapid 8 Pillars ranking and scored order are not the same. On a weekly snapshot that gap is a noticing cue, not a full lifestyle reading.",
+      "provider": "Rapid 8 Pillars: two or more pillars differ by \u22652 rank positions. Pulse clock \u2014 do not equate with the 90-day Complete 8 Pillars cycle.",
+      "evidence": {
+        "rapid_mismatch_count": 2
       }
     },
     {

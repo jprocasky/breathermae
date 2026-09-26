@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class BMF_Wellbeing_Map {
 
-	public const VERSION = 'v1';
+	public const VERSION = 'v1.1';
 
 	public static function definition(): array {
 		$map = [
@@ -41,21 +41,23 @@ class BMF_Wellbeing_Map {
 					'direction'         => 'low_better',
 					'scale'             => 100,
 					'assessment_key'    => 'rsi',
+					'tier'              => 'complementary',
 				],
-				'pillars' => [
+				'pillars_rapid' => [
 					'enabled'           => true,
-					'label'             => '8 Pillars',
-					'clock'             => 'cycle',
-					'recommended_days'  => 90,
-					'aging_days'        => 100,
-					'stale_days'        => 120,
+					'label'             => 'Rapid 8 Pillars',
+					'clock'             => 'pulse',
+					'recommended_days'  => 7,
+					'aging_days'        => 14,
+					'stale_days'        => 21,
 					'direction'         => 'high_better',
 					'scale'             => 100,
-					'assessment_key'    => 'pillars',
+					'assessment_key'    => '',
+					'tier'              => 'complementary',
 				],
 				'keys' => [
 					'enabled'           => true,
-					'label'             => 'Key Essentials',
+					'label'             => 'Key Life Essentials',
 					'clock'             => 'state',
 					'recommended_days'  => 14,
 					'aging_days'        => 21,
@@ -63,10 +65,23 @@ class BMF_Wellbeing_Map {
 					'direction'         => 'high_better',
 					'scale'             => 5,
 					'assessment_key'    => 'keys',
+					'tier'              => 'art',
 				],
-				'bsi'      => [ 'enabled' => true, 'label' => 'BSI', 'clock' => 'cycle', 'recommended_days' => 90, 'aging_days' => 100, 'stale_days' => 120, 'direction' => 'low_better', 'scale' => 100, 'assessment_key' => 'bsi' ],
-				'biovoice' => [ 'enabled' => true, 'label' => 'BioVoicePrint', 'clock' => 'state', 'recommended_days' => 30, 'aging_days' => 45, 'stale_days' => 60, 'direction' => 'low_better', 'scale' => 100 ],
-				'fitbit'   => [ 'enabled' => true, 'label' => 'Fitbit', 'clock' => 'state', 'recommended_days' => 1, 'aging_days' => 3, 'stale_days' => 7, 'direction' => 'high_better' ],
+				'pillars' => [
+					'enabled'           => true,
+					'label'             => 'Complete 8 Pillars',
+					'clock'             => 'cycle',
+					'recommended_days'  => 90,
+					'aging_days'        => 100,
+					'stale_days'        => 120,
+					'direction'         => 'high_better',
+					'scale'             => 100,
+					'assessment_key'    => 'pillars',
+					'tier'              => 'art',
+				],
+				'bsi'      => [ 'enabled' => true, 'label' => 'BSI', 'clock' => 'cycle', 'recommended_days' => 90, 'aging_days' => 100, 'stale_days' => 120, 'direction' => 'low_better', 'scale' => 100, 'assessment_key' => 'bsi', 'tier' => '360' ],
+				'biovoice' => [ 'enabled' => true, 'label' => 'BioVoicePrint', 'clock' => 'state', 'recommended_days' => 30, 'aging_days' => 45, 'stale_days' => 60, 'direction' => 'low_better', 'scale' => 100, 'tier' => '360' ],
+				'fitbit'   => [ 'enabled' => true, 'label' => 'Fitbit', 'clock' => 'state', 'recommended_days' => 1, 'aging_days' => 3, 'stale_days' => 7, 'direction' => 'high_better', 'tier' => '360' ],
 				'profile'  => [ 'enabled' => true, 'label' => 'Profile', 'clock' => 'context', 'recommended_days' => 3650, 'aging_days' => 3650, 'stale_days' => 3650, 'direction' => 'context' ],
 				'whoop'    => [ 'enabled' => false, 'label' => 'Whoop', 'clock' => 'state', 'reserved' => true ],
 				'oura'     => [ 'enabled' => false, 'label' => 'Oura', 'clock' => 'state', 'reserved' => true ],
@@ -118,6 +133,32 @@ class BMF_Wellbeing_Map {
 				$out[] = $m;
 			}
 		}
+		if ( ! $out && $source === 'pillars_rapid' ) {
+			return self::metrics_for( 'pillars' );
+		}
 		return $out;
+	}
+
+	/**
+	 * Membership-tier order for Systems snapshot chips and score blocks.
+	 */
+	public static function snapshot_tiers(): array {
+		return apply_filters( 'bmf_wellbeing_snapshot_tiers', [
+			[
+				'key'     => 'complementary',
+				'label'   => 'Complementary',
+				'sources' => [ 'rsi', 'pillars_rapid' ],
+			],
+			[
+				'key'     => 'art',
+				'label'   => 'Art of Wellness',
+				'sources' => [ 'keys', 'pillars' ],
+			],
+			[
+				'key'     => '360',
+				'label'   => '360 Health Intelligence',
+				'sources' => [ 'bsi', 'biovoice', 'fitbit' ],
+			],
+		] );
 	}
 }

@@ -146,11 +146,8 @@ class BMF_Wellbeing_Shortcodes {
 		$fix   = ! empty( $brief['is_fixture'] ) ? '<span class="bmf-wb-badge">Sample</span>' : '';
 		$html  = '<div class="bmf-wb-card bmf-wb-status">';
 		$html .= '<div class="bmf-wb-head"><h4>Wellbeing file</h4><span class="bmf-wb-member">' . $label . ' ' . $fix . '</span></div>';
-		$html .= '<div class="bmf-wb-grid">';
-		foreach ( $brief['sources'] ?? [] as $src ) {
-			$html .= self::source_chip( $src );
-		}
-		$html .= '</div></div>';
+		$html .= self::markup_tier_chips( $brief );
+		$html .= '</div>';
 		return $html;
 	}
 
@@ -160,15 +157,8 @@ class BMF_Wellbeing_Shortcodes {
 		$fix   = ! empty( $brief['is_fixture'] ) ? '<span class="bmf-wb-badge">Sample</span>' : '';
 		$html  = '<div class="bmf-wb-card bmf-wb-brief" data-voice="' . esc_attr( $voice ) . '">';
 		$html .= '<div class="bmf-wb-head"><h4>Systems snapshot</h4><span class="bmf-wb-member">' . $label . ' ' . $fix . '</span></div>';
-		$html .= '<p class="bmf-wb-sub">Pulse = RSI · Cycle = Pillars + BSI · State = Keys + BioVoice + Fitbit. Map ' . esc_html( $brief['map_version'] ?? 'v1' ) . '.</p>';
-
-		$html .= '<div class="bmf-wb-grid">';
-		foreach ( [ 'rsi', 'pillars', 'keys', 'bsi', 'biovoice', 'fitbit', 'profile' ] as $k ) {
-			if ( isset( $brief['sources'][ $k ] ) ) {
-				$html .= self::source_chip( $brief['sources'][ $k ] );
-			}
-		}
-		$html .= '</div>';
+		$html .= '<p class="bmf-wb-sub">Complementary = RSI + Rapid 8 Pillars (weekly) · Art of Wellness = Key Life Essentials + Complete 8 Pillars · 360 = BSI + BioVoice + wearables. Map ' . esc_html( $brief['map_version'] ?? 'v1' ) . '.</p>';
+		$html .= self::markup_tier_chips( $brief );
 		$strip = trim( (string) ( $brief['sources']['profile']['strip'] ?? '' ) );
 		if ( $strip !== '' ) {
 			$html .= '<p class="bmf-wb-profile">' . esc_html( $strip ) . '</p>';
@@ -191,7 +181,7 @@ class BMF_Wellbeing_Shortcodes {
 		if ( ! empty( $brief['highlights'] ) ) {
 			$html .= '<h5 class="bmf-wb-h">Highlighted items</h5><ul class="bmf-wb-hi">';
 			foreach ( array_slice( $brief['highlights'], 0, 12 ) as $h ) {
-				$html .= '<li><span class="src">' . esc_html( strtoupper( $h['source'] ?? '' ) ) . '</span> ';
+				$html .= '<li><span class="src">' . esc_html( self::source_tag( $h['source'] ?? '' ) ) . '</span> ';
 				$html .= esc_html( $h['prompt'] ?? '' );
 				if ( ! empty( $h['answer_label'] ) ) {
 					$html .= ' — <em>' . esc_html( $h['answer_label'] ) . '</em>';
@@ -201,12 +191,16 @@ class BMF_Wellbeing_Shortcodes {
 			$html .= '</ul>';
 		}
 
-		$html .= self::score_block( 'RSI (pulse)', $brief['sources']['rsi']['scores'] ?? [], 'low_better' );
-		$html .= self::score_block( '8 Pillars (cycle)', $brief['sources']['pillars']['scores'] ?? [], 'high_better', 'is-pillars' );
-		if ( ! empty( $brief['sources']['pillars']['master'] ) ) {
-			$html .= '<p class="bmf-wb-note">Pillars master score: ' . esc_html( (string) $brief['sources']['pillars']['master'] ) . '</p>';
+		$html .= self::score_block( 'RSI (weekly pulse)', $brief['sources']['rsi']['scores'] ?? [], 'low_better' );
+		$html .= self::score_block( 'Rapid 8 Pillars (weekly snapshot)', $brief['sources']['pillars_rapid']['scores'] ?? [], 'high_better', 'is-pillars' );
+		if ( ! empty( $brief['sources']['pillars_rapid']['master'] ) ) {
+			$html .= '<p class="bmf-wb-note">Rapid 8 Pillars average: ' . esc_html( (string) $brief['sources']['pillars_rapid']['master'] ) . '</p>';
 		}
-		$html .= self::score_block( 'Key Essentials (state)', $brief['sources']['keys']['scores'] ?? [], 'high_better' );
+		$html .= self::score_block( 'Key Life Essentials (14-day state)', $brief['sources']['keys']['scores'] ?? [], 'high_better' );
+		$html .= self::score_block( 'Complete 8 Pillars (90-day cycle)', $brief['sources']['pillars']['scores'] ?? [], 'high_better', 'is-pillars' );
+		if ( ! empty( $brief['sources']['pillars']['master'] ) ) {
+			$html .= '<p class="bmf-wb-note">Complete 8 Pillars master score: ' . esc_html( (string) $brief['sources']['pillars']['master'] ) . '</p>';
+		}
 		$html .= self::score_block( 'BSI composites (cycle)', $brief['sources']['bsi']['scores'] ?? [], 'low_better' );
 		$html .= self::score_block( 'BSI F1–F9 (cycle)', $brief['sources']['bsi']['forms'] ?? [], 'low_better', 'is-bsi' );
 		$html .= self::score_block( 'BioVoicePrint (state)', $brief['sources']['biovoice']['scores'] ?? [], 'low_better' );
@@ -243,13 +237,13 @@ class BMF_Wellbeing_Shortcodes {
 			];
 		}
 
-		$pil = $brief['sources']['pillars']['history'] ?? [];
-		if ( count( $pil ) >= 2 ) {
+		$rapid = $brief['sources']['pillars_rapid']['history'] ?? [];
+		if ( count( $rapid ) >= 2 ) {
 			$panels[] = [
-				'title'  => 'Pillars cycle',
-				'sub'    => 'Master score  (higher is better)',
+				'title'  => 'Rapid 8 Pillars',
+				'sub'    => 'Weekly snapshot average  (higher is better)',
 				'series' => [
-					[ 'label' => 'Master', 'color' => '#6ec1e4', 'points' => self::hist_xy( $pil, 'master' ) ],
+					[ 'label' => 'Average', 'color' => '#38bdf8', 'points' => self::hist_xy( $rapid, 'master' ) ],
 				],
 			];
 		}
@@ -257,10 +251,21 @@ class BMF_Wellbeing_Shortcodes {
 		$keys = $brief['sources']['keys']['history'] ?? [];
 		if ( count( $keys ) >= 2 ) {
 			$panels[] = [
-				'title'  => 'Keys state',
+				'title'  => 'Key Life Essentials',
 				'sub'    => 'Overall essentials  (higher is better)',
 				'series' => [
 					[ 'label' => 'Overall', 'color' => '#4ade80', 'points' => self::hist_xy( $keys, 'overall' ) ],
+				],
+			];
+		}
+
+		$pil = $brief['sources']['pillars']['history'] ?? [];
+		if ( count( $pil ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'Complete 8 Pillars',
+				'sub'    => '90-day master score  (higher is better)',
+				'series' => [
+					[ 'label' => 'Master', 'color' => '#6ec1e4', 'points' => self::hist_xy( $pil, 'master' ) ],
 				],
 			];
 		}
@@ -326,6 +331,51 @@ class BMF_Wellbeing_Shortcodes {
 			$out[] = [ 'x' => $r['date'], 'y' => (float) $r[ $field ] ];
 		}
 		return $out;
+	}
+
+	private static function markup_tier_chips( array $brief ): string {
+		$tiers = class_exists( 'BMF_Wellbeing_Map' )
+			? BMF_Wellbeing_Map::snapshot_tiers()
+			: [];
+		if ( ! $tiers ) {
+			$html = '<div class="bmf-wb-grid">';
+			foreach ( $brief['sources'] ?? [] as $k => $src ) {
+				if ( $k === 'profile' ) {
+					continue;
+				}
+				$html .= self::source_chip( $src );
+			}
+			$html .= '</div>';
+			return $html;
+		}
+		$html = '<div class="bmf-wb-tiers">';
+		foreach ( $tiers as $tier ) {
+			$html .= '<div class="bmf-wb-tier" data-tier="' . esc_attr( $tier['key'] ?? '' ) . '">';
+			$html .= '<div class="bmf-wb-tier-label">' . esc_html( $tier['label'] ?? '' ) . '</div>';
+			$html .= '<div class="bmf-wb-tier-chips">';
+			foreach ( $tier['sources'] ?? [] as $k ) {
+				if ( isset( $brief['sources'][ $k ] ) ) {
+					$html .= self::source_chip( $brief['sources'][ $k ] );
+				}
+			}
+			$html .= '</div></div>';
+		}
+		$html .= '</div>';
+		return $html;
+	}
+
+	private static function source_tag( string $key ): string {
+		$map = [
+			'rsi'           => 'RSI',
+			'pillars_rapid' => 'Rapid 8P',
+			'keys'          => 'Keys',
+			'pillars'       => '8 Pillars',
+			'bsi'           => 'BSI',
+			'biovoice'      => 'Voice',
+			'fitbit'        => 'Fitbit',
+			'profile'       => 'Profile',
+		];
+		return $map[ $key ] ?? strtoupper( $key );
 	}
 
 	private static function source_chip( array $src ): string {

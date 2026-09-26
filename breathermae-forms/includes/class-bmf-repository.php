@@ -166,9 +166,14 @@ class BMF_Repository {
             `rank` VARCHAR(255) COLLATE utf8mb4_unicode_520_ci DEFAULT NULL,
             master_score DECIMAL(10,4) DEFAULT NULL,
             notes TEXT COLLATE utf8mb4_unicode_520_ci,
+            series VARCHAR(20) COLLATE utf8mb4_unicode_520_ci NOT NULL DEFAULT 'full',
+            source_form_id INT DEFAULT NULL,
+            source_response_id BIGINT DEFAULT NULL,
+            interpretation_json LONGTEXT COLLATE utf8mb4_unicode_520_ci,
 
             PRIMARY KEY (id),
-            UNIQUE KEY uniq_user_date (user_email, results_date)
+            UNIQUE KEY uniq_user_date_series (user_email, results_date, series),
+            KEY idx_series_user_final (series, user_email, is_final, results_date)
         ) $charset;");
 
         dbDelta("CREATE TABLE {$pillars_open} (
@@ -180,7 +185,66 @@ class BMF_Repository {
 
     }
 
+    /**
+     * Add Rapid vs Full isolation columns on existing installs.
+     * Safe to call on every request; no-ops when already migrated.
+     */
+    public static function maybe_upgrade_pillars_schema() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'bm_pillars_results';
+        $exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+        if ( $exists !== $table ) {
+            return;
+        }
+
+        $cols = $wpdb->get_col( "DESCRIBE {$table}", 0 );
+        if ( ! is_array( $cols ) ) {
+            $cols = [];
+        }
+
+        $add = [];
+        if ( ! in_array( 'series', $cols, true ) ) {
+            $add[] = "ADD COLUMN series VARCHAR(20) NOT NULL DEFAULT 'full'";
+        }
+        if ( ! in_array( 'source_form_id', $cols, true ) ) {
+            $add[] = "ADD COLUMN source_form_id INT DEFAULT NULL";
+        }
+        if ( ! in_array( 'source_response_id', $cols, true ) ) {
+            $add[] = "ADD COLUMN source_response_id BIGINT DEFAULT NULL";
+        }
+        if ( ! in_array( 'interpretation_json', $cols, true ) ) {
+            $add[] = "ADD COLUMN interpretation_json LONGTEXT NULL";
+        }
+        if ( $add ) {
+            $wpdb->query( "ALTER TABLE {$table} " . implode( ', ', $add ) );
+        }
+
+        $wpdb->query( "UPDATE {$table} SET series = 'full' WHERE series IS NULL OR series = ''" );
+
+        $indexes = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+        $have_old = false;
+        $have_new = false;
+        if ( is_array( $indexes ) ) {
+            foreach ( $indexes as $idx ) {
+                $name = $idx['Key_name'] ?? '';
+                if ( $name === 'uniq_user_date' ) {
+                    $have_old = true;
+                }
+                if ( $name === 'uniq_user_date_series' ) {
+                    $have_new = true;
+                }
+            }
+        }
+        if ( $have_old ) {
+            $wpdb->query( "ALTER TABLE {$table} DROP INDEX uniq_user_date" );
+        }
+        if ( ! $have_new ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY uniq_user_date_series (user_email, results_date, series)" );
+        }
+    }
+
     public static function get_rsi_result_dates($user_email) {
+
         global $wpdb;
         $table = $wpdb->prefix . 'bm_rsi_results';
 

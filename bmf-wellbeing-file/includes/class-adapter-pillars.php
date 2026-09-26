@@ -6,16 +6,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BMF_Wellbeing_Adapter_Pillars {
 
 	public static function load( int $user_id, string $email ): array {
-		$cfg   = BMF_Wellbeing_Map::source( 'pillars' );
-		$empty = self::shell( $cfg );
+		return self::load_series( $user_id, $email, 'full' );
+	}
+
+	public static function load_rapid( int $user_id, string $email ): array {
+		return self::load_series( $user_id, $email, 'rapid' );
+	}
+
+	public static function load_series( int $user_id, string $email, string $series = 'full' ): array {
+		$series = $series === 'rapid' ? 'rapid' : 'full';
+		$key    = $series === 'rapid' ? 'pillars_rapid' : 'pillars';
+		$cfg    = BMF_Wellbeing_Map::source( $key );
+		$empty  = self::shell( $cfg, $key );
 		if ( $email === '' ) {
 			return $empty;
 		}
 		global $wpdb;
 		$table = $wpdb->prefix . 'bm_pillars_results';
-		$row   = $wpdb->get_row(
+		if ( $series === 'rapid' ) {
+			$series_sql = "series = 'rapid'";
+		} else {
+			$series_sql = "( series = 'full' OR series IS NULL OR series = '' )";
+		}
+		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE user_email = %s AND is_final = 1 ORDER BY results_date DESC, id DESC LIMIT 1",
+				"SELECT * FROM {$table} WHERE user_email = %s AND is_final = 1 AND {$series_sql} ORDER BY results_date DESC, id DESC LIMIT 1",
 				$email
 			),
 			ARRAY_A
@@ -25,7 +40,7 @@ class BMF_Wellbeing_Adapter_Pillars {
 		}
 
 		$date  = BMF_Wellbeing_Freshness::normalize_date( $row['results_date'] ?? '' );
-		$fresh = BMF_Wellbeing_Freshness::evaluate( 'pillars', $date );
+		$fresh = BMF_Wellbeing_Freshness::evaluate( $key, $date );
 		$cols  = [
 			'physical'      => 'Physical',
 			'mental'        => 'Mental',
@@ -37,7 +52,7 @@ class BMF_Wellbeing_Adapter_Pillars {
 			'social'        => 'Social',
 		];
 		$metrics = [];
-		foreach ( BMF_Wellbeing_Map::metrics_for( 'pillars' ) as $m ) {
+		foreach ( BMF_Wellbeing_Map::metrics_for( $key ) as $m ) {
 			$metrics[ $m['code'] ] = $m;
 		}
 
@@ -65,9 +80,10 @@ class BMF_Wellbeing_Adapter_Pillars {
 		}
 
 		$comparison = null;
-		if ( class_exists( 'BMF_QA_Extremes_Shortcodes' ) && $user_id && $date ) {
+		if ( $series === 'full' && class_exists( 'BMF_QA_Extremes_Shortcodes' ) && $user_id && $date ) {
 			$comparison = BMF_QA_Extremes_Shortcodes::pillars_comparison( $user_id, $date );
-		} else {
+		}
+		if ( ! $comparison ) {
 			$comparison = self::rank_comparison( $row, $scores );
 		}
 
@@ -76,18 +92,22 @@ class BMF_Wellbeing_Adapter_Pillars {
 			'scores'      => $scores,
 			'master'      => $master,
 			'comparison'  => $comparison,
-			'history'     => self::history( $email ),
+			'history'     => self::history( $email, $series ),
 			'raw_id'      => isset( $row['id'] ) ? (int) $row['id'] : 0,
 		] );
 	}
 
-	private static function history( string $email ): array {
+	private static function history( string $email, string $series = 'full' ): array {
 		global $wpdb;
 		$table = $wpdb->prefix . 'bm_pillars_results';
+		$series_sql = ( $series === 'rapid' )
+			? "series = 'rapid'"
+			: "( series = 'full' OR series IS NULL OR series = '' )";
 		$rows  = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT results_date, master_score FROM {$table}
 				 WHERE user_email = %s AND is_final = 1
+				   AND {$series_sql}
 				 ORDER BY results_date ASC, id ASC",
 				$email
 			),
@@ -144,10 +164,10 @@ class BMF_Wellbeing_Adapter_Pillars {
 		return [ 'master' => null, 'items' => $items ];
 	}
 
-	private static function shell( array $cfg ): array {
+	private static function shell( array $cfg, string $key = 'pillars' ): array {
 		return [
-			'key'         => 'pillars',
-			'label'       => $cfg['label'] ?? '8 Pillars',
+			'key'         => $key,
+			'label'       => $cfg['label'] ?? ( $key === 'pillars_rapid' ? 'Rapid 8 Pillars' : 'Complete 8 Pillars' ),
 			'enabled'     => ! empty( $cfg['enabled'] ),
 			'clock'       => $cfg['clock'] ?? 'cycle',
 			'present'     => false,

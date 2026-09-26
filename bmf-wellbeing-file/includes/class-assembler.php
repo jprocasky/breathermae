@@ -23,13 +23,14 @@ class BMF_Wellbeing_Assembler {
 		$map   = BMF_Wellbeing_Map::definition();
 
 		$sources = [
-			'rsi'      => BMF_Wellbeing_Adapter_RSI::load( $user_id, $email ),
-			'pillars'  => BMF_Wellbeing_Adapter_Pillars::load( $user_id, $email ),
-			'keys'     => BMF_Wellbeing_Adapter_Keys::load( $user_id, $email ),
-			'bsi'      => BMF_Wellbeing_Adapter_BSI::load( $user_id, $email ),
-			'biovoice' => BMF_Wellbeing_Adapter_BioVoice::load( $user_id, $email ),
-			'fitbit'   => BMF_Wellbeing_Adapter_Fitbit::load( $user_id, $email ),
-			'profile'  => BMF_Wellbeing_Adapter_Profile::load( $user_id, $email ),
+			'rsi'            => BMF_Wellbeing_Adapter_RSI::load( $user_id, $email ),
+			'pillars_rapid'  => BMF_Wellbeing_Adapter_Pillars::load_rapid( $user_id, $email ),
+			'keys'           => BMF_Wellbeing_Adapter_Keys::load( $user_id, $email ),
+			'pillars'        => BMF_Wellbeing_Adapter_Pillars::load( $user_id, $email ),
+			'bsi'            => BMF_Wellbeing_Adapter_BSI::load( $user_id, $email ),
+			'biovoice'       => BMF_Wellbeing_Adapter_BioVoice::load( $user_id, $email ),
+			'fitbit'         => BMF_Wellbeing_Adapter_Fitbit::load( $user_id, $email ),
+			'profile'        => BMF_Wellbeing_Adapter_Profile::load( $user_id, $email ),
 		];
 
 		$highlights = self::collect_highlights( $user_id, $sources );
@@ -72,15 +73,19 @@ class BMF_Wellbeing_Assembler {
 	private static function collect_highlights( int $user_id, array $sources ): array {
 		$out = [];
 		if ( class_exists( 'BMF_QA_Extremes_Shortcodes' ) && $user_id > 0 ) {
-		foreach ( [ 'rsi', 'pillars', 'keys', 'bsi' ] as $key ) {
+		foreach ( [ 'rsi', 'pillars_rapid', 'keys', 'pillars', 'bsi' ] as $key ) {
 			$src = $sources[ $key ] ?? [];
 			if ( empty( $src['present'] ) || empty( $src['date'] ) ) {
 				continue;
 			}
 			$cfg = BMF_Wellbeing_Map::source( $key );
+			if ( empty( $cfg['assessment_key'] ) ) {
+				continue;
+			}
 			$dir = $cfg['direction'] ?? 'low_better';
+			$key_for_qa = $cfg['assessment_key'];
 			try {
-				$data = BMF_QA_Extremes_Shortcodes::build_extremes( $user_id, $key, $src['date'], $dir, 0.75 );
+				$data = BMF_QA_Extremes_Shortcodes::build_extremes( $user_id, $key_for_qa, $src['date'], $dir, 0.75 );
 			} catch ( Throwable $e ) {
 				continue;
 			}
@@ -182,9 +187,27 @@ class BMF_Wellbeing_Assembler {
 				'code'    => 'pillars_awareness_gap',
 				'severity'=> 'info',
 				'title'   => 'Perceived vs scored pillar rank differs',
-				'member'  => 'How you ranked your pillars and how they scored are not the same. That gap is useful — it often points at what you notice versus what is carrying load.',
-				'provider'=> 'Two or more pillars differ by ≥2 rank positions (perceived vs scored). Treat as awareness gap, not inconsistency.',
+				'member'  => 'How you ranked your Complete 8 Pillars and how they scored are not the same. That gap is useful — it often points at what you notice versus what is carrying load.',
+				'provider'=> 'Two or more Complete 8 Pillars differ by ≥2 rank positions (perceived vs scored). Treat as awareness gap, not inconsistency.',
 				'evidence'=> [ 'mismatch_count' => $mismatch ],
+			];
+		}
+
+		$rapid_cmp = $sources['pillars_rapid']['comparison']['items'] ?? [];
+		$rapid_mis = 0;
+		foreach ( $rapid_cmp as $item ) {
+			if ( isset( $item['diff'] ) && abs( (int) $item['diff'] ) >= 2 ) {
+				$rapid_mis++;
+			}
+		}
+		if ( $rapid_mis >= 2 ) {
+			$patterns[] = [
+				'code'    => 'pillars_rapid_awareness_gap',
+				'severity'=> 'info',
+				'title'   => 'Rapid snapshot rank differs from scores',
+				'member'  => 'Your Rapid 8 Pillars ranking and scored order are not the same. On a weekly snapshot that gap is a noticing cue, not a full lifestyle reading.',
+				'provider'=> 'Rapid 8 Pillars: two or more pillars differ by ≥2 rank positions. Pulse clock — do not equate with the 90-day Complete 8 Pillars cycle.',
+				'evidence'=> [ 'rapid_mismatch_count' => $rapid_mis ],
 			];
 		}
 
