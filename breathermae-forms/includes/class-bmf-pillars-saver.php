@@ -273,11 +273,36 @@ if (!class_exists('BMF_Pillars_Saver')) {
             }
         }
 
+        /**
+         * Map a form-17 section / interpreter label onto a pillar column.
+         * Longest token first so "environmental" is not stolen by "mental",
+         * and "environment" (Rapid section title) maps to environmental.
+         */
         protected static function title_to_pillar($title) {
             $t = strtolower(trim((string) $title));
             $t = preg_replace('/[^a-z]/', '', $t);
-            foreach (self::$pillar_columns as $col) {
-                if ($t === $col || strpos($t, $col) === 0 || strpos($t, $col) !== false) {
+            if ($t === '') {
+                return null;
+            }
+
+            $needles = [
+                'environmental' => 'environmental',
+                'environment'   => 'environmental',
+                'occupational'  => 'occupational',
+                'occupation'    => 'occupational',
+                'emotional'     => 'emotional',
+                'financial'     => 'financial',
+                'spiritual'     => 'spiritual',
+                'physical'      => 'physical',
+                'mental'        => 'mental',
+                'social'        => 'social',
+            ];
+            uksort($needles, function ($a, $b) {
+                return strlen($b) - strlen($a);
+            });
+
+            foreach ($needles as $needle => $col) {
+                if ($t === $needle || strpos($t, $needle) === 0 || strpos($t, $needle) !== false) {
                     return $col;
                 }
             }
@@ -488,10 +513,14 @@ if (!class_exists('BMF_Pillars_Saver')) {
         }
 
         /**
-         * One-time: write rapid rows for already-submitted form 17 responses.
+         * Write / refresh rapid rows for already-submitted form 17 responses.
+         * Upserts by source_response_id (or email+date), so a forced rerun
+         * fills missing columns instead of inserting duplicates.
+         *
+         * $force=true ignores bmf_pillars_rapid_backfill_done.
          */
-        public static function backfill_rapid_rows() {
-            if (get_option('bmf_pillars_rapid_backfill_done')) {
+        public static function backfill_rapid_rows($force = false) {
+            if (!$force && get_option('bmf_pillars_rapid_backfill_done')) {
                 return;
             }
             global $wpdb;

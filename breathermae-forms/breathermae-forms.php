@@ -267,7 +267,9 @@ private function __construct() {
         if ( class_exists( 'BMF_Repository' ) ) {
             BMF_Repository::maybe_upgrade_pillars_schema();
             if ( is_admin() && class_exists( 'BMF_Pillars_Saver' ) ) {
-                BMF_Pillars_Saver::backfill_rapid_rows();
+                $force = ! empty( $_GET['bmf_pillars_rapid_rebackfill'] )
+                    && current_user_can( 'manage_options' );
+                BMF_Pillars_Saver::backfill_rapid_rows( $force );
             }
         }
         BMF_Shortcodes::register();
