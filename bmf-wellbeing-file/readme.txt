@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.9-poc
+Stable tag: 0.1.10-poc
 License: GPLv2 or later
 
 Canonical wellbeing brief assembled from entry-level self-assessments. WP Fusion gates the page.
@@ -29,8 +29,10 @@ Shortcodes:
 [bmf_wellbeing_brief fixture="1"]
 [bmf_wellbeing_brief voice="provider"]
 [bmf_wellbeing_status admin="1"]
+[bmf_theme_toggle]
 
 admin="1" listens for uls:selected-member (same as Q&A / BioVoice admin panels).
+Theme: viewer usermeta `bmf_ui_theme` (dark|light). Default dark. Sun/moon control is on the brief/status wrap; [bmf_theme_toggle] is optional if you want the control on a different part of the page. Provider inspect uses the provider's preference, not the member's.
 fixture="1" renders fixtures/sample_brief.json for Elementor layout work.
 
 Map version: wellbeing_map_v1 in includes/class-map.php
@@ -42,6 +44,12 @@ Map version: wellbeing_map_v1 in includes/class-map.php
 3. Add shortcodes on a WP Fusion-gated page
 
 == Changelog ==
+
+= 0.1.10-poc =
+* Light/dark result theme as viewer usermeta `bmf_ui_theme` (default dark)
+* CSS tokens on `.bmf-wb-wrap[data-bmf-theme]`
+* Sun/moon toggle on status/brief; optional `[bmf_theme_toggle]`
+* History charts pick axis/legend colors from the active theme
 
 = 0.1.9-poc =
 * Systems snapshot grouped by membership: Complementary / Art of Wellness / 360

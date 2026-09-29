@@ -1436,8 +1436,10 @@ class BMF_RSI_Form_Shortcodes {
         if ( ! $user_id ) return '';
 
         $data = BMF_RSI_Form_Service::get_trend_series_for_user( $user_id );
+        $theme = class_exists( 'BMF_Wellbeing_Theme' ) ? BMF_Wellbeing_Theme::get() : 'dark';
+
         if ( ! $data || empty( $data['points'] ) ) {
-            return '<div class="bmf-rsi-trend-empty" style="padding:24px;text-align:center;color:#8892a4;background:#0b1220;border-radius:12px;">No historical RSI data</div>';
+            return '<div class="bmf-rsi-trend-empty" data-bmf-theme="' . esc_attr( $theme ) . '">No historical RSI data</div>';
         }
 
         $baseline = $data['baseline_date'];
@@ -1491,16 +1493,35 @@ class BMF_RSI_Form_Shortcodes {
 
         ob_start();
         ?>
-<div class="bmf-rsi-trend-wrap" style="background:#0b1220;border-radius:16px;padding:20px 16px 16px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
-  <div class="bmf-rsi-trend-phases" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+<style>
+.bmf-rsi-trend-wrap,.bmf-rsi-trend-empty{
+  --rsi-bg:#0b1220;--rsi-well:#121a2b;--rsi-text:#e2e8f0;--rsi-muted:#94a3b8;--rsi-label:#93c5fd;--rsi-border:#1e2a44;--rsi-point:#0b1220;
+  font-family:system-ui,-apple-system,sans-serif;color:var(--rsi-text);border-radius:16px;
+}
+.bmf-rsi-trend-wrap[data-bmf-theme="light"],.bmf-rsi-trend-empty[data-bmf-theme="light"]{
+  --rsi-bg:#f4f7fb;--rsi-well:#fff;--rsi-text:#122033;--rsi-muted:#5b6b82;--rsi-label:#1e3a5f;--rsi-border:#d5deeb;--rsi-point:#fff;
+}
+.bmf-rsi-trend-wrap{background:transparent;padding:4px 0 0;color:var(--rsi-text)}
+.bmf-rsi-trend-empty{padding:24px;text-align:center;color:var(--rsi-muted);background:var(--rsi-bg)}
+.bmf-rsi-trend-phases{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.bmf-rsi-trend-phase{background-color:var(--rsi-well);background-image:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,0) 42%);border:1px solid var(--rsi-border);border-radius:10px;padding:10px 8px;text-align:center}
+.bmf-rsi-trend-wrap[data-bmf-theme="light"] .bmf-rsi-trend-phase{background-image:linear-gradient(180deg,rgba(255,255,255,.95),rgba(226,232,240,.4))}
+.bmf-rsi-trend-phase .ic{font-size:1.25rem;margin-bottom:4px}
+.bmf-rsi-trend-phase .lb{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:var(--rsi-label)}
+.bmf-rsi-trend-phase .dt{font-size:.65rem;color:var(--rsi-muted);margin-top:2px}
+.bmf-rsi-trend-legend{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:14px;font-size:.85rem;color:var(--rsi-text)}
+@media(max-width:720px){.bmf-rsi-trend-phases{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div class="bmf-rsi-trend-wrap" data-bmf-theme="<?php echo esc_attr( $theme ); ?>">
+  <div class="bmf-rsi-trend-phases">
     <?php foreach ( $phases as $i => $ph ):
         $icons = [ '📋', '🎯', '📈', '🛡️' ];
         $icon  = $icons[ $i ] ?? '●';
     ?>
-    <div style="background:#121a2b;border:1px solid #1e2a44;border-radius:10px;padding:10px 8px;text-align:center;">
-      <div style="font-size:1.25rem;margin-bottom:4px;"><?php echo $icon; ?></div>
-      <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.02em;color:#93c5fd;"><?php echo esc_html( $ph['label'] ); ?></div>
-      <div style="font-size:0.65rem;color:#64748b;margin-top:2px;"><?php echo esc_html( date( 'M j, Y', $ph['ts'] / 1000 ) ); ?></div>
+    <div class="bmf-rsi-trend-phase">
+      <div class="ic"><?php echo $icon; ?></div>
+      <div class="lb"><?php echo esc_html( $ph['label'] ); ?></div>
+      <div class="dt"><?php echo esc_html( date( 'M j, Y', $ph['ts'] / 1000 ) ); ?></div>
     </div>
     <?php endforeach; ?>
   </div>
@@ -1509,7 +1530,7 @@ class BMF_RSI_Form_Shortcodes {
     <canvas id="<?php echo esc_attr( $uid ); ?>"></canvas>
   </div>
 
-  <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:14px;font-size:0.85rem;">
+  <div class="bmf-rsi-trend-legend">
     <span style="display:inline-flex;align-items:center;gap:6px;">
       <span style="width:12px;height:3px;background:<?php echo $c_core; ?>;border-radius:2px;display:inline-block;"></span>
       Core RSI
@@ -1555,6 +1576,55 @@ class BMF_RSI_Form_Shortcodes {
     s.src = src; s.onload = cb; document.head.appendChild(s);
   }
 
+  function closestTheme(el) {
+    var n = el;
+    while (n && n.getAttribute) {
+      var t = n.getAttribute('data-bmf-theme');
+      if (t === 'light' || t === 'dark') return t;
+      n = n.parentElement;
+    }
+    var host = document.querySelector('.bmf-wb-panel[data-bmf-theme], .bmf-wb-wrap[data-bmf-theme]');
+    if (host) return host.getAttribute('data-bmf-theme') === 'light' ? 'light' : 'dark';
+    return 'dark';
+  }
+
+  function chartSkin(theme) {
+    if (theme === 'light') {
+      return {
+        grid: 'rgba(213,222,235,.95)',
+        tick: '#5b6b82',
+        phase: 'rgba(100,116,139,.45)',
+        point: '#fff',
+        tipBg: '#fff',
+        tipTitle: '#122033',
+        tipBody: '#334155',
+        tipBorder: '#d5deeb',
+        zones: [
+          { from: 75, to: 100, color: 'rgba(198,40,40,0.10)' },
+          { from: 50, to: 75,  color: 'rgba(234,88,12,0.09)' },
+          { from: 25, to: 50,  color: 'rgba(234,179,8,0.10)' },
+          { from: 0,  to: 25,  color: 'rgba(34,197,94,0.10)' }
+        ]
+      };
+    }
+    return {
+      grid: 'rgba(30,42,68,0.8)',
+      tick: '#94a3b8',
+      phase: 'rgba(148,163,184,0.45)',
+      point: '#0b1220',
+      tipBg: '#121a2b',
+      tipTitle: '#e2e8f0',
+      tipBody: '#cbd5e1',
+      tipBorder: '#1e2a44',
+      zones: [
+        { from: 75, to: 100, color: 'rgba(198,40,40,0.12)' },
+        { from: 50, to: 75,  color: 'rgba(234,88,12,0.10)' },
+        { from: 25, to: 50,  color: 'rgba(234,179,8,0.08)' },
+        { from: 0,  to: 25,  color: 'rgba(34,197,94,0.08)' }
+      ]
+    };
+  }
+
   function boot() {
     loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', function(){
       loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js', function(){
@@ -1566,18 +1636,21 @@ class BMF_RSI_Form_Shortcodes {
   function render() {
     var ctx = document.getElementById(canvasId);
     if (!ctx || typeof Chart === 'undefined') return;
+    var wrap = ctx.closest('.bmf-rsi-trend-wrap');
+    var theme = closestTheme(wrap || ctx);
+    if (wrap) wrap.setAttribute('data-bmf-theme', theme);
+    var skin = chartSkin(theme);
+    if (ctx._rsiChart) {
+      try { ctx._rsiChart.destroy(); } catch (e) {}
+      ctx._rsiChart = null;
+    }
 
     var zonePlugin = {
       id: 'bmfRsiZones',
       beforeDraw: function(chart) {
         var y = chart.scales.y;
         var x = chart.scales.x;
-        var areas = [
-          { from: 75, to: 100, color: 'rgba(198,40,40,0.12)' },
-          { from: 50, to: 75,  color: 'rgba(234,88,12,0.10)' },
-          { from: 25, to: 50,  color: 'rgba(234,179,8,0.08)' },
-          { from: 0,  to: 25,  color: 'rgba(34,197,94,0.08)' }
-        ];
+        var areas = skin.zones;
         var ctx2 = chart.ctx;
         areas.forEach(function(a){
           var y1 = y.getPixelForValue(a.to);
@@ -1600,7 +1673,7 @@ class BMF_RSI_Form_Shortcodes {
           ctx2.save();
           ctx2.beginPath();
           ctx2.setLineDash([4, 4]);
-          ctx2.strokeStyle = 'rgba(148,163,184,0.45)';
+          ctx2.strokeStyle = skin.phase;
           ctx2.lineWidth = 1;
           ctx2.moveTo(px, y.top);
           ctx2.lineTo(px, y.bottom);
@@ -1629,7 +1702,7 @@ class BMF_RSI_Form_Shortcodes {
       }
     };
 
-    new Chart(ctx, {
+    ctx._rsiChart = new Chart(ctx, {
       type: 'line',
       data: {
         datasets: [
@@ -1641,7 +1714,7 @@ class BMF_RSI_Form_Shortcodes {
             borderWidth: 2.5,
             pointRadius: ptRadius,
             pointHoverRadius: ptHover,
-            pointBackgroundColor: '#0b1220',
+            pointBackgroundColor: skin.point,
             pointBorderColor: cCore,
             pointBorderWidth: 2,
             tension: 0.35,
@@ -1655,7 +1728,7 @@ class BMF_RSI_Form_Shortcodes {
             borderWidth: 2.5,
             pointRadius: ptRadius,
             pointHoverRadius: ptHover,
-            pointBackgroundColor: '#0b1220',
+            pointBackgroundColor: skin.point,
             pointBorderColor: cPerformance,
             pointBorderWidth: 2,
             tension: 0.35,
@@ -1669,7 +1742,7 @@ class BMF_RSI_Form_Shortcodes {
             borderWidth: 2.5,
             pointRadius: ptRadius,
             pointHoverRadius: ptHover,
-            pointBackgroundColor: '#0b1220',
+            pointBackgroundColor: skin.point,
             pointBorderColor: cCalibration,
             pointBorderWidth: 2,
             tension: 0.35,
@@ -1684,10 +1757,10 @@ class BMF_RSI_Form_Shortcodes {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#121a2b',
-            titleColor: '#e2e8f0',
-            bodyColor: '#cbd5e1',
-            borderColor: '#1e2a44',
+            backgroundColor: skin.tipBg,
+            titleColor: skin.tipTitle,
+            bodyColor: skin.tipBody,
+            borderColor: skin.tipBorder,
             borderWidth: 1,
             callbacks: {
               title: function(items) {
@@ -1704,13 +1777,13 @@ class BMF_RSI_Form_Shortcodes {
             min: xMin,
             max: xMax,
             time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
-            grid: { color: 'rgba(30,42,68,0.8)', drawBorder: false },
-            ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+            grid: { color: skin.grid, drawBorder: false },
+            ticks: { color: skin.tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
           },
           y: {
             min: 0,
             max: 100,
-            grid: { color: 'rgba(30,42,68,0.6)', drawBorder: false },
+            grid: { color: skin.grid, drawBorder: false },
             ticks: {
               stepSize: 25,
               color: function(ctx) {
@@ -1719,7 +1792,7 @@ class BMF_RSI_Form_Shortcodes {
                 if (v === 25) return '#eff012';
                 if (v === 50) return '#ff6600';
                 if (v === 75) return '#d60008';
-                return '#94a3b8';
+                return skin.tick;
               },
               callback: function(v) {
                 if (v === 100) return '100';
@@ -1736,6 +1809,11 @@ class BMF_RSI_Form_Shortcodes {
       plugins: [ zonePlugin, phasePlugin, glowPlugin ]
     });
   }
+
+  document.addEventListener('click', function (ev) {
+    if (!ev.target || !ev.target.closest || !ev.target.closest('.bmf-wb-theme-btn')) return;
+    setTimeout(function () { if (typeof Chart !== 'undefined') render(); }, 30);
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

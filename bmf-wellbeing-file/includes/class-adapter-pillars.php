@@ -107,11 +107,7 @@ class BMF_Wellbeing_Adapter_Pillars {
 			$wpdb->prepare(
 				"SELECT results_date, master_score FROM {$table}
 				 WHERE user_email = %s AND is_final = 1
-<<<<<<< HEAD
 				   AND {$series_sql}
-=======
-				   AND ( series = 'full' OR series IS NULL OR series = '' )
->>>>>>> 1c08b81f54979737225ea6efc34bd600d231b418
 				 ORDER BY results_date ASC, id ASC",
 				$email
 			),

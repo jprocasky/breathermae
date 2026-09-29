@@ -39,8 +39,19 @@
 		return m[mo - 1] + ' ' + parseInt(iso.slice(8, 10), 10);
 	}
 
+	function chartColors(wrap) {
+		var light = wrap && wrap.getAttribute('data-bmf-theme') === 'light';
+		return light
+			? { legend: '#1e3a5f', tick: '#5b6b82', grid: 'rgba(213,222,235,.95)' }
+			: { legend: '#cfe6ff', tick: '#9db0d0', grid: 'rgba(35,59,109,.45)' };
+	}
+
 	function renderCharts(root) {
 		if (!window.Chart || !root) return;
+		var wrap = root.classList && root.classList.contains('bmf-wb-wrap')
+			? root
+			: root.closest('.bmf-wb-wrap');
+		var pal = chartColors(wrap);
 		root.querySelectorAll('canvas.bmf-wb-canvas').forEach(function (cv) {
 			if (cv._wbChart) {
 				try { cv._wbChart.destroy(); } catch (e) {}
@@ -77,7 +88,7 @@
 					plugins: {
 						legend: {
 							display: datasets.length > 1,
-							labels: { color: '#cfe6ff', boxWidth: 10, font: { size: 10 } },
+							labels: { color: pal.legend, boxWidth: 10, font: { size: 10 } },
 						},
 						tooltip: {
 							callbacks: {
@@ -90,7 +101,7 @@
 					scales: {
 						x: {
 							ticks: {
-								color: '#9db0d0',
+								color: pal.tick,
 								maxRotation: 0,
 								autoSkip: true,
 								maxTicksLimit: 6,
@@ -100,18 +111,40 @@
 									return shortDate(lab);
 								},
 							},
-							grid: { color: 'rgba(35,59,109,.45)' },
+							grid: { color: pal.grid },
 						},
 						y: {
 							min: 0,
 							max: 100,
-							ticks: { color: '#9db0d0', font: { size: 10 }, stepSize: 25 },
-							grid: { color: 'rgba(35,59,109,.45)' },
+							ticks: { color: pal.tick, font: { size: 10 }, stepSize: 25 },
+							grid: { color: pal.grid },
 						},
 					},
 				},
 			});
 		});
+	}
+
+	function applyTheme(theme) {
+		theme = theme === 'light' ? 'light' : 'dark';
+		document.querySelectorAll('.bmf-wb-wrap, .bmf-wb-panel, .bmf-rsi-trend-wrap, .bmf-rsi-trend-empty').forEach(function (wrap) {
+			wrap.setAttribute('data-bmf-theme', theme);
+			wrap.querySelectorAll('.bmf-wb-theme-btn').forEach(function (btn) {
+				btn.setAttribute('aria-pressed', btn.getAttribute('data-bmf-theme-set') === theme ? 'true' : 'false');
+			});
+			renderCharts(wrap);
+		});
+		if (window.bmfWellbeingCfg) window.bmfWellbeingCfg.theme = theme;
+	}
+
+	function saveTheme(theme) {
+		var cfg = window.bmfWellbeingCfg || {};
+		if (!cfg.ajax || !cfg.nonce) return;
+		var body = new FormData();
+		body.append('action', 'bmf_ui_theme');
+		body.append('nonce', cfg.nonce);
+		body.append('theme', theme);
+		fetch(cfg.ajax, { method: 'POST', credentials: 'same-origin', body: body }).catch(function () {});
 	}
 
 	function loadFor(wrap, userId, email) {
@@ -129,7 +162,12 @@
 			.then(function (r) { return r.json(); })
 			.then(function (json) {
 				if (json && json.success && json.data && json.data.html) {
-					wrap.innerHTML = json.data.html;
+					var bodyEl = wrap.querySelector('.bmf-wb-body');
+					if (bodyEl) {
+						bodyEl.innerHTML = json.data.html;
+					} else {
+						wrap.innerHTML = json.data.html;
+					}
 					renderCharts(wrap);
 				}
 			})
@@ -138,8 +176,18 @@
 	}
 
 	onReady(function () {
+		var cfg = window.bmfWellbeingCfg || {};
+		if (cfg.theme) applyTheme(cfg.theme);
 		document.querySelectorAll('.bmf-wb-wrap').forEach(function (wrap) {
 			renderCharts(wrap);
+		});
+		document.addEventListener('click', function (ev) {
+			var btn = ev.target && ev.target.closest ? ev.target.closest('.bmf-wb-theme-btn') : null;
+			if (!btn) return;
+			ev.preventDefault();
+			var theme = btn.getAttribute('data-bmf-theme-set') === 'light' ? 'light' : 'dark';
+			applyTheme(theme);
+			saveTheme(theme);
 		});
 		document.addEventListener('uls:selected-member', function (ev) {
 			var d = (ev && ev.detail) || {};

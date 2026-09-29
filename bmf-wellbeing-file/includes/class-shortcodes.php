@@ -8,7 +8,9 @@ class BMF_Wellbeing_Shortcodes {
 	public static function init() {
 		add_shortcode( 'bmf_wellbeing_status', [ __CLASS__, 'shortcode_status' ] );
 		add_shortcode( 'bmf_wellbeing_brief', [ __CLASS__, 'shortcode_brief' ] );
+		add_shortcode( 'bmf_theme_toggle', [ __CLASS__, 'shortcode_theme_toggle' ] );
 		add_action( 'wp_ajax_bmf_wellbeing_brief', [ __CLASS__, 'ajax_brief' ] );
+		add_action( 'wp_ajax_bmf_ui_theme', [ __CLASS__, 'ajax_theme' ] );
 		add_action( 'wp_enqueue_scripts', [ __CLASS__, 'register_assets' ] );
 	}
 
@@ -100,23 +102,70 @@ class BMF_Wellbeing_Shortcodes {
 				: null;
 		}
 
+		$theme = BMF_Wellbeing_Theme::get();
 		self::enqueue( [
 			'ajax'  => admin_url( 'admin-ajax.php' ),
 			'nonce' => wp_create_nonce( 'bmf_wellbeing' ),
 			'voice' => $voice,
 			'admin' => $admin ? 1 : 0,
 			'mode'  => $mode,
+			'theme' => $theme,
 		] );
 
 		ob_start();
-		echo '<div class="bmf-wb-wrap" data-mode="' . esc_attr( $mode ) . '" data-voice="' . esc_attr( $voice ) . '" data-admin="' . ( $admin ? '1' : '0' ) . '">';
+		echo '<div class="bmf-wb-wrap" data-bmf-theme="' . esc_attr( $theme ) . '" data-mode="' . esc_attr( $mode ) . '" data-voice="' . esc_attr( $voice ) . '" data-admin="' . ( $admin ? '1' : '0' ) . '">';
+		echo self::markup_theme_toggle( $theme );
+		echo '<div class="bmf-wb-body">';
 		if ( $brief ) {
 			echo $mode === 'status' ? self::markup_status( $brief ) : self::markup_brief( $brief );
 		} else {
 			echo '<div class="bmf-wb-empty">Select a member to load the wellbeing file.</div>';
 		}
-		echo '</div>';
+		echo '</div></div>';
 		return ob_get_clean();
+	}
+
+	public static function shortcode_theme_toggle( $atts ) {
+		if ( bmf_wellbeing_in_elementor_editor() ) {
+			return '<div class="bmf-wb-editor">Theme toggle (editor)</div>';
+		}
+		if ( ! is_user_logged_in() ) {
+			return '';
+		}
+		$theme = BMF_Wellbeing_Theme::get();
+		self::enqueue( [
+			'ajax'  => admin_url( 'admin-ajax.php' ),
+			'nonce' => wp_create_nonce( 'bmf_wellbeing' ),
+			'theme' => $theme,
+		] );
+		return '<div class="bmf-wb-wrap bmf-wb-wrap--toggle-only" data-bmf-theme="' . esc_attr( $theme ) . '">'
+			. self::markup_theme_toggle( $theme )
+			. '</div>';
+	}
+
+	public static function ajax_theme() {
+		check_ajax_referer( 'bmf_wellbeing', 'nonce' );
+		if ( ! is_user_logged_in() ) {
+			wp_send_json_error( [ 'message' => 'Unauthorized' ], 401 );
+		}
+		$theme = BMF_Wellbeing_Theme::set( isset( $_POST['theme'] ) ? wp_unslash( $_POST['theme'] ) : '' );
+		wp_send_json_success( [ 'theme' => $theme ] );
+	}
+
+	public static function markup_theme_toggle( string $theme ): string {
+		$theme = BMF_Wellbeing_Theme::normalize( $theme );
+		$sun   = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.2 6.2l1.4 1.4M16.4 16.4l1.4 1.4M6.2 17.8l1.4-1.4M16.4 7.6l1.4-1.4"/></svg>';
+		$moon  = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.2 2.1a9.5 9.5 0 1 0 6.7 16.6 7.2 7.2 0 0 1-6.7-16.6z"/></svg>';
+		$html  = '<div class="bmf-wb-themebar" role="group" aria-label="Result theme">';
+		$html .= '<span class="bmf-wb-themebar-label">Theme</span>';
+		$html .= '<button type="button" class="bmf-wb-theme-btn" data-bmf-theme-set="light"'
+			. ' title="Switch to light theme" aria-label="Switch to light theme"'
+			. ' aria-pressed="' . ( $theme === 'light' ? 'true' : 'false' ) . '">' . $sun . '</button>';
+		$html .= '<button type="button" class="bmf-wb-theme-btn" data-bmf-theme-set="dark"'
+			. ' title="Switch to dark theme" aria-label="Switch to dark theme"'
+			. ' aria-pressed="' . ( $theme === 'dark' ? 'true' : 'false' ) . '">' . $moon . '</button>';
+		$html .= '</div>';
+		return $html;
 	}
 
 	public static function ajax_brief() {
