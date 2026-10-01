@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
     class="bmae-avf-root <?php echo esc_attr($custom_class); ?>"
     data-bmae-dashboard="eight-pillars"
     data-bmae-module="2"
+    data-bmf-theme="<?php echo esc_attr(!empty($theme) ? $theme : 'dark'); ?>"
     aria-live="polite"
 >
     <div class="bmae-avf-loading">

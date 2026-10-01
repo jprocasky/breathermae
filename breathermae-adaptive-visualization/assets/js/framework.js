@@ -8,8 +8,32 @@
             this.data = null;
         }
 
+        resolveTheme() {
+            const host = document.querySelector(".bmf-wb-panel[data-bmf-theme], .bmf-wb-wrap[data-bmf-theme]");
+            if (host) {
+                const ht = host.getAttribute("data-bmf-theme");
+                if (ht === "light" || ht === "dark") return ht;
+            }
+            const cfg = window.bmfWellbeingCfg || {};
+            if (cfg.theme === "light" || cfg.theme === "dark") return cfg.theme;
+            if (this.config && (this.config.theme === "light" || this.config.theme === "dark")) {
+                return this.config.theme;
+            }
+            if (this.root) {
+                const t = this.root.getAttribute("data-bmf-theme");
+                if (t === "light" || t === "dark") return t;
+            }
+            return "dark";
+        }
+
+        applyTheme() {
+            if (!this.root) return;
+            this.root.setAttribute("data-bmf-theme", this.resolveTheme());
+        }
+
         async initialize() {
             if (!this.root) return;
+            this.applyTheme();
 
             try {
                 const response = await fetch(this.config.restUrl, {
@@ -401,8 +425,23 @@
 
     const boot = () => {
         const queue = window.BMAE_AVF_QUEUE || [];
-        queue.forEach(config => new BreathermaeEightPillarsDashboard(config).initialize());
+        const dashboards = queue.map(config => {
+            const dash = new BreathermaeEightPillarsDashboard(config);
+            dash.initialize();
+            return dash;
+        });
         window.BMAE_AVF_QUEUE = [];
+        document.addEventListener("click", ev => {
+            if (!ev.target || !ev.target.closest || !ev.target.closest(".bmf-wb-theme-btn")) return;
+            setTimeout(() => {
+                dashboards.forEach(dash => dash.applyTheme());
+                document.querySelectorAll(".bmae-avf-root").forEach(root => {
+                    const host = document.querySelector(".bmf-wb-panel[data-bmf-theme], .bmf-wb-wrap[data-bmf-theme]");
+                    const theme = host && host.getAttribute("data-bmf-theme") === "light" ? "light" : (host ? "dark" : (window.bmfWellbeingCfg && window.bmfWellbeingCfg.theme) || "dark");
+                    root.setAttribute("data-bmf-theme", theme === "light" ? "light" : "dark");
+                });
+            }, 30);
+        });
     };
 
     if (document.readyState === "loading") {

@@ -29,6 +29,8 @@ final class BMAE_AVF_Shortcodes {
         wp_enqueue_style('bmae-avf-dashboard');
         wp_enqueue_script('bmae-avf-dashboard');
 
+        $theme = class_exists('BMF_Wellbeing_Theme') ? BMF_Wellbeing_Theme::get() : 'dark';
+
         $instance_id = 'bmae-avf-' . wp_generate_uuid4();
         $bootstrap = [
             'instanceId' => $instance_id,
@@ -40,6 +42,7 @@ final class BMAE_AVF_Shortcodes {
             ),
             'nonce' => BMAE_AVF_Security::nonce(),
             'module' => 2,
+            'theme' => $theme,
         ];
 
         wp_add_inline_script(

@@ -875,8 +875,9 @@ class BMF_BSI_Form_Shortcodes {
         if ( ! $user_id ) return '';
 
         $data = BMF_BSI_Form_Service::get_trend_series_for_user( $user_id );
+        $theme = class_exists( 'BMF_Wellbeing_Theme' ) ? BMF_Wellbeing_Theme::get() : 'dark';
         if ( ! $data || empty( $data['points'] ) ) {
-            return '<div class="bmf-bsi-trend-empty" style="padding:24px;text-align:center;color:#8892a4;background:#0b1220;border-radius:12px;">No historical BSI data</div>';
+            return '<div class="bmf-bsi-trend-empty" data-bmf-theme="' . esc_attr( $theme ) . '">No historical BSI data</div>';
         }
 
         $baseline = $data['baseline_date'];
@@ -928,17 +929,35 @@ class BMF_BSI_Form_Shortcodes {
 
         ob_start();
         ?>
-<div class="bmf-bsi-trend-wrap" style="background:#0b1220;border-radius:16px;padding:20px 16px 16px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
-  <!-- Phase cards -->
-  <div class="bmf-bsi-trend-phases" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+<style>
+.bmf-bsi-trend-wrap,.bmf-bsi-trend-empty{
+  --bsi-well:#121a2b;--bsi-text:#e2e8f0;--bsi-muted:#94a3b8;--bsi-label:#93c5fd;--bsi-border:#1e2a44;--bsi-bg:#0b1220;
+  font-family:system-ui,-apple-system,sans-serif;color:var(--bsi-text);border-radius:16px;
+}
+.bmf-bsi-trend-wrap[data-bmf-theme="light"],.bmf-bsi-trend-empty[data-bmf-theme="light"]{
+  --bsi-well:#fff;--bsi-text:#122033;--bsi-muted:#5b6b82;--bsi-label:#1e3a5f;--bsi-border:#d5deeb;--bsi-bg:#f4f7fb;
+}
+.bmf-bsi-trend-wrap{background:transparent;padding:4px 0 0}
+.bmf-bsi-trend-empty{padding:24px;text-align:center;color:var(--bsi-muted);background:var(--bsi-bg)}
+.bmf-bsi-trend-phases{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.bmf-bsi-trend-phase{background-color:var(--bsi-well);background-image:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,0) 42%);border:1px solid var(--bsi-border);border-radius:10px;padding:10px 8px;text-align:center}
+.bmf-bsi-trend-wrap[data-bmf-theme="light"] .bmf-bsi-trend-phase{background-image:linear-gradient(180deg,rgba(255,255,255,.95),rgba(226,232,240,.4))}
+.bmf-bsi-trend-phase .ic{font-size:1.25rem;margin-bottom:4px}
+.bmf-bsi-trend-phase .lb{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:var(--bsi-label)}
+.bmf-bsi-trend-phase .dt{font-size:.65rem;color:var(--bsi-muted);margin-top:2px}
+.bmf-bsi-trend-legend{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:14px;font-size:.85rem;color:var(--bsi-text)}
+@media(max-width:720px){.bmf-bsi-trend-phases{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div class="bmf-bsi-trend-wrap" data-bmf-theme="<?php echo esc_attr( $theme ); ?>">
+  <div class="bmf-bsi-trend-phases">
     <?php foreach ( $phases as $i => $ph ):
         $icons = [ '📋', '🎯', '📈', '🛡️' ];
         $icon  = $icons[ $i ] ?? '●';
     ?>
-    <div style="background:#121a2b;border:1px solid #1e2a44;border-radius:10px;padding:10px 8px;text-align:center;">
-      <div style="font-size:1.25rem;margin-bottom:4px;"><?php echo $icon; ?></div>
-      <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.02em;color:#93c5fd;"><?php echo esc_html( $ph['label'] ); ?></div>
-      <div style="font-size:0.65rem;color:#64748b;margin-top:2px;"><?php echo esc_html( date( 'M j, Y', $ph['ts'] / 1000 ) ); ?></div>
+    <div class="bmf-bsi-trend-phase">
+      <div class="ic"><?php echo $icon; ?></div>
+      <div class="lb"><?php echo esc_html( $ph['label'] ); ?></div>
+      <div class="dt"><?php echo esc_html( date( 'M j, Y', $ph['ts'] / 1000 ) ); ?></div>
     </div>
     <?php endforeach; ?>
   </div>
@@ -949,7 +968,7 @@ class BMF_BSI_Form_Shortcodes {
   </div>
 
   <!-- Legend + end values -->
-  <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:14px;font-size:0.85rem;">
+  <div class="bmf-bsi-trend-legend">
     <span style="display:inline-flex;align-items:center;gap:6px;">
       <span style="width:12px;height:3px;background:<?php echo $c_drivers; ?>;border-radius:2px;display:inline-block;"></span>
       Drivers
@@ -993,8 +1012,59 @@ class BMF_BSI_Form_Shortcodes {
     s.src = src; s.onload = cb; document.head.appendChild(s);
   }
 
+  function closestTheme(el) {
+    var host = document.querySelector('.bmf-wb-panel[data-bmf-theme], .bmf-wb-wrap[data-bmf-theme]');
+    if (host) {
+      var ht = host.getAttribute('data-bmf-theme');
+      if (ht === 'light' || ht === 'dark') return ht;
+    }
+    var n = el;
+    while (n && n.getAttribute) {
+      var t = n.getAttribute('data-bmf-theme');
+      if (t === 'light' || t === 'dark') return t;
+      n = n.parentElement;
+    }
+    return 'dark';
+  }
+
+  function chartSkin(theme) {
+    if (theme === 'light') {
+      return {
+        grid: 'rgba(213,222,235,.95)',
+        tick: '#5b6b82',
+        phase: 'rgba(100,116,139,.45)',
+        point: '#fff',
+        tipBg: '#fff',
+        tipTitle: '#122033',
+        tipBody: '#334155',
+        tipBorder: '#d5deeb',
+        zones: [
+          { from: 75, to: 100, color: 'rgba(198,40,40,0.10)' },
+          { from: 50, to: 75,  color: 'rgba(234,88,12,0.09)' },
+          { from: 25, to: 50,  color: 'rgba(234,179,8,0.10)' },
+          { from: 0,  to: 25,  color: 'rgba(34,197,94,0.10)' }
+        ]
+      };
+    }
+    return {
+      grid: 'rgba(30,42,68,0.8)',
+      tick: '#94a3b8',
+      phase: 'rgba(148,163,184,0.45)',
+      point: '#0b1220',
+      tipBg: '#121a2b',
+      tipTitle: '#e2e8f0',
+      tipBody: '#cbd5e1',
+      tipBorder: '#1e2a44',
+      zones: [
+        { from: 75, to: 100, color: 'rgba(198,40,40,0.12)' },
+        { from: 50, to: 75,  color: 'rgba(234,88,12,0.10)' },
+        { from: 25, to: 50,  color: 'rgba(234,179,8,0.08)' },
+        { from: 0,  to: 25,  color: 'rgba(34,197,94,0.08)' }
+      ]
+    };
+  }
+
   function boot() {
-    // Chart.js time scale needs the date adapter
     loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', function(){
       loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js', function(){
         render();
@@ -1005,19 +1075,21 @@ class BMF_BSI_Form_Shortcodes {
   function render() {
     var ctx = document.getElementById(canvasId);
     if (!ctx || typeof Chart === 'undefined') return;
+    var wrap = ctx.closest('.bmf-bsi-trend-wrap');
+    var theme = closestTheme(wrap || ctx);
+    if (wrap) wrap.setAttribute('data-bmf-theme', theme);
+    var skin = chartSkin(theme);
+    if (ctx._bsiChart) {
+      try { ctx._bsiChart.destroy(); } catch (e) {}
+      ctx._bsiChart = null;
+    }
 
-    // Zone plugin – draws background bands
     var zonePlugin = {
       id: 'bmfZones',
       beforeDraw: function(chart) {
         var y = chart.scales.y;
         var x = chart.scales.x;
-        var areas = [
-          { from: 75, to: 100, color: 'rgba(198,40,40,0.12)' },   // High Strain
-          { from: 50, to: 75,  color: 'rgba(234,88,12,0.10)' },   // Elevated
-          { from: 25, to: 50,  color: 'rgba(234,179,8,0.08)' },   // Moderate
-          { from: 0,  to: 25,  color: 'rgba(34,197,94,0.08)' }    // Optimal
-        ];
+        var areas = skin.zones;
         var ctx2 = chart.ctx;
         areas.forEach(function(a){
           var y1 = y.getPixelForValue(a.to);
@@ -1027,25 +1099,6 @@ class BMF_BSI_Form_Shortcodes {
         });
       }
     };
-
-    // Soft glow under each line (color matches the series)
-    // Tweak shadowBlur (e.g. 8–20) to adjust strength
-    var glowPlugin = {
-      id: 'bmfGlow',
-      beforeDatasetDraw: function(chart, args) {
-        var ctx = chart.ctx;
-        var ds  = chart.data.datasets[args.index];
-        if (!ds) return;
-        ctx.save();
-        ctx.shadowColor   = ds.borderColor || 'rgba(255,255,255,0.4)';
-        ctx.shadowBlur    = 8;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 4;
-      },
-      afterDatasetDraw: function(chart) {
-        chart.ctx.restore();
-      }
-    };    
 
     // Vertical phase markers
     var phasePlugin = {
@@ -1060,7 +1113,7 @@ class BMF_BSI_Form_Shortcodes {
           ctx2.save();
           ctx2.beginPath();
           ctx2.setLineDash([4, 4]);
-          ctx2.strokeStyle = 'rgba(148,163,184,0.45)';
+          ctx2.strokeStyle = skin.phase;
           ctx2.lineWidth = 1;
           ctx2.moveTo(px, y.top);
           ctx2.lineTo(px, y.bottom);
@@ -1070,7 +1123,7 @@ class BMF_BSI_Form_Shortcodes {
       }
     };
 
-    new Chart(ctx, {
+    ctx._bsiChart = new Chart(ctx, {
       type: 'line',
       data: {
         datasets: [
@@ -1082,10 +1135,10 @@ class BMF_BSI_Form_Shortcodes {
             borderWidth: 2.5,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: '#0b1220',
+            pointBackgroundColor: skin.point,
             pointBorderColor: cDrivers,
             pointBorderWidth: 2,
-            tension: 0.65,
+            tension: 0.35,
             spanGaps: true
           },
           {
@@ -1096,7 +1149,7 @@ class BMF_BSI_Form_Shortcodes {
             borderWidth: 2.5,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: '#0b1220',
+            pointBackgroundColor: skin.point,
             pointBorderColor: cMediators,
             pointBorderWidth: 2,
             tension: 0.35,
@@ -1110,7 +1163,7 @@ class BMF_BSI_Form_Shortcodes {
             borderWidth: 2.5,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: '#0b1220',
+            pointBackgroundColor: skin.point,
             pointBorderColor: cOutcomes,
             pointBorderWidth: 2,
             tension: 0.35,
@@ -1125,10 +1178,10 @@ class BMF_BSI_Form_Shortcodes {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#121a2b',
-            titleColor: '#e2e8f0',
-            bodyColor: '#cbd5e1',
-            borderColor: '#1e2a44',
+            backgroundColor: skin.tipBg,
+            titleColor: skin.tipTitle,
+            bodyColor: skin.tipBody,
+            borderColor: skin.tipBorder,
             borderWidth: 1,
             callbacks: {
               title: function(items) {
@@ -1145,13 +1198,13 @@ class BMF_BSI_Form_Shortcodes {
             min: xMin,
             max: xMax,
             time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
-            grid: { color: 'rgba(30,42,68,0.8)', drawBorder: false },
-            ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+            grid: { color: skin.grid, drawBorder: false },
+            ticks: { color: skin.tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
           },
           y: {
             min: 0,
             max: 100,
-            grid: { color: 'rgba(30,42,68,0.6)', drawBorder: false },
+            grid: { color: skin.grid, drawBorder: false },
             ticks: {
               stepSize: 25,
               color: function(ctx) {
@@ -1160,7 +1213,7 @@ class BMF_BSI_Form_Shortcodes {
                 if (v === 25) return '#eff012';
                 if (v === 50) return '#ff6600';
                 if (v === 75) return '#d60008';
-                return '#94a3b8';
+                return skin.tick;
               },
               callback: function(v) {
                 if (v === 100) return '100';
@@ -1174,9 +1227,14 @@ class BMF_BSI_Form_Shortcodes {
           }
         }
       },
-      plugins: [ zonePlugin, phasePlugin, glowPlugin ]
+      plugins: [ zonePlugin, phasePlugin ]
     });
   }
+
+  document.addEventListener('click', function (ev) {
+    if (!ev.target || !ev.target.closest || !ev.target.closest('.bmf-wb-theme-btn')) return;
+    setTimeout(function () { if (typeof Chart !== 'undefined') render(); }, 30);
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

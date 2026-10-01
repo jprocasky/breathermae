@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — Shared light/dark theme
+
+- Honors viewer usermeta `bmf_ui_theme` when BMF Wellbeing File is active.
+- `.bmae-avf-root[data-bmf-theme]` light token set; metric and pillar-card gradients kept with light stops.
+- Follows page `[bmf_theme_toggle]` without embedding a second control.
+
 ## 1.2.0 — Subcategory enrichment from forms
 
 - Added `BMAE_AVF_Section_Map` mapping live `bm_form_sections` IDs (forms 18–25) to registry subcategory keys.

@@ -924,7 +924,7 @@ class BMF_Key_Essentials_Shortcodes {
 	 */
 	public static function shortcode_trend_chart( $atts ) {
 		if ( self::should_bail_for_editor() ) {
-			return '<div style="padding:20px;background:#0b1220;color:#94a3b8;border-radius:12px;">Key Essentials trend preview</div>';
+			return '<div class="bmf-ke-trend-empty">Key Essentials trend preview</div>';
 		}
 
 		$atts = shortcode_atts(
@@ -978,8 +978,10 @@ class BMF_Key_Essentials_Shortcodes {
 			}
 		}
 
+		$theme = class_exists( 'BMF_Wellbeing_Theme' ) ? BMF_Wellbeing_Theme::get() : 'dark';
+
 		if ( $n_pts === 0 ) {
-			return '<div class="bmf-ke-trend-empty" style="padding:24px;text-align:center;color:#8892a4;background:#0b1220;border-radius:12px;">No historical Key Essentials data</div>';
+			return '<div class="bmf-ke-trend-empty" data-bmf-theme="' . esc_attr( $theme ) . '">No historical Key Essentials data</div>';
 		}
 
 		// Pad the window; keep at least ~90 days so a couple of points are readable.
@@ -1011,18 +1013,34 @@ class BMF_Key_Essentials_Shortcodes {
 
 		ob_start();
 		?>
-<div class="bmf-ke-trend-wrap" style="background:#0b1220;border-radius:16px;padding:20px 16px 16px;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+<style>
+.bmf-ke-trend-wrap,.bmf-ke-trend-empty{
+  --ke-text:#e2e8f0;--ke-muted:#94a3b8;--ke-label:#38bdf8;--ke-title:#f8fafc;--ke-bg:#0b1220;
+  font-family:system-ui,-apple-system,sans-serif;color:var(--ke-text);border-radius:16px;
+}
+.bmf-ke-trend-wrap[data-bmf-theme="light"],.bmf-ke-trend-empty[data-bmf-theme="light"]{
+  --ke-text:#122033;--ke-muted:#5b6b82;--ke-label:#0284c7;--ke-title:#0b1b3a;--ke-bg:#f4f7fb;
+}
+.bmf-ke-trend-wrap{background:transparent;padding:4px 0 0}
+.bmf-ke-trend-empty{padding:24px;text-align:center;color:var(--ke-muted);background:var(--ke-bg)}
+.bmf-ke-trend-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.bmf-ke-trend-kicker{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ke-label)}
+.bmf-ke-trend-title{font-size:1.05rem;font-weight:650;color:var(--ke-title)}
+.bmf-ke-trend-hint{font-size:.78rem;color:var(--ke-muted)}
+.bmf-ke-trend-legend{display:flex;flex-wrap:wrap;gap:12px 16px;justify-content:center;margin-top:14px;font-size:.8rem;color:var(--ke-text)}
+</style>
+<div class="bmf-ke-trend-wrap" data-bmf-theme="<?php echo esc_attr( $theme ); ?>">
+  <div class="bmf-ke-trend-head">
     <div>
-      <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#38bdf8;">Key Essentials</div>
-      <div style="font-size:1.05rem;font-weight:650;color:#f8fafc;">History trend</div>
+      <div class="bmf-ke-trend-kicker">Key Essentials</div>
+      <div class="bmf-ke-trend-title">History trend</div>
     </div>
-    <div style="font-size:0.78rem;color:#94a3b8;">1–5 scale · higher is better · click a name to hide</div>
+    <div class="bmf-ke-trend-hint">1–5 scale · higher is better · click a name to hide</div>
   </div>
   <div style="position:relative;height:<?php echo (int) $height; ?>px;">
     <canvas id="<?php echo esc_attr( $uid ); ?>"></canvas>
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:12px 16px;justify-content:center;margin-top:14px;font-size:0.8rem;">
+  <div class="bmf-ke-trend-legend">
     <?php foreach ( $datasets as $ds ) : ?>
     <span style="display:inline-flex;align-items:center;gap:6px;">
       <span style="width:12px;height:3px;background:<?php echo esc_attr( $ds['color'] ); ?>;border-radius:2px;display:inline-block;"></span>
@@ -1049,6 +1067,58 @@ class BMF_Key_Essentials_Shortcodes {
     s.src = src; s.onload = cb; document.head.appendChild(s);
   }
 
+  function closestTheme(el) {
+    var host = document.querySelector('.bmf-wb-panel[data-bmf-theme], .bmf-wb-wrap[data-bmf-theme]');
+    if (host) {
+      var ht = host.getAttribute('data-bmf-theme');
+      if (ht === 'light' || ht === 'dark') return ht;
+    }
+    var n = el;
+    while (n && n.getAttribute) {
+      var t = n.getAttribute('data-bmf-theme');
+      if (t === 'light' || t === 'dark') return t;
+      n = n.parentElement;
+    }
+    return 'dark';
+  }
+
+  function chartSkin(theme) {
+    if (theme === 'light') {
+      return {
+        grid: 'rgba(213,222,235,.95)',
+        tick: '#5b6b82',
+        legend: '#1e3a5f',
+        point: '#fff',
+        tipBg: '#fff',
+        tipTitle: '#122033',
+        tipBody: '#334155',
+        tipBorder: '#d5deeb',
+        zones: [
+          { from: 4.5, to: 5.0, color: 'rgba(16,185,129,0.12)' },
+          { from: 3.5, to: 4.5, color: 'rgba(8,145,178,0.10)' },
+          { from: 2.5, to: 3.5, color: 'rgba(37,99,235,0.08)' },
+          { from: 1.0, to: 2.5, color: 'rgba(217,119,6,0.10)' }
+        ]
+      };
+    }
+    return {
+      grid: 'rgba(30,42,68,0.8)',
+      tick: '#94a3b8',
+      legend: '#cbd5e1',
+      point: '#0b1220',
+      tipBg: '#121a2b',
+      tipTitle: '#e2e8f0',
+      tipBody: '#cbd5e1',
+      tipBorder: '#1e2a44',
+      zones: [
+        { from: 4.5, to: 5.0, color: 'rgba(52,211,153,0.12)' },
+        { from: 3.5, to: 4.5, color: 'rgba(34,211,238,0.10)' },
+        { from: 2.5, to: 3.5, color: 'rgba(96,165,250,0.08)' },
+        { from: 1.0, to: 2.5, color: 'rgba(251,191,36,0.10)' }
+      ]
+    };
+  }
+
   function boot() {
     loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', function(){
       loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js', function(){
@@ -1060,18 +1130,21 @@ class BMF_Key_Essentials_Shortcodes {
   function render() {
     var ctx = document.getElementById(canvasId);
     if (!ctx || typeof Chart === 'undefined') return;
+    var wrap = ctx.closest('.bmf-ke-trend-wrap');
+    var theme = closestTheme(wrap || ctx);
+    if (wrap) wrap.setAttribute('data-bmf-theme', theme);
+    var skin = chartSkin(theme);
+    if (ctx._keChart) {
+      try { ctx._keChart.destroy(); } catch (e) {}
+      ctx._keChart = null;
+    }
 
     var zonePlugin = {
       id: 'bmfKeZones',
       beforeDraw: function(chart) {
         var y = chart.scales.y;
         var x = chart.scales.x;
-        var areas = [
-          { from: 4.5, to: 5.0, color: 'rgba(52,211,153,0.12)' },
-          { from: 3.5, to: 4.5, color: 'rgba(34,211,238,0.10)' },
-          { from: 2.5, to: 3.5, color: 'rgba(96,165,250,0.08)' },
-          { from: 1.0, to: 2.5, color: 'rgba(251,191,36,0.10)' }
-        ];
+        var areas = skin.zones;
         var ctx2 = chart.ctx;
         areas.forEach(function(a){
           var y1 = y.getPixelForValue(a.to);
@@ -1108,7 +1181,7 @@ class BMF_Key_Essentials_Shortcodes {
         borderWidth: 2.25,
         pointRadius: ptRadius,
         pointHoverRadius: ptHover,
-        pointBackgroundColor: '#0b1220',
+        pointBackgroundColor: skin.point,
         pointBorderColor: ds.color,
         pointBorderWidth: 2,
         tension: 0.35,
@@ -1116,7 +1189,7 @@ class BMF_Key_Essentials_Shortcodes {
       };
     });
 
-    new Chart(ctx, {
+    ctx._keChart = new Chart(ctx, {
       type: 'line',
       data: { datasets: datasets },
       options: {
@@ -1126,13 +1199,13 @@ class BMF_Key_Essentials_Shortcodes {
         plugins: {
           legend: {
             display: true,
-            labels: { color: '#cbd5e1', boxWidth: 12, font: { size: 11 }, padding: 12 }
+            labels: { color: skin.legend, boxWidth: 12, font: { size: 11 }, padding: 12 }
           },
           tooltip: {
-            backgroundColor: '#121a2b',
-            titleColor: '#e2e8f0',
-            bodyColor: '#cbd5e1',
-            borderColor: '#1e2a44',
+            backgroundColor: skin.tipBg,
+            titleColor: skin.tipTitle,
+            bodyColor: skin.tipBody,
+            borderColor: skin.tipBorder,
             borderWidth: 1,
             callbacks: {
               title: function(items) {
@@ -1153,13 +1226,13 @@ class BMF_Key_Essentials_Shortcodes {
             min: xMin,
             max: xMax,
             time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
-            grid: { color: 'rgba(30,42,68,0.8)', drawBorder: false },
-            ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+            grid: { color: skin.grid, drawBorder: false },
+            ticks: { color: skin.tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
           },
           y: {
             min: 1,
             max: 5,
-            grid: { color: 'rgba(30,42,68,0.6)', drawBorder: false },
+            grid: { color: skin.grid, drawBorder: false },
             ticks: {
               stepSize: 1,
               color: function(ctx) {
@@ -1169,7 +1242,7 @@ class BMF_Key_Essentials_Shortcodes {
                 if (v === 3) return '#60a5fa';
                 if (v === 2) return '#fbbf24';
                 if (v === 1) return '#f59e0b';
-                return '#94a3b8';
+                return skin.tick;
               },
               callback: function(v) {
                 if (v === 5) return '5  EXCELLENT';
@@ -1186,6 +1259,11 @@ class BMF_Key_Essentials_Shortcodes {
       plugins: [ zonePlugin, glowPlugin ]
     });
   }
+
+  document.addEventListener('click', function (ev) {
+    if (!ev.target || !ev.target.closest || !ev.target.closest('.bmf-wb-theme-btn')) return;
+    setTimeout(function () { if (typeof Chart !== 'undefined') render(); }, 30);
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
