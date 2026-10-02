@@ -204,10 +204,17 @@ function ulscf_viewer_normalize_form( $raw ) {
   if ( $raw === '' ) {
     return '';
   }
+  // Accept a full table name (uls_ULS_CF_BIO) as well as the form name.
+  // Only strip the WP prefix when the remainder is still a ULS_CF_ form.
+  // Do not strip on a case-insensitive prefix match: prefix "uls_" would
+  // otherwise eat the start of form name "ULS_CF_BIO" and leave "CF_BIO".
   global $wpdb;
-  $prefix = isset( $wpdb->prefix ) ? $wpdb->prefix : '';
+  $prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : '';
   if ( $prefix !== '' && stripos( $raw, $prefix ) === 0 ) {
-    $raw = substr( $raw, strlen( $prefix ) );
+    $rest = substr( $raw, strlen( $prefix ) );
+    if ( stripos( $rest, 'ULS_CF_' ) === 0 ) {
+      $raw = $rest;
+    }
   }
   if ( stripos( $raw, 'ulscf_' ) === 0 ) {
     return '';

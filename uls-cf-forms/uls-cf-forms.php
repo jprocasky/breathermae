@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ULS CF Forms — Per-form Tables with Locking + Prefill (PHP + JS)
  * Description: Elementor Pro forms whose Form Name starts with "ULS_CF_": per-form tables, lock/unlock, update or insert; supports shortcodes for single-value defaults AND auto-prefill via render filters when no editor default is set. Adds JS fallback to reliably prefill all fields after widget render and popup show.
- * Version: 0.10.0
+ * Version: 0.10.1
  * Author: Jeff Procasky
  * License: GPL-2.0-or-later
  */
@@ -15,7 +15,7 @@ require_once __DIR__ . '/uls-cf-viewer.php';
  * ------------------------------- */
 define( 'ULS_CF_PREFIX', 'ULS_CF_' );          // Elementor Form Name must start with this
 define( 'ULS_CF_TABLE_PREFIX', 'ulscf_' );     // legacy table prefix (kept for fallback reads)
-define( 'ULS_CF_VERSION', '0.10.0' );
+define( 'ULS_CF_VERSION', '0.10.1' );
 if ( ! defined( 'ULS_CF_DEBUG' ) ) define( 'ULS_CF_DEBUG', false );         // error_log traces
 if ( ! defined( 'ULS_CF_FORCE_PREFILL' ) ) define( 'ULS_CF_FORCE_PREFILL', false ); // testing flag
 function ulscf_dbg( $msg ) { if ( ULS_CF_DEBUG ) error_log( '[ULS_CF] ' . $msg ); }
