@@ -1,0 +1,52 @@
+.ulscf-viewer {
+  border: 1px solid #d7dde3;
+  border-radius: 8px;
+  background: #fff;
+  color: #1d2327;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0 0 1.25rem;
+}
+.ulscf-viewer__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e6ebf0;
+}
+.ulscf-viewer__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.ulscf-viewer__who {
+  color: #50575e;
+  font-size: 12px;
+}
+.ulscf-viewer__body { padding: 12px 14px 14px; }
+.ulscf-viewer__note { margin: 0; color: #50575e; }
+.ulscf-viewer__dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 34%) 1fr;
+  gap: 6px 12px;
+  margin: 0 0 12px;
+}
+.ulscf-viewer__dl dt { margin: 0; color: #50575e; font-weight: 600; }
+.ulscf-viewer__dl dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.ulscf-viewer__scroll { overflow-x: auto; }
+.ulscf-viewer__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ulscf-viewer__table th,
+.ulscf-viewer__table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e6ebf0;
+  vertical-align: top;
+}
+.ulscf-viewer__table tbody tr { cursor: pointer; }
+.ulscf-viewer__table tbody tr.is-current { background: #f0f6fc; }
+.ulscf-viewer__table tbody tr:hover { background: #f6f7f7; }
