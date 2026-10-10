@@ -30,6 +30,7 @@ class BMF_Wellbeing_Assembler {
 			'bsi'            => BMF_Wellbeing_Adapter_BSI::load( $user_id, $email ),
 			'biovoice'       => BMF_Wellbeing_Adapter_BioVoice::load( $user_id, $email ),
 			'fitbit'         => BMF_Wellbeing_Adapter_Fitbit::load( $user_id, $email ),
+			'oura'           => BMF_Wellbeing_Adapter_Oura::load( $user_id, $email ),
 			'profile'        => BMF_Wellbeing_Adapter_Profile::load( $user_id, $email ),
 		];
 

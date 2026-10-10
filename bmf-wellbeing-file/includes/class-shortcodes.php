@@ -260,10 +260,16 @@ class BMF_Wellbeing_Shortcodes {
 		if ( ! empty( $bv['progress'] ) && ( $bv['progress']['baseline_final'] || $bv['progress']['comparison_final'] ) ) {
 			$html .= '<p class="bmf-wb-note">Groups: baseline ' . (int) $bv['progress']['baseline_final'] . ' · comparison ' . (int) $bv['progress']['comparison_final'] . '</p>';
 		}
-		$html .= self::score_block( 'Fitbit nights (state)', $brief['sources']['fitbit']['scores'] ?? [], 'high_better' );
 		$fb = $brief['sources']['fitbit'] ?? [];
+		if ( ! empty( $fb['present'] ) || ! empty( $fb['linked'] ) ) {
+			$html .= self::score_block( 'Fitbit nights (state)', $fb['scores'] ?? [], 'high_better' );
+		}
 		if ( ! empty( $fb['present'] ) ) {
 			$html .= '<p class="bmf-wb-note">Last 7 nights with data: ' . (int) ( $fb['nights_7d'] ?? 0 ) . ' · under 6 hours: ' . (int) ( $fb['short_nights'] ?? 0 ) . '</p>';
+		}
+		$oura = $brief['sources']['oura'] ?? [];
+		if ( ! empty( $oura['present'] ) || ! empty( $oura['linked'] ) ) {
+			$html .= self::score_block( 'Oura nights (state)', $oura['scores'] ?? [], 'high_better' );
 		}
 
 		$html .= '<p class="bmf-wb-disc">' . esc_html( $brief['disclaimer'] ?? '' ) . '</p>';
@@ -343,14 +349,28 @@ class BMF_Wellbeing_Shortcodes {
 			];
 		}
 
-		$fb_hist = $brief['sources']['fitbit']['history'] ?? [];
-		if ( count( $fb_hist ) >= 2 ) {
+		$fb = $brief['sources']['fitbit'] ?? [];
+		$fb_hist = $fb['history'] ?? [];
+		if ( ( ! empty( $fb['present'] ) || ! empty( $fb['linked'] ) ) && count( $fb_hist ) >= 2 ) {
 			$panels[] = [
 				'title'  => 'Fitbit nights',
 				'sub'    => 'Sleep vs 8h · efficiency  (higher is better)',
 				'series' => [
 					[ 'label' => 'Sleep / 8h', 'color' => '#38bdf8', 'points' => self::hist_xy( $fb_hist, 'sleep_pct' ) ],
 					[ 'label' => 'Efficiency', 'color' => '#34d399', 'points' => self::hist_xy( $fb_hist, 'efficiency' ) ],
+				],
+			];
+		}
+
+		$oura = $brief['sources']['oura'] ?? [];
+		$oura_hist = $oura['history'] ?? [];
+		if ( ( ! empty( $oura['present'] ) || ! empty( $oura['linked'] ) ) && count( $oura_hist ) >= 2 ) {
+			$panels[] = [
+				'title'  => 'Oura nights',
+				'sub'    => 'Sleep vs 8h · readiness  (higher is better)',
+				'series' => [
+					[ 'label' => 'Sleep / 8h', 'color' => '#38bdf8', 'points' => self::hist_xy( $oura_hist, 'sleep_pct' ) ],
+					[ 'label' => 'Readiness', 'color' => '#a78bfa', 'points' => self::hist_xy( $oura_hist, 'readiness' ) ],
 				],
 			];
 		}
@@ -404,6 +424,9 @@ class BMF_Wellbeing_Shortcodes {
 			$html .= '<div class="bmf-wb-tier-chips">';
 			foreach ( $tier['sources'] ?? [] as $k ) {
 				if ( isset( $brief['sources'][ $k ] ) ) {
+					if ( in_array( $k, array( 'oura', 'fitbit' ), true ) && empty( $brief['sources'][ $k ]['present'] ) && empty( $brief['sources'][ $k ]['linked'] ) ) {
+						continue;
+					}
 					$html .= self::source_chip( $brief['sources'][ $k ] );
 				}
 			}
@@ -443,11 +466,42 @@ class BMF_Wellbeing_Shortcodes {
 		} else {
 			$meta = 'No final row';
 		}
+		$words = array(
+			'fresh'      => 'Current',
+			'present'    => 'Current',
+			'aging'      => 'Available',
+			'stale'      => 'Available',
+			'incomplete' => 'Available',
+			'missing'    => 'Not started',
+			'reserved'   => 'Reserved',
+		);
+		$label = $words[ $status ] ?? ucfirst( $status );
 		return '<div class="bmf-wb-chip st-' . esc_attr( $status ) . '">'
+			. '<div class="bmf-wb-chip-top">' . self::icon( (string) ( $src['key'] ?? '' ) )
 			. '<span class="nm">' . esc_html( $src['label'] ?? $src['key'] ) . '</span>'
-			. '<span class="st">' . esc_html( $status ) . '</span>'
+			. '<span class="st">' . esc_html( $label ) . '</span></div>'
 			. '<span class="dt">' . esc_html( $meta ) . '</span>'
 			. '</div>';
+	}
+
+	private static function icon( string $key ): string {
+		$map = array(
+			'pillars_rapid' => 'rapid',
+			'pillars'       => 'pillars',
+		);
+		$key = $map[ $key ] ?? $key;
+		$paths = array(
+			'rsi'      => '<path d="M3 12h3l2-5 4 10 2-5h7"/>',
+			'rapid'    => '<path d="M13 3 5 14h7l-1 7 8-11h-7l1-7z"/>',
+			'keys'     => '<circle cx="8" cy="8" r="3"/><path d="M10.5 10.5 20 20M16 16l2 2M14 18l2 2"/>',
+			'pillars'  => '<path d="M5 20V9M10 20V4M15 20v-7M20 20V7"/>',
+			'bsi'      => '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+			'biovoice' => '<path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h0"/>',
+			'fitbit'   => '<rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6V4h6v2M9 18v2h6v-2"/>',
+			'oura'     => '<circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="2"/>',
+		);
+		$path = $paths[ $key ] ?? '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>';
+		return '<svg class="bmf-wb-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
 	}
 
 	private static function score_block( string $title, array $scores, string $direction, string $extra_class = '' ): string {

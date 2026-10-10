@@ -127,12 +127,14 @@
 
 	function applyTheme(theme) {
 		theme = theme === 'light' ? 'light' : 'dark';
-		document.querySelectorAll('.bmf-wb-wrap, .bmf-wb-panel, .bmf-rsi-trend-wrap, .bmf-rsi-trend-empty, .bmf-ke-trend-wrap, .bmf-ke-trend-empty, .bmf-bsi-trend-wrap, .bmf-bsi-trend-empty, .bmae-avf-root').forEach(function (wrap) {
+		document.querySelectorAll('.bmf-wb-wrap, .bmf-wb-panel, .bmf-home, .bmf-rsi-trend-wrap, .bmf-rsi-trend-empty, .bmf-ke-trend-wrap, .bmf-ke-trend-empty, .bmf-bsi-trend-wrap, .bmf-bsi-trend-empty, .bmae-avf-root').forEach(function (wrap) {
 			wrap.setAttribute('data-bmf-theme', theme);
-			wrap.querySelectorAll('.bmf-wb-theme-btn').forEach(function (btn) {
+			wrap.querySelectorAll('.bmf-wb-theme-btn, [data-bmf-theme-set]').forEach(function (btn) {
 				btn.setAttribute('aria-pressed', btn.getAttribute('data-bmf-theme-set') === theme ? 'true' : 'false');
 			});
-			renderCharts(wrap);
+			if (wrap.classList.contains('bmf-wb-wrap') || wrap.classList.contains('bmf-wb-panel')) {
+				renderCharts(wrap);
+			}
 		});
 		if (window.bmfWellbeingCfg) window.bmfWellbeingCfg.theme = theme;
 	}

@@ -18,8 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BMF_Wellbeing_Adapter_Fitbit {
 
 	public static function load( int $user_id, string $email ): array {
-		$cfg   = BMF_Wellbeing_Map::source( 'fitbit' );
-		$empty = self::shell( $cfg );
+		$cfg    = BMF_Wellbeing_Map::source( 'fitbit' );
+		$linked = function_exists( 'wpf_has_tag' ) && $user_id > 0 && wpf_has_tag( 'FITBIT', $user_id );
+		$empty  = self::shell( $cfg, $linked );
 
 		$nights = apply_filters( 'bmf_wellbeing_fitbit_nights', null, $user_id, $email );
 		if ( ! is_array( $nights ) ) {
@@ -295,13 +296,14 @@ class BMF_Wellbeing_Adapter_Fitbit {
 		];
 	}
 
-	private static function shell( array $cfg ): array {
+	private static function shell( array $cfg, bool $linked = false ): array {
 		return [
 			'key'          => 'fitbit',
 			'label'        => $cfg['label'] ?? 'Fitbit',
 			'enabled'      => ! empty( $cfg['enabled'] ),
 			'clock'        => $cfg['clock'] ?? 'state',
 			'present'      => false,
+			'linked'       => $linked,
 			'status'       => 'missing',
 			'date'         => '',
 			'age_days'     => null,

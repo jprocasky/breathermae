@@ -82,9 +82,9 @@ class BMF_Wellbeing_Map {
 				'bsi'      => [ 'enabled' => true, 'label' => 'BSI', 'clock' => 'cycle', 'recommended_days' => 90, 'aging_days' => 100, 'stale_days' => 120, 'direction' => 'low_better', 'scale' => 100, 'assessment_key' => 'bsi', 'tier' => '360' ],
 				'biovoice' => [ 'enabled' => true, 'label' => 'BioVoicePrint', 'clock' => 'state', 'recommended_days' => 30, 'aging_days' => 45, 'stale_days' => 60, 'direction' => 'low_better', 'scale' => 100, 'tier' => '360' ],
 				'fitbit'   => [ 'enabled' => true, 'label' => 'Fitbit', 'clock' => 'state', 'recommended_days' => 1, 'aging_days' => 3, 'stale_days' => 7, 'direction' => 'high_better', 'tier' => '360' ],
+				'oura'     => [ 'enabled' => true, 'label' => 'Oura', 'clock' => 'state', 'recommended_days' => 1, 'aging_days' => 3, 'stale_days' => 7, 'direction' => 'high_better', 'tier' => '360' ],
 				'profile'  => [ 'enabled' => true, 'label' => 'Profile', 'clock' => 'context', 'recommended_days' => 3650, 'aging_days' => 3650, 'stale_days' => 3650, 'direction' => 'context' ],
 				'whoop'    => [ 'enabled' => false, 'label' => 'Whoop', 'clock' => 'state', 'reserved' => true ],
-				'oura'     => [ 'enabled' => false, 'label' => 'Oura', 'clock' => 'state', 'reserved' => true ],
 				'apple'    => [ 'enabled' => false, 'label' => 'Apple Health', 'clock' => 'state', 'reserved' => true ],
 			],
 			'metrics' => [
@@ -157,7 +157,7 @@ class BMF_Wellbeing_Map {
 			[
 				'key'     => '360',
 				'label'   => '360 Health Intelligence',
-				'sources' => [ 'bsi', 'biovoice', 'fitbit' ],
+				'sources' => [ 'bsi', 'biovoice', 'fitbit', 'oura' ],
 			],
 		] );
 	}

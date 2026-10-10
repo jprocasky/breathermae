@@ -3,7 +3,7 @@
  * Plugin Name:       BMF Wellbeing File
  * Plugin URI:        https://breathermae.com
  * Description:       Canonical wellbeing brief from RSI, Pillars, Keys, BSI, BioVoicePrint, and Fitbit nights. Status + brief shortcodes.
- * Version:           0.1.10-poc
+ * Version:           0.1.17-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_WELLBEING_VERSION', '0.1.10-poc' );
+define( 'BMF_WELLBEING_VERSION', '0.1.17-poc' );
 define( 'BMF_WELLBEING_FILE', __FILE__ );
 define( 'BMF_WELLBEING_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_WELLBEING_URL', plugin_dir_url( __FILE__ ) );
@@ -48,6 +48,7 @@ require_once BMF_WELLBEING_PATH . 'includes/class-adapter-keys.php';
 require_once BMF_WELLBEING_PATH . 'includes/class-adapter-bsi.php';
 require_once BMF_WELLBEING_PATH . 'includes/class-adapter-biovoice.php';
 require_once BMF_WELLBEING_PATH . 'includes/class-adapter-fitbit.php';
+require_once BMF_WELLBEING_PATH . 'includes/class-adapter-oura.php';
 require_once BMF_WELLBEING_PATH . 'includes/class-adapter-profile.php';
 require_once BMF_WELLBEING_PATH . 'includes/class-assembler.php';
 require_once BMF_WELLBEING_PATH . 'includes/class-shortcodes.php';
