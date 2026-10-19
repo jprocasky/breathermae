@@ -35,6 +35,9 @@ class ULS_Members_Plugin {
         
         // Load AI summary class (for file summary AJAX endpoint)
         require_once plugin_dir_path( __FILE__ ) . 'uls-ai-summary.php';
+        
+        //
+        require_once plugin_dir_path( __FILE__ ) . 'uls-sales-commission.php';        
 
         // Shortcodes
         add_shortcode( 'uls_members_table', [ $this, 'shortcode_members_table' ] );
