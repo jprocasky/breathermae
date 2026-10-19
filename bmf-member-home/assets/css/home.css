@@ -167,8 +167,14 @@
 .bmf-home-meta,
 .bmf-home-empty{
 	color:var(--bmf-muted);
-	font-size:.8rem;
-	margin:0 0 10px;
+	font-size:.78rem;
+	margin:4px 0 0;
+}
+.bmf-home-lag{
+	margin:10px 0 0;
+	color:var(--bmf-muted);
+	font-size:.72rem;
+	line-height:1.35;
 }
 .bmf-home-subhead{margin-top:16px}
 .bmf-home-due-grid{
@@ -280,6 +286,7 @@
 .bmf-home a{
 	color:var(--bmf-text);
 }
+.bmf-home .bmf-home-lag{color:var(--bmf-muted)}
 .bmf-home a.bmf-home-btn{color:var(--bmf-accent) !important;background:transparent}
 .bmf-home a.bmf-home-btn.is-primary{color:var(--bmf-badge-fg) !important;background:var(--bmf-accent)}
 .bmf-home .bmf-home-embed,
@@ -339,7 +346,77 @@
 .bmf-home .bmf-cal-title{display:none}
 .bmf-home .bmf-cal-item,
 .bmf-home .bmf-cal-placeholder{color:var(--bmf-text)}
+.bmf-home-menu,
+.bmf-home-menu-close,
+.bmf-home-backdrop{display:none}
+.bmf-home-menu{
+	align-items:center;
+	gap:8px;
+	border:1px solid var(--bmf-border);
+	background:var(--bmf-chip);
+	color:var(--bmf-text);
+	border-radius:8px;
+	padding:8px 12px;
+	font-size:.9rem;
+	font-weight:650;
+	cursor:pointer;
+}
+.bmf-home-menu-bars,
+.bmf-home-menu-bars:before,
+.bmf-home-menu-bars:after{
+	display:block;
+	width:14px;
+	height:2px;
+	background:currentColor;
+	border-radius:2px;
+	content:"";
+}
+.bmf-home-menu-bars{position:relative}
+.bmf-home-menu-bars:before{position:absolute;top:-5px}
+.bmf-home-menu-bars:after{position:absolute;top:5px}
+.bmf-home-menu-close{
+	margin:0 0 10px auto;
+	border:1px solid var(--bmf-border);
+	background:transparent;
+	color:var(--bmf-muted);
+	border-radius:8px;
+	padding:4px 8px;
+	font-size:.75rem;
+	cursor:pointer;
+}
 @media (max-width:900px){
 	.bmf-home,
 	.bmf-home-grid{grid-template-columns:1fr}
+	.bmf-home-menu{display:inline-flex}
+	.bmf-home--solo{width:100%}
+	.bmf-home--solo .bmf-home-menu{
+		display:flex;
+		width:100%;
+		justify-content:center;
+		box-sizing:border-box;
+	}
+	.bmf-home-menu-close{display:block}
+	.bmf-home-backdrop{
+		display:block;
+		position:fixed;
+		inset:0;
+		background:rgba(2,19,34,.55);
+		z-index:10010;
+		opacity:0;
+		pointer-events:none;
+	}
+	.bmf-home.is-menu-open .bmf-home-backdrop{opacity:1;pointer-events:auto}
+	.bmf-home-rail{
+		position:fixed;
+		top:0;
+		left:0;
+		bottom:0;
+		width:min(280px,86vw);
+		z-index:10020;
+		margin:0;
+		overflow:auto;
+		transform:translateX(-105%);
+		transition:transform .2s ease;
+	}
+	.bmf-home.is-menu-open .bmf-home-rail{transform:none}
 }

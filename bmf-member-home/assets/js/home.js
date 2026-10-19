@@ -16,6 +16,13 @@
 		});
 	}
 
+	function setMenu(shell, open) {
+		if (!shell) return;
+		shell.classList.toggle('is-menu-open', open);
+		var btn = shell.querySelector('.bmf-home-menu');
+		if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+	}
+
 	ready(function () {
 		var rail = document.querySelector('.bmf-home');
 		if (rail) apply(rail.getAttribute('data-bmf-theme') === 'light' ? 'light' : 'dark');
@@ -25,6 +32,14 @@
 				el.innerHTML = greet + ', <span>' + el.getAttribute('data-bmf-greet') + '</span>';
 			});
 			document.addEventListener('click', function (event) {
+			var toggle = event.target.closest('.bmf-home-menu, .bmf-home-menu-close, .bmf-home-backdrop');
+			if (toggle) {
+				var shell = toggle.closest('.bmf-home');
+				setMenu(shell, toggle.classList.contains('bmf-home-menu') && !shell.classList.contains('is-menu-open'));
+				return;
+			}
+			var link = event.target.closest('.bmf-home-rail a');
+			if (link) setMenu(link.closest('.bmf-home'), false);
 			var dismiss = event.target.closest('[data-bmf-dismiss]');
 			if (dismiss && dismiss.closest('.bmf-home') && window.bmfMemberHome) {
 				var key = dismiss.getAttribute('data-bmf-dismiss');
@@ -57,6 +72,12 @@
 				credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: body.toString()
+			});
+		});
+		document.addEventListener('keydown', function (event) {
+			if (event.key !== 'Escape') return;
+			document.querySelectorAll('.bmf-home.is-menu-open').forEach(function (shell) {
+				setMenu(shell, false);
 			});
 		});
 	});

@@ -19,6 +19,7 @@ class BMF_Member_Home_Shortcodes {
 		}
 		self::enqueue();
 		return '<div class="' . esc_attr( self::wrap_class() ) . '" data-bmf-theme="' . esc_attr( self::theme() ) . '">'
+			. self::menu_button()
 			. self::nav_markup( 'home' )
 			. '<div class="bmf-home-main">' . self::today_markup() . '</div>'
 			. '</div>';
@@ -31,6 +32,7 @@ class BMF_Member_Home_Shortcodes {
 		self::enqueue();
 		$atts = shortcode_atts( array( 'context' => 'home' ), $atts, 'bmf_member_nav' );
 		return '<div class="' . esc_attr( self::wrap_class( true ) ) . '" data-bmf-theme="' . esc_attr( self::theme() ) . '" data-context="' . esc_attr( $atts['context'] ) . '">'
+			. self::menu_button()
 			. self::nav_markup( $atts['context'] )
 			. '</div>';
 	}
@@ -98,9 +100,16 @@ class BMF_Member_Home_Shortcodes {
 		);
 	}
 
+	private static function menu_button(): string {
+		return '<button type="button" class="bmf-home-menu" aria-expanded="false" aria-controls="bmf-home-rail">'
+			. '<span class="bmf-home-menu-bars" aria-hidden="true"></span><span>Menu</span></button>'
+			. '<div class="bmf-home-backdrop" hidden></div>';
+	}
+
 	private static function nav_markup( string $context = 'home' ): string {
 		$settings = BMF_Member_Home_Settings::get();
-		$html     = '<aside class="bmf-home-rail" aria-label="Site"' . self::help_attrs( 'rail' ) . '>';
+		$html     = '<aside id="bmf-home-rail" class="bmf-home-rail" aria-label="Site"' . self::help_attrs( 'rail' ) . '>';
+		$html    .= '<button type="button" class="bmf-home-menu-close" aria-label="Close menu">Close</button>';
 		$results  = self::link_list( $settings['result_links'] ?? array(), true );
 		$site     = self::link_list( $settings['nav'] ?? array(), false );
 		if ( $context === 'results' ) {
@@ -164,7 +173,7 @@ class BMF_Member_Home_Shortcodes {
 		$html    .= '<div><p class="bmf-home-kicker">Today</p>';
 		$html    .= '<h2 class="bmf-home-hello" data-bmf-greet="' . esc_attr( $name ) . '">Hello, <span>' . esc_html( $name ) . '</span></h2></div>';
 		$html    .= '<div class="bmf-home-top-tools">';
-		$html    .= '<span class="bmf-home-chip">' . esc_html( self::membership_label() ) . '</span>';
+		$html    .= '<span class="bmf-home-chip"' . self::help_attrs( 'membership' ) . '>' . esc_html( self::membership_label() ) . '</span>';
 		$html    .= self::theme_toggle();
 		$html .= '</div></header>';
 		$html .= self::cards_markup( $settings, $user->user_email );
@@ -233,7 +242,9 @@ class BMF_Member_Home_Shortcodes {
 			}
 			$html .= '</div></article>';
 		}
-		$html .= '</div></section>';
+		$html .= '</div>';
+		$html .= '<p class="bmf-home-lag">Status and dates update after overnight scoring, usually within 24 hours of finishing an assessment.</p>';
+		$html .= '</section>';
 		return $html;
 	}
 
@@ -280,7 +291,7 @@ class BMF_Member_Home_Shortcodes {
 			$img = '<img src="' . $image . '" alt="" />';
 			$inner = $link !== '' ? '<a href="' . $link . '">' . $img . '</a>' : $img;
 		}
-		return '<aside class="bmf-home-spot">' . $inner . '</aside>';
+		return '<aside class="bmf-home-spot"' . self::help_attrs( 'wellness' ) . '>' . $inner . '</aside>';
 	}
 
 	private static function matching_notice( array $settings ): ?array {
@@ -380,7 +391,7 @@ class BMF_Member_Home_Shortcodes {
 		$theme = self::theme();
 		$sun   = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
 		$moon  = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/></svg>';
-		$html  = '<div class="bmf-home-theme" role="group" aria-label="Theme">';
+		$html  = '<div class="bmf-home-theme" role="group" aria-label="Theme"' . self::help_attrs( 'theme' ) . '>';
 		$html .= '<button type="button" data-bmf-theme-set="light" aria-pressed="' . ( $theme === 'light' ? 'true' : 'false' ) . '" title="Light" aria-label="Light">' . $sun . '</button>';
 		$html .= '<button type="button" data-bmf-theme-set="dark" aria-pressed="' . ( $theme === 'dark' ? 'true' : 'false' ) . '" title="Dark" aria-label="Dark">' . $moon . '</button>';
 		$html .= '</div>';

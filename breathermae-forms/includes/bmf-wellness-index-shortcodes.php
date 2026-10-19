@@ -70,18 +70,22 @@ class BMF_Wellness_Index_Shortcodes {
 			return self::render_empty( $result['message'] ?? 'Complete more assessments to see your Wellness Index.', $atts, $result );
 		}
 
-		$score  = (int) $result['score'];
-		$status = (string) $result['status'];
-		$zone   = (string) $result['zone'];
-		$size   = in_array( $atts['size'], [ 'sm', 'md' ], true ) ? $atts['size'] : 'sm';
-		$extra  = sanitize_html_class( $atts['class'] );
+		$score   = (int) $result['score'];
+		$status  = (string) $result['status'];
+		$zone    = (string) $result['zone'];
+		$caption = self::caption_for_zone( $zone );
+		$size    = in_array( $atts['size'], [ 'sm', 'md' ], true ) ? $atts['size'] : 'sm';
+		$extra   = sanitize_html_class( $atts['class'] );
+		$tip     = 'Synthesis of your latest RSI, Pillars, and Key Essentials (35/35/30). Strong 75+, Building 50–74, Opportunity 25–49, Focus under 25. Based on self-assessments, not a clinical score.';
 
 		ob_start();
 		?>
 		<div class="bmf-wi <?php echo esc_attr( $size ); ?> is-<?php echo esc_attr( $zone ); ?> <?php echo esc_attr( $extra ); ?>"
-			data-bmf-theme="dark"
-			title="Wellness Index based on your latest assessments">
-			<div class="bmf-wi-label">Wellness Index</div>
+			data-bmf-theme="dark">
+			<div class="bmf-wi-label">
+				Wellness Index
+				<span class="bmf-wi-info" tabindex="0" aria-label="About this index" data-tip="<?php echo esc_attr( $tip ); ?>">i</span>
+			</div>
 			<div class="bmf-wi-gauge" style="--wi-pct: <?php echo esc_attr( $score ); ?>;">
 				<svg viewBox="0 0 36 36" class="bmf-wi-svg" aria-hidden="true">
 					<path class="bmf-wi-track"
@@ -97,9 +101,22 @@ class BMF_Wellness_Index_Shortcodes {
 				<div class="bmf-wi-value"><?php echo esc_html( $score ); ?></div>
 			</div>
 			<div class="bmf-wi-status"><?php echo esc_html( $status ); ?></div>
+			<?php if ( $caption !== '' ) : ?>
+				<div class="bmf-wi-caption"><?php echo esc_html( $caption ); ?></div>
+			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();
+	}
+
+	private static function caption_for_zone( $zone ) {
+		$map = [
+			'strong'      => 'Solid across the assessments that feed this index.',
+			'building'    => 'Foundation in place — room to strengthen.',
+			'opportunity' => 'Several areas are pulling the overall picture down.',
+			'focus'       => 'The current mix points to priority areas.',
+		];
+		return $map[ $zone ] ?? '';
 	}
 
 	private static function render_empty( $message, $atts, $result = [] ) {
@@ -109,11 +126,15 @@ class BMF_Wellness_Index_Shortcodes {
 
 		$spot = self::member_home_spot();
 		$has_image = ! empty( $spot['image'] );
+		$tip = 'Synthesis of your latest RSI, Pillars, and Key Essentials (35/35/30). Strong 75+, Building 50–74, Opportunity 25–49, Focus under 25. Based on self-assessments, not a clinical score.';
 
 		ob_start();
 		?>
 		<div class="bmf-wi bmf-wi-empty <?php echo esc_attr( $size ); ?> <?php echo esc_attr( $extra ); ?>">
-			<div class="bmf-wi-label">Wellness Index</div>
+			<div class="bmf-wi-label">
+				Wellness Index
+				<span class="bmf-wi-info" tabindex="0" aria-label="About this index" data-tip="<?php echo esc_attr( $tip ); ?>">i</span>
+			</div>
 			<?php if ( $has_image ) : ?>
 				<div class="bmf-wi-fallback">
 					<?php if ( ! empty( $spot['link'] ) ) : ?>
@@ -528,7 +549,66 @@ class BMF_Wellness_Index_Shortcodes {
 				letter-spacing: 0.06em;
 				text-transform: uppercase;
 				color: #94a3b8;
-				order: -1;
+				display: inline-flex;
+				align-items: center;
+				gap: 0.35rem;
+			}
+			.bmf-wi-info {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 14px;
+				height: 14px;
+				border-radius: 50%;
+				border: 1px solid currentColor;
+				font-size: 0.62rem;
+				font-weight: 700;
+				font-style: italic;
+				cursor: help;
+				position: relative;
+				opacity: 0.75;
+			}
+			.bmf-wi-info:hover,
+			.bmf-wi-info:focus {
+				opacity: 1;
+			}
+			.bmf-wi-tip {
+				position: fixed;
+				z-index: 10000;
+				max-width: 240px;
+				padding: 0.45rem 0.55rem;
+				background: #121a2b;
+				color: #e2e8f0;
+				border: 1px solid #1e2a44;
+				border-radius: 6px;
+				font-size: 0.68rem;
+				font-weight: 500;
+				font-style: normal;
+				letter-spacing: 0;
+				text-transform: none;
+				line-height: 1.35;
+				text-align: left;
+				white-space: normal;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.15s ease;
+				box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+			}
+			.bmf-wi-tip.is-on {
+				opacity: 1;
+			}
+			[data-bmf-theme="light"] .bmf-wi-tip,
+			.bmf-wi[data-bmf-theme="light"] .bmf-wi-tip {
+				background: #fff;
+				color: #122033;
+				border-color: #d5deeb;
+			}
+			.bmf-wi-caption {
+				font-size: 0.68rem;
+				color: #94a3b8;
+				max-width: 160px;
+				line-height: 1.3;
+				margin-top: -0.15rem;
 			}
 			.bmf-wi-status {
 				font-size: 0.92rem;
@@ -590,6 +670,57 @@ class BMF_Wellness_Index_Shortcodes {
 				color: #5b6b82;
 			}
 		</style>
+		<script>
+		(function(){
+			if (window.bmfWiTipBound) return;
+			window.bmfWiTipBound = true;
+			var tip = null;
+			function ensure() {
+				if (!tip) {
+					tip = document.createElement('div');
+					tip.className = 'bmf-wi-tip';
+					document.body.appendChild(tip);
+				}
+				return tip;
+			}
+			function show(el) {
+				var text = el.getAttribute('data-tip');
+				if (!text) return;
+				var t = ensure();
+				t.textContent = text;
+				var r = el.getBoundingClientRect();
+				var left = r.left + r.width / 2;
+				var top = r.top - 8;
+				t.style.left = left + 'px';
+				t.style.top = top + 'px';
+				t.style.transform = 'translate(-50%, -100%)';
+				if (top < 60) {
+					t.style.top = (r.bottom + 8) + 'px';
+					t.style.transform = 'translate(-50%, 0)';
+				}
+				t.classList.add('is-on');
+			}
+			function hide() {
+				if (tip) tip.classList.remove('is-on');
+			}
+			document.addEventListener('mouseover', function(e){
+				var el = e.target.closest && e.target.closest('.bmf-wi-info');
+				if (el) show(el);
+			});
+			document.addEventListener('mouseout', function(e){
+				var el = e.target.closest && e.target.closest('.bmf-wi-info');
+				if (el) hide();
+			});
+			document.addEventListener('focusin', function(e){
+				var el = e.target.closest && e.target.closest('.bmf-wi-info');
+				if (el) show(el);
+			});
+			document.addEventListener('focusout', function(e){
+				var el = e.target.closest && e.target.closest('.bmf-wi-info');
+				if (el) hide();
+			});
+		})();
+		</script>
 		<?php
 	}
 }
