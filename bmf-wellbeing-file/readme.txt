@@ -2,10 +2,10 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.10-poc
+Stable tag: 0.1.17-poc
 License: GPLv2 or later
 
-Canonical wellbeing brief assembled from entry-level self-assessments. WP Fusion gates the page.
+Canonical wellbeing brief assembled from entry-level self-assessments and wearable nights. WP Fusion gates the page.
 
 == Description ==
 
@@ -13,14 +13,23 @@ Reads existing results tables. Does not capture new assessments.
 
 Enabled:
 * RSI (pulse, weekly recommended) — `wp_bm_rsi_results`
-* 8-Pillars (cycle, 90 days) — `wp_bm_pillars_results`
+* Rapid 8 Pillars (pulse, weekly) — `wp_bm_pillars_results` series=rapid
 * Key Essentials (state, 14 days) — `uls_key_essentials`
+* Complete 8 Pillars (cycle, 90 days) — `wp_bm_pillars_results` series=full
 * BSI (cycle, 90 days) — `wp_bm_bsi_results` F1–F9 + Drivers/Mediators/Outcomes
 * BioVoicePrint (state) — `wp_bm_biovoice_results` stage7 RDI + marker highlights
 * Fitbit (state, nightly) — `uls_bm_fitbit_sleep_summary` (wp_user_id, date_of_sleep, minutes_asleep, efficiency)
+* Oura (state, nightly) — `wp_bm_oura_sleep` + `wp_bm_oura_readiness`
 * Profile (context) — `uls_ULS_CF_BIO` age/sex/height/weight/diet/employment/dependents (no race/income on card)
 
-Reserved adapters (schema only): Whoop, Oura, Apple Health.
+Reserved adapters (schema only): Whoop, Apple Health.
+
+Snapshot groups:
+* Complementary — RSI + Rapid 8 Pillars
+* Art of Wellness — Key Life Essentials + Complete 8 Pillars
+* 360 Health Intelligence — BSI + BioVoicePrint + Fitbit + Oura
+
+Fitbit and Oura chips, score blocks, and history charts appear only when the member has nights or the WP Fusion tag `FITBIT` / `OURA`. History charts need at least two nights.
 
 Shortcodes:
 
@@ -32,10 +41,20 @@ Shortcodes:
 [bmf_theme_toggle]
 
 admin="1" listens for uls:selected-member (same as Q&A / BioVoice admin panels).
-Theme: viewer usermeta `bmf_ui_theme` (dark|light). Default dark. Sun/moon control is on the brief/status wrap; [bmf_theme_toggle] is optional if you want the control on a different part of the page. Provider inspect uses the provider's preference, not the member's.
 fixture="1" renders fixtures/sample_brief.json for Elementor layout work.
 
-Map version: wellbeing_map_v1 in includes/class-map.php
+Theme:
+* Viewer usermeta `bmf_ui_theme` (dark|light). Default dark.
+* Sun/moon control is on the brief/status wrap; [bmf_theme_toggle] is optional for other pages.
+* Provider inspect uses the provider's preference, not the member's.
+* Elementor classes (one class, no dots, leave Elementor background empty):
+  - `bmf-wb-panel` — outer frame (follows theme)
+  - `bmf-wb-inset` — inner well, dark `#021322` with a light top sheen
+  - `bmf-wb-chip` — small tiles
+  - `bmf-wb-h` — section labels (Themes, History)
+* The toggle stamps every `.bmf-wb-wrap`, `.bmf-wb-panel`, RSI/BSI/Keys trend wrap, and `.bmae-avf-root` on the page.
+
+Map version: wellbeing_map_v1.1 in includes/class-map.php
 
 == Installation ==
 
@@ -44,6 +63,16 @@ Map version: wellbeing_map_v1 in includes/class-map.php
 3. Add shortcodes on a WP Fusion-gated page
 
 == Changelog ==
+
+= 0.1.17-poc =
+* Oura adapter: last-night hours + readiness from `wp_bm_oura_sleep` / `wp_bm_oura_readiness`
+* Fitbit and Oura sit in the 360 snapshot group
+* Fitbit/Oura chips and score blocks hidden unless nights are present or the member has the FITBIT/OURA tag
+* History charts: Fitbit sleep/8h + efficiency; Oura sleep/8h + readiness (both need 2+ nights)
+* Map v1.1
+* Elementor theme hosts: `bmf-wb-panel`, `bmf-wb-inset` (`#021322` dark), `bmf-wb-chip`, `bmf-wb-h`
+* Light top sheen on inset and chip; outer panel stays flat
+* Theme toggle stamps RSI, BSI, and Keys trend wraps plus the Eight Pillars AVF root
 
 = 0.1.10-poc =
 * Light/dark result theme as viewer usermeta `bmf_ui_theme` (default dark)

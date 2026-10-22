@@ -12,7 +12,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BMF_Guided_Path_API {
 
 	public static function init() {
-		// Placeholder for future hooks (e.g. on tag change, form submission).
+		add_action( 'init', array( __CLASS__, 'maybe_record_seen' ) );
+	}
+
+	/**
+	 * If the button URL carried a seen token, record the event and clean the URL.
+	 */
+	public static function maybe_record_seen() {
+		if ( empty( $_GET['bmf_gp_seen'] ) || ! is_user_logged_in() ) {
+			return;
+		}
+		$step_id = (int) $_GET['bmf_gp_seen'];
+		$nonce   = sanitize_text_field( wp_unslash( $_GET['bmf_gp_nonce'] ?? '' ) );
+		if ( ! $step_id || ! wp_verify_nonce( $nonce, 'bmf_gp_seen_' . $step_id ) ) {
+			return;
+		}
+		global $wpdb;
+		$table = $wpdb->prefix . 'bm_workflow_steps';
+		$step  = $wpdb->get_row( $wpdb->prepare( "SELECT conditions FROM {$table} WHERE id = %d", $step_id ), ARRAY_A );
+		if ( $step ) {
+			$conds = json_decode( $step['conditions'] ?? '{}', true );
+			$key   = trim( (string) ( $conds['suppress_event_key'] ?? '' ) );
+			if ( $key !== '' ) {
+				BMF_Guided_Path_Evaluator::record_event( get_current_user_id(), $key );
+			}
+		}
+		$clean = remove_query_arg( array( 'bmf_gp_seen', 'bmf_gp_nonce' ) );
+		wp_safe_redirect( $clean );
+		exit;
 	}
 
 	/**
@@ -37,6 +64,18 @@ class BMF_Guided_Path_API {
 		}
 
 		$url = self::build_url( $step['destination'], $step['anchor'] );
+
+		$conds = json_decode( $step['conditions'] ?? '{}', true );
+		$key   = is_array( $conds ) ? trim( (string) ( $conds['suppress_event_key'] ?? '' ) ) : '';
+		if ( $key !== '' ) {
+			$url = add_query_arg(
+				array(
+					'bmf_gp_seen'  => (int) $step['id'],
+					'bmf_gp_nonce' => wp_create_nonce( 'bmf_gp_seen_' . (int) $step['id'] ),
+				),
+				$url
+			);
+		}
 
 		// Record that the step was presented (lightweight; caller may also record click).
 		BMF_Guided_Path_History::record(

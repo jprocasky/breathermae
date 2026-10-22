@@ -3,7 +3,7 @@
  * Plugin Name:       BMF Guided Path
  * Plugin URI:        https://breathermae.com
  * Description:       Data-driven next-step guidance for logged-in members. Evaluates ordered workflow steps against WP Fusion tags and surfaces the matching step on the member-home dashboard.
- * Version:           0.1.7-poc
+ * Version:           0.1.8-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_GUIDED_PATH_VERSION', '0.1.7-poc' );
+define( 'BMF_GUIDED_PATH_VERSION', '0.1.8-poc' );
 define( 'BMF_GUIDED_PATH_FILE', __FILE__ );
 define( 'BMF_GUIDED_PATH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_GUIDED_PATH_URL', plugin_dir_url( __FILE__ ) );

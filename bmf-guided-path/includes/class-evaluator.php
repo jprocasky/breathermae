@@ -107,11 +107,11 @@ class BMF_Guided_Path_Evaluator {
 			}
 		}
 
-		// Suppress if the user recently viewed a results section.
-		// Requires both an event key and a day window; either blank = ignore.
+		// Suppress if the user recently viewed a results section (or ever, if days is 0).
+		// Requires an event key. Days blank = ignore. Days 0 = suppress forever once any row exists.
 		$event_key = trim( (string) ( $conditions['suppress_event_key'] ?? '' ) );
-		$seen_days = isset( $conditions['suppress_if_seen_days'] ) ? (int) $conditions['suppress_if_seen_days'] : 0;
-		if ( $event_key !== '' && $seen_days > 0 ) {
+		$seen_days = array_key_exists( 'suppress_if_seen_days', $conditions ) ? (int) $conditions['suppress_if_seen_days'] : null;
+		if ( $event_key !== '' && $seen_days !== null ) {
 			if ( self::event_seen_within( $user_id, $event_key, $seen_days ) ) {
 				return false;
 			}
@@ -152,8 +152,8 @@ class BMF_Guided_Path_Evaluator {
 	}
 
 	/**
-	 * True when uls_user_event_log has a matching event_key for this user
-	 * whose last_updated is within $days.
+	 * True when uls_user_event_log has a matching event_key for this user.
+	 * $days = 0 means any existing row suppresses. $days > 0 means last_updated within that many days.
 	 */
 	protected static function event_seen_within( $user_id, $event_key, $days ) {
 		global $wpdb;
@@ -173,12 +173,60 @@ class BMF_Guided_Path_Evaluator {
 		if ( ! $raw ) {
 			return false;
 		}
+		if ( $days <= 0 ) {
+			return true;
+		}
 		$ts = strtotime( $raw );
 		if ( ! $ts ) {
 			return false;
 		}
 		$age = (int) floor( ( time() - $ts ) / DAY_IN_SECONDS );
 		return $age >= 0 && $age < $days;
+	}
+
+	/**
+	 * Record (or refresh) an event row so a one-time step can suppress itself.
+	 */
+	public static function record_event( $user_id, $event_key ) {
+		global $wpdb;
+		$event_key = trim( (string) $event_key );
+		if ( $event_key === '' ) {
+			return;
+		}
+		$user = get_userdata( $user_id );
+		if ( ! $user || empty( $user->user_email ) ) {
+			return;
+		}
+		$table = 'uls_user_event_log';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			return;
+		}
+		$existing = $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$table} WHERE user_email = %s AND event_key = %s LIMIT 1",
+			$user->user_email,
+			$event_key
+		) );
+		$now = current_time( 'mysql' );
+		if ( $existing ) {
+			$wpdb->update(
+				$table,
+				array( 'event_value' => '1', 'last_updated' => $now ),
+				array( 'id' => (int) $existing ),
+				array( '%s', '%s' ),
+				array( '%d' )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'user_email'   => $user->user_email,
+					'event_key'    => $event_key,
+					'event_value'  => '1',
+					'last_updated' => $now,
+				),
+				array( '%s', '%s', '%s', '%s' )
+			);
+		}
 	}
 
 	/**

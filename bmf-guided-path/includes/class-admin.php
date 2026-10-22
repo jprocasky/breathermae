@@ -181,8 +181,8 @@ class BMF_Guided_Path_Admin {
 
 		echo '<tr><th>Suppress if event seen</th><td>';
 		echo '<input type="text" class="regular-text" name="suppress_event_key" value="' . esc_attr( $suppress_key ) . '" placeholder="rsi_results_viewed"> ';
-		echo '<input type="number" min="1" class="small-text" name="suppress_if_seen_days" value="' . esc_attr( $suppress_days ) . '" placeholder="days">';
-		echo '<p class="description">Optional. Event key from <code>uls_user_event_log</code> and a day window. If a matching row exists and <code>last_updated</code> is within that many days, this step is skipped. Leave either blank to ignore.</p></td></tr>';
+		echo '<input type="number" min="0" class="small-text" name="suppress_if_seen_days" value="' . esc_attr( $suppress_days ) . '" placeholder="days">';
+		echo '<p class="description">Optional. Event key from <code>uls_user_event_log</code> and a day window. If a matching row exists and <code>last_updated</code> is within that many days, this step is skipped. Set days to <strong>0</strong> to suppress forever once the event exists (one-time notice). Leave the key blank to ignore.</p></td></tr>';
 
 		self::field( 'destination', 'Destination (slug or path)', $step['destination'] ?? '' );
 		self::field( 'anchor', 'Anchor', $step['anchor'] ?? '' );
