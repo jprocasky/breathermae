@@ -337,12 +337,13 @@ class ULS_Member_Files_Module {
             $visibility = $r['visibility_scope'] ?? 'shared';
 
             if ($visibility === 'private') {
-
-                $same_author  = (int) $r['uploaded_by'] === $current_user_id;
-                $same_context = !empty($context) && $r['author_context'] === $context;
-
-                if ( ! $same_author || ! $same_context ) {
-                continue; // 🚫 hide completely
+                // Private = only the uploading provider can see the file
+                // (member visibility is controlled separately by is_member_visible).
+                // Context is recorded for AI/other features but must not hide
+                // the file from its owner, even if context is empty or mismatched.
+                $same_author = (int) $r['uploaded_by'] === $current_user_id;
+                if ( ! $same_author ) {
+                    continue; // hide from other providers
                 }
             }
             
@@ -551,7 +552,7 @@ class ULS_Member_Files_Module {
                 ( isset($_POST['visibility_scope']) && $_POST['visibility_scope'] === 'private' )
                     ? 'private'
                     : 'shared',            
-        ], [ '%s','%d','%s','%s','%s','%s','%s','%d','%d','%d','%d','%s','%d' ] );
+        ], [ '%s','%d','%s','%s','%s','%s','%s','%d','%d','%d','%d','%s','%d','%s','%s' ] );
 
         $id  = (int) $wpdb->insert_id;
         $fmt = $this->dtfmt();

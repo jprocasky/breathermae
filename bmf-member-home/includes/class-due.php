@@ -52,6 +52,9 @@ class BMF_Member_Home_Due {
 		if ( $source === 'keys' ) {
 			return self::keys_date( $email );
 		}
+		if ( $source === 'biovoice' ) {
+			return self::biovoice_date( $email );
+		}
 		$table = $wpdb->prefix . 'bm_rsi_results';
 		$extra = '';
 		if ( $source === 'bsi' ) {
@@ -70,6 +73,23 @@ class BMF_Member_Home_Due {
 		}
 		$sql = "SELECT results_date FROM {$table} WHERE user_email = %s AND is_final = 1{$extra} ORDER BY results_date DESC, id DESC LIMIT 1";
 		$raw = $wpdb->get_var( $wpdb->prepare( $sql, $email ) );
+		return self::normalize_date( $raw );
+	}
+
+	private static function biovoice_date( string $email ): string {
+		global $wpdb;
+		$user = get_user_by( 'email', $email );
+		if ( ! $user ) {
+			return '';
+		}
+		$table = $wpdb->prefix . 'bm_biovoice_session_groups';
+		if ( ! self::table_exists( $table ) ) {
+			return '';
+		}
+		$raw = $wpdb->get_var( $wpdb->prepare(
+			"SELECT updated_at FROM {$table} WHERE user_id = %d ORDER BY updated_at DESC LIMIT 1",
+			$user->ID
+		) );
 		return self::normalize_date( $raw );
 	}
 

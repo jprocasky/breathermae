@@ -271,6 +271,7 @@
       fd.append('note_name', String($p.data('noteName')||''));
       fd.append('is_member_visible', $p.find('.uls-file-visible').is(':checked') ? 1 : 0);
       fd.append('overwrite', 1);
+      fd.append('context', String($p.data('context') || ''));
       fd.append('file', file);
 
       setStatus($p, 'Uploading…');

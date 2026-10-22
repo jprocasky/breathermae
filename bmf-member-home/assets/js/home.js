@@ -80,5 +80,18 @@
 				setMenu(shell, false);
 			});
 		});
+
+		// Guided-path "new step" highlight (session-scoped).
+		document.querySelectorAll('.bmf-home-guided[data-step-id]').forEach(function (panel) {
+			var id = panel.getAttribute('data-step-id') || '';
+			if (!id) return;
+			var key = 'bmf_guided_last';
+			var last = '';
+			try { last = sessionStorage.getItem(key) || ''; } catch (e) {}
+			if (last !== id) {
+				panel.classList.add('bmf-home-guided--new');
+				try { sessionStorage.setItem(key, id); } catch (e) {}
+			}
+		});
 	});
 })();

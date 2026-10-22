@@ -3,7 +3,7 @@
  * Plugin Name:       BMF Member Home
  * Plugin URI:        https://breathermae.com
  * Description:       Logged-in Today dashboard. Dark/light tokens shared with the wellbeing file. Links live in Settings, not in code.
- * Version:           0.1.14-poc
+ * Version:           0.1.19-poc
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Breathermae
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BMF_MEMBER_HOME_VERSION', '0.1.14-poc' );
+define( 'BMF_MEMBER_HOME_VERSION', '0.1.19-poc' );
 define( 'BMF_MEMBER_HOME_FILE', __FILE__ );
 define( 'BMF_MEMBER_HOME_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BMF_MEMBER_HOME_URL', plugin_dir_url( __FILE__ ) );

@@ -123,6 +123,18 @@ class BMF_Member_Home_Settings {
 					'source'  => 'bsi',
 					'enabled' => 1,
 				),
+				array(
+					'key'     => 'biovoice',
+					'label'   => 'BioVoicePrint',
+					'blurb'   => 'Voice regulation sessions. Ongoing after baseline.',
+					'page_id' => 0,
+					'anchor'  => '',
+					'open_page_id' => 0,
+					'open_anchor'  => '',
+					'cadence' => 30,
+					'source'  => 'biovoice',
+					'enabled' => 1,
+				),
 			),
 			'strip' => array(
 				array( 'key' => 'results', 'label' => 'Your Results', 'page_id' => 0, 'anchor' => '' ),

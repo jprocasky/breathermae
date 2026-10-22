@@ -251,6 +251,13 @@
 	border-color:var(--bmf-accent);
 }
 .bmf-home-notice p{margin:0 0 8px;color:var(--bmf-text);font-size:.86rem}
+.bmf-home-guided--new .bmf-home-guided-title{
+	color:#2ecc71;
+	font-weight:700;
+}
+.bmf-home[data-bmf-theme="light"] .bmf-home-guided--new .bmf-home-guided-title{
+	color:#1a7f3c;
+}
 .bmf-home-dismiss{
 	appearance:none;
 	border:0;

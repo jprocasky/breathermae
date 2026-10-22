@@ -201,15 +201,6 @@ class BMF_Member_Home_Shortcodes {
 			$card['_due'] = $due;
 			$cards[] = $card;
 		}
-		usort(
-			$cards,
-			static function ( $a, $b ) {
-				$rank = array( 'due' => 0, 'missing' => 1, 'ok' => 2 );
-				$ra   = $rank[ $a['_due']['status'] ] ?? 3;
-				$rb   = $rank[ $b['_due']['status'] ] ?? 3;
-				return $ra <=> $rb;
-			}
-		);
 		$html = '<section class="bmf-home-due"' . self::help_attrs( 'assessments' ) . '><div class="bmf-home-due-head"><h3>Assessments</h3></div>';
 		$html .= '<div class="bmf-home-due-grid">';
 		if ( ! $cards ) {
@@ -249,6 +240,16 @@ class BMF_Member_Home_Shortcodes {
 	}
 
 	private static function notice_markup( array $settings ): string {
+		// Prefer guided-path next step when available.
+		$guided = self::guided_path_markup();
+		if ( $guided !== '' ) {
+			$spot = self::spot_markup( $settings );
+			if ( $spot === '' ) {
+				return $guided;
+			}
+			return '<div class="bmf-home-info-row">' . $spot . $guided . '</div>';
+		}
+
 		$notice = self::matching_notice( $settings );
 		$custom = trim( (string) get_user_meta( get_current_user_id(), 'bmf_home_notice', true ) );
 		if ( $custom === '' && ! $notice ) {
@@ -275,6 +276,32 @@ class BMF_Member_Home_Shortcodes {
 			return $html;
 		}
 		return '<div class="bmf-home-info-row">' . $spot . $html . '</div>';
+	}
+
+	/**
+	 * Center panel driven by bmf-guided-path when the plugin is active.
+	 */
+	private static function guided_path_markup(): string {
+		if ( ! function_exists( 'bmf_guided_path_get_current_step' ) ) {
+			return '';
+		}
+		$step = bmf_guided_path_get_current_step();
+		if ( ! is_array( $step ) || empty( $step['title'] ) ) {
+			return '';
+		}
+		$html  = '<section class="bmf-home-notice bmf-home-guided" data-step-id="' . esc_attr( (string) $step['id'] ) . '">';
+		$html .= '<div>';
+		$html .= '<h3 class="bmf-home-guided-title">' . esc_html( $step['title'] ) . '</h3>';
+		if ( ! empty( $step['description'] ) ) {
+			$html .= '<p>' . esc_html( $step['description'] ) . '</p>';
+		}
+		if ( ! empty( $step['url'] ) ) {
+			$label = ! empty( $step['button_label'] ) ? $step['button_label'] : 'Continue';
+			$html .= '<a class="bmf-home-btn is-primary" href="' . esc_url( $step['url'] ) . '">' . esc_html( $label ) . '</a>';
+		}
+		$html .= '</div>';
+		$html .= '</section>';
+		return $html;
 	}
 
 	private static function spot_markup( array $settings ): string {
