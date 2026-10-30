@@ -73,6 +73,10 @@ class BMF_Member_Home_Settings {
 					'open_anchor'  => '',
 					'cadence' => 7,
 					'source'  => 'rsi',
+					'take_tags_required'    => '',
+					'take_tags_missing'     => '',
+					'results_tags_required' => '',
+					'results_tags_missing'  => '',
 					'enabled' => 1,
 				),
 				array(
@@ -85,6 +89,10 @@ class BMF_Member_Home_Settings {
 					'open_anchor'  => '',
 					'cadence' => 7,
 					'source'  => 'pillars_rapid',
+					'take_tags_required'    => '',
+					'take_tags_missing'     => '',
+					'results_tags_required' => '',
+					'results_tags_missing'  => '',
 					'enabled' => 1,
 				),
 				array(
@@ -97,6 +105,10 @@ class BMF_Member_Home_Settings {
 					'open_anchor'  => '',
 					'cadence' => 14,
 					'source'  => 'keys',
+					'take_tags_required'    => '',
+					'take_tags_missing'     => '',
+					'results_tags_required' => '',
+					'results_tags_missing'  => '',
 					'enabled' => 1,
 				),
 				array(
@@ -109,6 +121,10 @@ class BMF_Member_Home_Settings {
 					'open_anchor'  => '',
 					'cadence' => 90,
 					'source'  => 'pillars_full',
+					'take_tags_required'    => '',
+					'take_tags_missing'     => '',
+					'results_tags_required' => '',
+					'results_tags_missing'  => '',
 					'enabled' => 1,
 				),
 				array(
@@ -121,6 +137,10 @@ class BMF_Member_Home_Settings {
 					'open_anchor'  => '',
 					'cadence' => 90,
 					'source'  => 'bsi',
+					'take_tags_required'    => '',
+					'take_tags_missing'     => '',
+					'results_tags_required' => '',
+					'results_tags_missing'  => '',
 					'enabled' => 1,
 				),
 				array(
@@ -133,6 +153,10 @@ class BMF_Member_Home_Settings {
 					'open_anchor'  => '',
 					'cadence' => 30,
 					'source'  => 'biovoice',
+					'take_tags_required'    => '',
+					'take_tags_missing'     => '',
+					'results_tags_required' => '',
+					'results_tags_missing'  => '',
 					'enabled' => 1,
 				),
 			),
@@ -259,6 +283,12 @@ class BMF_Member_Home_Settings {
 				if ( isset( $row['source'] ) ) {
 					$clean[ $group ][ $i ]['source'] = sanitize_key( $src['source'] ?? $row['source'] );
 				}
+				if ( isset( $row['take_tags_required'] ) ) {
+					$clean[ $group ][ $i ]['take_tags_required']    = self::sanitize_tag_list( $src['take_tags_required'] ?? '' );
+					$clean[ $group ][ $i ]['take_tags_missing']     = self::sanitize_tag_list( $src['take_tags_missing'] ?? '' );
+					$clean[ $group ][ $i ]['results_tags_required'] = self::sanitize_tag_list( $src['results_tags_required'] ?? '' );
+					$clean[ $group ][ $i ]['results_tags_missing']  = self::sanitize_tag_list( $src['results_tags_missing'] ?? '' );
+				}
 			}
 		}
 		return $clean;
@@ -289,6 +319,17 @@ class BMF_Member_Home_Settings {
 		$raw = ltrim( $raw, '#' );
 		$raw = sanitize_title( $raw );
 		return $raw === '' ? '' : '#' . $raw;
+	}
+
+	/**
+	 * Comma-separated tag list. Trims, drops empties, keeps original case.
+	 */
+	public static function sanitize_tag_list( $raw ): string {
+		$parts = array_map( 'trim', explode( ',', (string) $raw ) );
+		$parts = array_filter( $parts, static function ( $t ) {
+			return $t !== '';
+		} );
+		return implode( ', ', $parts );
 	}
 
 	public static function url_for( array $row, string $page_key = 'page_id', string $anchor_key = 'anchor' ): string {
@@ -351,10 +392,14 @@ class BMF_Member_Home_Settings {
 
 	private static function render_table( string $title, string $group, array $rows, array $pages, bool $with_enabled, bool $with_card_fields = false ) {
 		echo '<h2>' . esc_html( $title ) . '</h2>';
+		if ( $with_card_fields ) {
+			echo '<p class="description">Take and Results tag fields are optional comma-separated lists. Logic is “any”: the user must have at least one Required tag (if listed) and be missing at least one Missing tag (if listed). Empty fields impose no extra constraint. Tags are the source of truth for button emphasis and the Available badge.</p>';
+		}
 		echo '<table class="widefat striped"><thead><tr>';
 		echo '<th>Key</th><th>Label</th><th>Take page</th><th>Take anchor</th>';
 		if ( $with_card_fields ) {
 			echo '<th>Results page</th><th>Results anchor</th><th>Cadence</th>';
+			echo '<th>Take required</th><th>Take missing</th><th>Results required</th><th>Results missing</th>';
 		}
 		if ( $with_enabled ) {
 			echo '<th>Show</th>';
@@ -384,6 +429,10 @@ class BMF_Member_Home_Settings {
 				echo '<td>' . self::page_select( $base . '[open_page_id]', (int) ( $row['open_page_id'] ?? 0 ), $pages ) . '</td>';
 				echo '<td><input type="text" name="' . esc_attr( $base ) . '[open_anchor]" value="' . esc_attr( $row['open_anchor'] ?? '' ) . '" placeholder="" /></td>';
 				echo '<td><input type="number" min="1" style="width:70px" name="' . esc_attr( $base ) . '[cadence]" value="' . esc_attr( (string) $row['cadence'] ) . '" /></td>';
+				echo '<td><input type="text" style="width:140px" name="' . esc_attr( $base ) . '[take_tags_required]" value="' . esc_attr( $row['take_tags_required'] ?? '' ) . '" placeholder="TAG1, TAG2" /></td>';
+				echo '<td><input type="text" style="width:140px" name="' . esc_attr( $base ) . '[take_tags_missing]" value="' . esc_attr( $row['take_tags_missing'] ?? '' ) . '" placeholder="TAG_A" /></td>';
+				echo '<td><input type="text" style="width:140px" name="' . esc_attr( $base ) . '[results_tags_required]" value="' . esc_attr( $row['results_tags_required'] ?? '' ) . '" placeholder="TAG1" /></td>';
+				echo '<td><input type="text" style="width:140px" name="' . esc_attr( $base ) . '[results_tags_missing]" value="' . esc_attr( $row['results_tags_missing'] ?? '' ) . '" placeholder="" /></td>';
 			}
 			if ( $with_enabled ) {
 				echo '<td>';

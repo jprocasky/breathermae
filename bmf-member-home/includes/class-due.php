@@ -127,6 +127,53 @@ class BMF_Member_Home_Due {
 		return $ts ? gmdate( 'Y-m-d', $ts ) : '';
 	}
 
+	/**
+	 * True when the comma-separated required/missing lists are satisfied (any-logic).
+	 * Empty lists impose no constraint. Returns true when both are empty.
+	 */
+	public static function tags_allow( string $required_csv, string $missing_csv, int $user_id ): bool {
+		$required = self::parse_tags( $required_csv );
+		$missing  = self::parse_tags( $missing_csv );
+		if ( ! $required && ! $missing ) {
+			return true;
+		}
+		if ( $user_id <= 0 || ! function_exists( 'wpf_has_tag' ) ) {
+			return false;
+		}
+		if ( $required ) {
+			$has_any = false;
+			foreach ( $required as $tag ) {
+				if ( wpf_has_tag( $tag, $user_id ) ) {
+					$has_any = true;
+					break;
+				}
+			}
+			if ( ! $has_any ) {
+				return false;
+			}
+		}
+		if ( $missing ) {
+			$missing_any = false;
+			foreach ( $missing as $tag ) {
+				if ( ! wpf_has_tag( $tag, $user_id ) ) {
+					$missing_any = true;
+					break;
+				}
+			}
+			if ( ! $missing_any ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static function parse_tags( string $csv ): array {
+		$parts = array_map( 'trim', explode( ',', $csv ) );
+		return array_values( array_filter( $parts, static function ( $t ) {
+			return $t !== '';
+		} ) );
+	}
+
 	private static function age_days( string $date ): ?int {
 		$a = strtotime( $date . ' UTC' );
 		$b = strtotime( gmdate( 'Y-m-d' ) . ' UTC' );

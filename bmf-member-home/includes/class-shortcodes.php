@@ -192,13 +192,32 @@ class BMF_Member_Home_Shortcodes {
 	}
 
 	private static function cards_markup( array $settings, string $email ): string {
+		$user = $email !== '' ? get_user_by( 'email', $email ) : false;
+		$uid  = $user ? (int) $user->ID : 0;
 		$cards = array();
 		foreach ( $settings['cards'] as $card ) {
 			if ( empty( $card['enabled'] ) ) {
 				continue;
 			}
 			$due = BMF_Member_Home_Due::for_card( $card, $email );
-			$card['_due'] = $due;
+			$take_ok = BMF_Member_Home_Due::tags_allow(
+				(string) ( $card['take_tags_required'] ?? '' ),
+				(string) ( $card['take_tags_missing'] ?? '' ),
+				$uid
+			);
+			$results_ok = BMF_Member_Home_Due::tags_allow(
+				(string) ( $card['results_tags_required'] ?? '' ),
+				(string) ( $card['results_tags_missing'] ?? '' ),
+				$uid
+			);
+			// Date says due/missing, but Take tags do not allow → treat as Current so badge and button stay quiet.
+			if ( in_array( $due['status'], array( 'due', 'missing' ), true ) && ! $take_ok ) {
+				$due['status'] = 'ok';
+				$due['label']  = 'Current';
+			}
+			$card['_due']        = $due;
+			$card['_take_ok']    = $take_ok;
+			$card['_results_ok'] = $results_ok;
 			$cards[] = $card;
 		}
 		$html = '<section class="bmf-home-due"' . self::help_attrs( 'assessments' ) . '><div class="bmf-home-due-head"><h3>Assessments</h3></div>';
@@ -223,7 +242,8 @@ class BMF_Member_Home_Shortcodes {
 			}
 			$html .= '<div class="bmf-home-actions">';
 			if ( $take !== '' ) {
-				$html .= '<a class="bmf-home-btn' . ( $due['status'] === 'ok' ? '' : ' is-primary' ) . '" href="' . esc_url( $take ) . '">Take assessment</a>';
+				$primary = ( $due['status'] !== 'ok' && $card['_take_ok'] ) ? ' is-primary' : '';
+				$html .= '<a class="bmf-home-btn' . $primary . '" href="' . esc_url( $take ) . '">Take assessment</a>';
 			}
 			if ( $open !== '' ) {
 				$html .= '<a class="bmf-home-btn" href="' . esc_url( $open ) . '">Open results</a>';
@@ -234,7 +254,7 @@ class BMF_Member_Home_Shortcodes {
 			$html .= '</div></article>';
 		}
 		$html .= '</div>';
-		$html .= '<p class="bmf-home-lag">Status and dates update after overnight scoring, usually within 24 hours of finishing an assessment.</p>';
+		$html .= '<p class="bmf-home-lag">Status and dates update after overnight scoring, usually within 24 hours of finishing an assessment. Available and the primary Take button also require the tags configured on the card.</p>';
 		$html .= '</section>';
 		return $html;
 	}

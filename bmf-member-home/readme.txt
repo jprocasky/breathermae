@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.19-poc
+Stable tag: 0.1.20-poc
 License: GPLv2 or later
 
 Logged-in Today dashboard. Dark/light tokens shared with the wellbeing file. Other site pages stay on the current theme until each is redesigned.
@@ -13,7 +13,7 @@ Replaces the portal-tile dashboard with a Today view. WP Fusion still gates the 
 
 * Site rail. Full-results links and group dividers show only on [bmf_member_nav context="results"].
 * Under 900px the rail is a closed drawer opened by Menu. Desktop stays a left column.
-* Assessment cards with Available / Current / Not started from the existing result tables.
+* Assessment cards with Available / Current / Not started. Available and the primary Take button also require the WP Fusion tags configured on the card.
 * Provider appointments via [bmf_my_appointments].
 * Internal reminders via [uls_member_appointments future="1"].
 * Notes via [uls_member_notes max="2" format="html" show_dates="0"].
@@ -37,6 +37,10 @@ Every link is a page ID plus an optional anchor, set under Settings → Member H
 5. Leave RSI, Pillars, BSI, and the other detail pages alone until each is redesigned.
 
 == Changelog ==
+
+= 0.1.20-poc =
+* Assessment cards: four optional WP Fusion tag fields (Take required/missing, Results required/missing). Comma-separated, any-logic.
+* Available badge and primary Take button appear only when the date cadence is met and the Take tags are satisfied. Buttons themselves always show when the corresponding page is set. Empty tag fields impose no extra constraint.
 
 = 0.1.19-poc =
 * Info row prefers a guided-path step when the bmf-guided-path plugin is active.
