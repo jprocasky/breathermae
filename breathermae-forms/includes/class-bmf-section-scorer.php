@@ -12,86 +12,22 @@ class BMF_Section_Scorer {
     add_action('bmf_compute_section_scores', [__CLASS__, 'compute_for_response'], 10, 3);
   }
 
+  /**
+   * Write readiness into the single open RSI row (not a date-keyed upsert).
+   */
   protected static function upsert_readiness_score($response_id, $form_id, $user_id, $readiness) {
-    global $wpdb;
-    $p = $wpdb->prefix;
-    $t_responses = $p . 'bm_responses';
-    $t_rsi       = $p . 'bm_rsi_results';
-
-    $row = $wpdb->get_row($wpdb->prepare(
-      "SELECT r.submitted_at, u.user_email
-       FROM {$t_responses} r
-       LEFT JOIN {$wpdb->users} u ON u.ID = r.user_id
-       WHERE r.id = %d LIMIT 1",
-      (int) $response_id
-    ));
-    if (!$row || empty($row->submitted_at) || empty($row->user_email)) return;
-
-    $date  = substr($row->submitted_at, 0, 10);
-    $email = trim((string) $row->user_email);
-
-    $updated = $wpdb->update(
-      $t_rsi,
-      ['readiness_score' => (int)$readiness, 'updated_at' => current_time('mysql', 1)],
-      ['user_email' => $email, 'results_date' => $date],
-      ['%d', '%s'],
-      ['%s', '%s']
-    );
-    if ($updated === 0) {
-      $wpdb->insert(
-        $t_rsi,
-        [
-          'user_email'      => $email,
-          'current_flag'    => 1,
-          'is_final'        => 0,
-          'results_date'    => $date,
-          'updated_at'      => current_time('mysql', 1),
-          'readiness_score' => (int) $readiness,
-        ],
-        ['%s','%d','%d','%s','%s','%d']
-      );
+    if (class_exists('BMF_RSI_Saver')) {
+      BMF_RSI_Saver::save_extra((int) $user_id, 'readiness_score', (int) $readiness);
     }
   }
 
+  /**
+   * Write R12_S6 into the single open RSI row (not a date-keyed upsert).
+   * Retained for callers; compute_for_response already uses the saver directly.
+   */
   protected static function upsert_r12s6_score($response_id, $form_id, $user_id, $pct) {
-    // ... (unchanged from original)
-    global $wpdb;
-    $p = $wpdb->prefix;
-    $t_responses = $p . 'bm_responses';
-    $t_rsi = $p . 'bm_rsi_results';
-
-    $row = $wpdb->get_row($wpdb->prepare(
-      "SELECT r.submitted_at, u.user_email
-       FROM {$t_responses} r
-       LEFT JOIN {$wpdb->users} u ON u.ID = r.user_id
-       WHERE r.id = %d LIMIT 1",
-      (int) $response_id
-    ));
-    if (!$row || empty($row->submitted_at) || empty($row->user_email)) return;
-
-    $date  = substr($row->submitted_at, 0, 10);
-    $email = trim((string) $row->user_email);
-
-    $updated = $wpdb->update(
-      $t_rsi,
-      ['R12_S6' => (float)$pct, 'updated_at' => current_time('mysql', 1)],
-      ['user_email' => $email, 'results_date' => $date],
-      ['%f', '%s'],
-      ['%s', '%s']
-    );
-    if ($updated === 0) {
-      $wpdb->insert(
-        $t_rsi,
-        [
-          'user_email'  => $email,
-          'current_flag'=> 1,
-          'is_final'    => 0,
-          'results_date'=> $date,
-          'updated_at'  => current_time('mysql', 1),
-          'R12_S6'      => (float)$pct,
-        ],
-        ['%s','%d','%d','%s','%s','%f']
-      );
+    if (class_exists('BMF_RSI_Saver')) {
+      BMF_RSI_Saver::save_extra((int) $user_id, 'R12_S6', (float) $pct);
     }
   }
 
@@ -205,7 +141,7 @@ class BMF_Section_Scorer {
       // Normal scoring with enhanced formula support
       $score = null;
       if ($formula !== '') {
-        if (preg_match('/^avg\\(([^)]+)\\)$/i', $formula, $m)) {
+        if (preg_match('/^avg\(([^)]+)\)$/i', $formula, $m)) {
           $inner = trim($m[1]);
           $values = [];
 
@@ -340,7 +276,7 @@ class BMF_Section_Scorer {
    */
   protected static function preprocess_formula(string $formula, array $vars): string {
     // Replace sum(...) calls
-    $formula = preg_replace_callback('/\bsum\\(([^)]+)\\)/i', function($m) use ($vars) {
+    $formula = preg_replace_callback('/\bsum\(([^)]+)\)/i', function($m) use ($vars) {
       $inner = trim($m[1]);
       $parts = preg_split('/\s*,\s*/', $inner);
       $all_values = [];
@@ -392,15 +328,15 @@ class BMF_Section_Scorer {
    */
   protected static function evaluate_formula_0to1(string $expr, array $vars): ?float {
     // Replace Qn tokens...
-    $expanded = preg_replace_callback('/\\bQ([1-9][0-9]?)\\b/', function($m) use ($vars) {
+    $expanded = preg_replace_callback('/\bQ([1-9][0-9]?)\b/', function($m) use ($vars) {
       $k = 'Q' . $m[1];
       $v = isset($vars[$k]) && is_numeric($vars[$k]) ? (float)$vars[$k] : 0.0;
       return (string)$v;
     }, $expr);
 
-    $s = preg_replace('/\\s+/', '', $expanded);
+    $s = preg_replace('/\s+/', '', $expanded);
 
-    if (preg_match('/[^0-9\\.\\+\\-\\*\\/\\(\\)]/', $s)) {
+    if (preg_match('/[^0-9\.\+\-\*\/\(\)]/', $s)) {
       return null;
     }
 
