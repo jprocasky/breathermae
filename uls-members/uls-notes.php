@@ -165,6 +165,36 @@ class ULS_Member_Notes_Module {
         return $u ? (int) $u->ID : null;
     }
 
+    /**
+     * Private-note access. 'full' | 'stub' | 'none' | 'uploader_fallback'
+     */
+    private function private_access_level( $current_user_id, $member_email, $context, $is_member_visible ) {
+        $context = sanitize_key( (string) $context );
+        $assign  = class_exists( 'ULS_Member_Provider_Assignment' )
+            ? ULS_Member_Provider_Assignment::instance()
+            : null;
+        $assigned_id = $assign ? $assign->get_assigned_provider_id( $member_email, $context ) : 0;
+
+        $me = wp_get_current_user();
+        if ( $me && strtolower( $me->user_email ) === strtolower( $member_email ) ) {
+            return (int) $is_member_visible ? 'full' : 'none';
+        }
+        if ( $assigned_id && (int) $current_user_id === $assigned_id ) return 'full';
+        if ( ! $assigned_id ) return 'uploader_fallback';
+        return 'stub';
+    }
+
+    private function can_toggle_private( $current_user_id, $member_email, $context, $created_by ) {
+        $assign = class_exists( 'ULS_Member_Provider_Assignment' )
+            ? ULS_Member_Provider_Assignment::instance()
+            : null;
+        $assigned_id = ( $assign && $context !== '' )
+            ? $assign->get_assigned_provider_id( $member_email, $context )
+            : 0;
+        if ( $assigned_id ) return (int) $current_user_id === $assigned_id;
+        return (int) $current_user_id === (int) $created_by;
+    }
+
     public function ajax_delete_member_note() {
 
         check_ajax_referer( 'uls_member_notes', 'nonce' );
@@ -236,23 +266,33 @@ class ULS_Member_Notes_Module {
             foreach ((array) $rows as $r) {
 
                 $visibility = $r['visibility_scope'] ?? 'shared';
+                $is_stub = false;
+                $note_text_out = wp_kses_post( (string) $r['note_text'] );
 
-                // 🔐 Private note?
-                if ($visibility === 'private') {
+                $note_context = sanitize_key( (string) ( $r['author_context'] ?? '' ) );
+                $use_context  = $note_context !== '' ? $note_context : $context;
 
-                    // Must be same author AND same context
-                    $same_author  = (int) $r['created_by'] === $current_user_id;
-                    $same_context = !empty($context) && $r['author_context'] === $context;
-
-                    if ( ! $same_author || ! $same_context ) {
-                    continue; // 🚫 hide completely
+                if ( $visibility === 'private' ) {
+                    $level = $this->private_access_level(
+                        $current_user_id,
+                        $email,
+                        $use_context,
+                        (int) $r['is_member_visible']
+                    );
+                    if ( $level === 'uploader_fallback' ) {
+                        if ( (int) $r['created_by'] !== $current_user_id ) continue;
+                    } elseif ( $level === 'none' ) {
+                        continue;
+                    } elseif ( $level === 'stub' ) {
+                        $is_stub = true;
+                        $note_text_out = ''; // body hidden
                     }
                 }
 
                 $notes[] = [
                     'id'                 => (int) $r['id'],
                     'note_name'          => (string) $r['note_name'],
-                    'note_text' => wp_kses_post( (string) $r['note_text'] ),
+                    'note_text'          => $note_text_out,
                     'is_member_visible'  => (int) $r['is_member_visible'],
                     'visibility_scope'   => $visibility,
                     'author_context'     => $r['author_context'],
@@ -261,6 +301,9 @@ class ULS_Member_Notes_Module {
                     'created_at'         => $this->fmt_dt($r['created_at']),
                     'updated_by'         => $r['updated_by'] ? (int) $r['updated_by'] : null,
                     'updated_at'         => $this->fmt_dt($r['updated_at']),
+                    'access'             => $is_stub ? 'stub' : 'full',
+                    'is_stub'            => $is_stub ? 1 : 0,
+                    'can_toggle_private' => (int) $this->can_toggle_private( $current_user_id, $email, $use_context, (int) $r['created_by'] ),
                 ];
             }
 
@@ -470,7 +513,7 @@ class ULS_Member_Notes_Module {
         // 🔎 Load the note row once
         $row = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT id, created_by, is_member_visible
+                "SELECT id, created_by, is_member_visible, author_context
                 FROM `{$table}`
                 WHERE id = %d
                 AND member_email = %s
@@ -502,27 +545,25 @@ class ULS_Member_Notes_Module {
             );
         }
 
-        // ✅ Provider-facing privacy (AUTHOR ONLY)
+        // Provider privacy: assigned provider if one exists, else author
         if ( isset( $_POST['visibility_scope'] ) ) {
+            $scope = sanitize_key( $_POST['visibility_scope'] );
+            $ctx   = sanitize_key( $_POST['context'] ?? '' );
+            $note_ctx = sanitize_key( (string) ( $row['author_context'] ?? '' ) );
+            $use_ctx  = $note_ctx !== '' ? $note_ctx : $ctx;
 
-            // Only the author may change provider privacy
-            if ( (int) $row['created_by'] !== $current_user_id ) {
-                wp_send_json_error(
-                    [ 'message' => 'Only the author can change note privacy' ],
-                    403
-                );
+            if ( ! $this->can_toggle_private( $current_user_id, $email, $use_ctx, (int) $row['created_by'] ) ) {
+                wp_send_json_error( [ 'message' => 'Only the assigned provider can change note privacy' ], 403 );
             }
 
-            $scope = sanitize_key( $_POST['visibility_scope'] );
-
             if ( in_array( $scope, [ 'shared', 'private' ], true ) ) {
-                $wpdb->update(
-                    $table,
-                    [ 'visibility_scope' => $scope ],
-                    [ 'id' => $id ],
-                    [ '%s' ],
-                    [ '%d' ]
-                );
+                $update = [ 'visibility_scope' => $scope ];
+                $formats = [ '%s' ];
+                if ( $note_ctx === '' && $ctx !== '' ) {
+                    $update['author_context'] = $ctx;
+                    $formats[] = '%s';
+                }
+                $wpdb->update( $table, $update, [ 'id' => $id ], $formats, [ '%d' ] );
             }
         }
 

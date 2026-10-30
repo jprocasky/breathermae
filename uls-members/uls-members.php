@@ -37,7 +37,8 @@ class ULS_Members_Plugin {
         require_once plugin_dir_path( __FILE__ ) . 'uls-ai-summary.php';
         
         //
-        require_once plugin_dir_path( __FILE__ ) . 'uls-sales-commission.php';        
+        require_once plugin_dir_path( __FILE__ ) . 'uls-sales-commission.php';
+        require_once plugin_dir_path( __FILE__ ) . 'uls-provider-assignment.php';        
 
         // Shortcodes
         add_shortcode( 'uls_members_table', [ $this, 'shortcode_members_table' ] );
@@ -309,6 +310,10 @@ class ULS_Members_Plugin {
                 'export'           => 'no',
                 'parent_pattern'   => '',
                 'metakeys'         => '',
+                'context'            => '',
+                'provider_patterns'  => 'DOCTOR',
+                'provider_admin'     => 'P_ADMIN',
+                'provider_exclude'   => '',
             ],
             $atts,
             'uls_members_table'
@@ -321,7 +326,7 @@ class ULS_Members_Plugin {
         }
 
         // Allowed + default fields
-        $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'all_tags', 'matched_tags', 'rewards_points' ];
+        $allowed_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit', 'all_tags', 'matched_tags', 'rewards_points', 'assigned_provider' ];
         $default_fields = [ 'email', 'display_name', 'first_name', 'last_name', 'first_visit', 'last_visit' ];
 
         $requested = array_filter( array_map( 'trim', explode( ',', (string) $atts['fields'] ) ) );
@@ -353,6 +358,7 @@ class ULS_Members_Plugin {
             'all_tags'       => 'All Tags',
             'matched_tags'   => 'Matched Tags',
             'rewards_points' => 'Reward Points',
+            'assigned_provider' => 'Assigned Provider',
         ];
 
         // Build headers (hierarchy column first)
@@ -580,7 +586,11 @@ class ULS_Members_Plugin {
                 <button type="button" class="uls-members__search-clear">&times;</button>
             </div>
 
-            <table class="uls-members__table">
+            <table class="uls-members__table"
+                data-provider-context="<?php echo esc_attr( sanitize_key( (string) $atts['context'] ) ); ?>"
+                data-provider-patterns="<?php echo esc_attr( $atts['provider_patterns'] ); ?>"
+                data-provider-admin="<?php echo esc_attr( $atts['provider_admin'] ); ?>"
+                data-provider-exclude="<?php echo esc_attr( $atts['provider_exclude'] ); ?>">
                 <thead>
                     <tr>
                         <?php foreach ( $headers as $h ): ?>
@@ -627,6 +637,19 @@ class ULS_Members_Plugin {
                                     $cell = implode( ', ', $tags );
                                 } elseif ( $f === 'rewards_points' ) {
                                     $cell = number_format( (int) ($r['rewards_points'] ?? 0) );
+                                } elseif ( $f === 'assigned_provider' ) {
+                                    $ctx  = sanitize_key( (string) $atts['context'] );
+                                    $cell = '—';
+                                    if ( $ctx !== '' && class_exists( 'ULS_Member_Provider_Assignment' ) ) {
+                                        $pid = ULS_Member_Provider_Assignment::instance()
+                                            ->get_assigned_provider_id( $r['user_email'] ?? '', $ctx );
+                                        if ( $pid ) {
+                                            $pu = get_user_by( 'id', $pid );
+                                            $cell = $pu ? ( $pu->display_name ?: $pu->user_login ) : '—';
+                                        }
+                                    }
+                                    $assigned = ( $cell !== '—' && $cell !== '' ) ? '1' : '0';
+                                    $td_attr = ' data-col="assigned_provider" data-assigned="' . $assigned . '" data-email="' . esc_attr( $r['user_email'] ?? '' ) . '" data-user-id="' . esc_attr( $r['ID'] ) . '" title="' . ( $assigned === '1' ? 'Assigned — only a provider admin can change' : 'Double-click to assign provider' ) . '"';
                                 } else {
                                     $cell = $r[$key] ?? '';
                                     if ( $f === 'email' ) {

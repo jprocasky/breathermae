@@ -113,6 +113,10 @@
 
       var isPrivate = (f.visibility_scope === 'private');
       var isOwner = (parseInt(f.uploaded_by, 10) === parseInt(W.currentUserId, 10));
+      var isStub = (parseInt(f.is_stub, 10) === 1 || f.access === 'stub');
+      var canTogglePrivate = (typeof f.can_toggle_private !== 'undefined')
+        ? (parseInt(f.can_toggle_private, 10) === 1)
+        : isOwner;
 
       var currentTypeId = String(f.ai_document_type_id || '');
 
@@ -134,32 +138,39 @@
       }
 
       var privateCell = '<td class="c6">';
-      if (isOwner) {
+      if (isStub) {
+        privateCell += '<span class="uls-private-disabled" title="Private – assigned provider only">🔒</span>';
+      } else if (canTogglePrivate) {
         privateCell +=
           '<input type="checkbox" class="uls-file-private-toggle" ' +
           (f.visibility_scope === 'private' ? 'checked ' : '') +
-          ' title="Private to me">';
+          ' title="Private to assigned provider">';
       } else {
-        privateCell += '<span class="uls-private-disabled" title="Only the uploader can change privacy">—</span>';
+        privateCell += '<span class="uls-private-disabled" title="Only the assigned provider can change privacy">—</span>';
       }
       privateCell += '</td>';
 
-      var viewIcon = f.is_viewable 
-        ? '<button type="button" class="uls-file-view" data-id="' + f.id + '" title="View File" style="background:none;border:0;padding:0;cursor:pointer;">👁️</button> ' 
+      var viewIcon = (!isStub && f.is_viewable)
+        ? '<button type="button" class="uls-file-view" data-id="' + f.id + '" title="View File" style="background:none;border:0;padding:0;cursor:pointer;">👁️</button> '
         : '';
 
-      var fileCell = 
-        '<td>' +
-          '<span class="uls-file-actions">' +
-            viewIcon +
-            '<a href="' + signedFileUrl(f.id) + '" class="uls-file-download" title="Download">⬇️</a>' +
-          '</span>' +
-          '<span class="uls-file-name-wrap">' +
-            '<a href="' + signedFileUrl(f.id) + '" class="uls-file-name">' +
-              h(f.original_name || f.file_name) +
-            '</a>' +
-          '</span>' +
-        '</td>';
+      var fileCell = isStub
+        ? ('<td>' +
+            '<span class="uls-file-name-wrap" title="Private – assigned provider only">' +
+              '🔒 ' + h(f.original_name || f.file_name) +
+            '</span>' +
+          '</td>')
+        : ('<td>' +
+            '<span class="uls-file-actions">' +
+              viewIcon +
+              '<a href="' + signedFileUrl(f.id) + '" class="uls-file-download" title="Download">⬇️</a>' +
+            '</span>' +
+            '<span class="uls-file-name-wrap">' +
+              '<a href="' + signedFileUrl(f.id) + '" class="uls-file-name">' +
+                h(f.original_name || f.file_name) +
+              '</a>' +
+            '</span>' +
+          '</td>');
 
       rows.push([
         '<tr data-id="', f.id, '">',
@@ -171,7 +182,7 @@
           privateCell,
           '<td>' + typeSelect + '</td>',
           '<td class="c-ai">', aiCell, '</td>',
-          (W.canEdit && isOwner ? [
+          (W.canEdit && isOwner && !isStub ? [
             '<td class="c7">',
               '<label title="Toggle member visibility">',
                 '<input type="checkbox" class="uls-file-toggle-vis" ',

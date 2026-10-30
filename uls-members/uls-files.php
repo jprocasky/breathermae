@@ -76,6 +76,55 @@ class ULS_Member_Files_Module {
         return (bool) apply_filters( 'uls_member_files_can_download', $can, $current_user_id, $member_email, $note_name, $row );
     }
 
+    /**
+     * Private-file access for a given context.
+     * Returns 'full' (assigned provider or member-visible), 'stub' (page-authorized but not assigned), or 'none'.
+     */
+    private function private_access_level( $current_user_id, $member_email, $context, $is_member_visible ) {
+        $context = sanitize_key( (string) $context );
+        $assign  = class_exists( 'ULS_Member_Provider_Assignment' )
+            ? ULS_Member_Provider_Assignment::instance()
+            : null;
+
+        $assigned_id = $assign ? $assign->get_assigned_provider_id( $member_email, $context ) : 0;
+
+        // Member sees content only when flagged visible
+        $me = wp_get_current_user();
+        if ( $me && strtolower( $me->user_email ) === strtolower( $member_email ) ) {
+            return (int) $is_member_visible ? 'full' : 'none';
+        }
+
+        // Assigned provider gets full access
+        if ( $assigned_id && (int) $current_user_id === $assigned_id ) {
+            return 'full';
+        }
+
+        // No assignment yet → fall back to uploader-only (handled by caller)
+        if ( ! $assigned_id ) {
+            return 'uploader_fallback';
+        }
+
+        // Everyone else who can see the page gets a stub only
+        return 'stub';
+    }
+
+    /**
+     * Who may flip the private flag.
+     * Assignment exists → only that provider. Otherwise the original uploader.
+     */
+    private function can_toggle_private( $current_user_id, $member_email, $context, $uploaded_by ) {
+        $assign = class_exists( 'ULS_Member_Provider_Assignment' )
+            ? ULS_Member_Provider_Assignment::instance()
+            : null;
+        $assigned_id = ( $assign && $context !== '' )
+            ? $assign->get_assigned_provider_id( $member_email, $context )
+            : 0;
+        if ( $assigned_id ) {
+            return (int) $current_user_id === $assigned_id;
+        }
+        return (int) $current_user_id === (int) $uploaded_by;
+    }
+
     private function normalize_note_name( $note ) {
         $note = sanitize_text_field( (string) $note );
         return substr( $note, 0, 100 );
@@ -336,15 +385,30 @@ class ULS_Member_Files_Module {
 
             $visibility = $r['visibility_scope'] ?? 'shared';
 
-            if ($visibility === 'private') {
-                // Private = only the uploading provider can see the file
-                // (member visibility is controlled separately by is_member_visible).
-                // Context is recorded for AI/other features but must not hide
-                // the file from its owner, even if context is empty or mismatched.
-                $same_author = (int) $r['uploaded_by'] === $current_user_id;
-                if ( ! $same_author ) {
-                    continue; // hide from other providers
+            $file_context = sanitize_key( (string) ( $r['author_context'] ?? '' ) );
+            $access = 'full';
+            $is_stub = false;
+
+            if ( $visibility === 'private' ) {
+                $level = $this->private_access_level(
+                    $current_user_id,
+                    $email,
+                    $file_context ?: $context,
+                    (int) $r['is_member_visible']
+                );
+
+                if ( $level === 'uploader_fallback' ) {
+                    // No assignment yet: only the original uploader
+                    if ( (int) $r['uploaded_by'] !== $current_user_id ) {
+                        continue;
+                    }
+                } elseif ( $level === 'none' ) {
+                    continue;
+                } elseif ( $level === 'stub' ) {
+                    $is_stub = true;
+                    $access  = 'stub';
                 }
+                // 'full' falls through
             }
             
             // For files that are either shared or owned by the current user in the same context, we include them but also check for AI summary status (if context is provided and AI summary class exists).
@@ -398,12 +462,14 @@ class ULS_Member_Files_Module {
                 'uploaded_by'        => (int) $r['uploaded_by'],
                 'uploaded_by_name'   => $this->author_name($r['uploaded_by']),
                 'uploaded_at'        => date_i18n($fmt, strtotime($r['uploaded_at'])),
-                'is_viewable'      => $is_viewable,
-                'view_type'        => $view_type,
-                'has_ai_summary' => $has_ai_summary,
-                'ai_summary_stale' => $ai_summary_stale,
+                'is_viewable'      => $is_stub ? false : $is_viewable,
+                'view_type'        => $is_stub ? '' : $view_type,
+                'has_ai_summary' => $is_stub ? false : $has_ai_summary,
+                'ai_summary_stale' => $is_stub ? false : $ai_summary_stale,
                 'ai_document_type_id' => (int) ($r['ai_document_type_id'] ?? 0),
-
+                'access'             => $access,          // 'full' | 'stub'
+                'is_stub'            => $is_stub ? 1 : 0,
+                'can_toggle_private' => (int) $this->can_toggle_private( $current_user_id, $email, $file_context ?: $context, (int) $r['uploaded_by'] ),
             ];
         }
 
@@ -595,7 +661,7 @@ class ULS_Member_Files_Module {
 
         $row = $wpdb->get_row(
             $wpdb->prepare(
-            "SELECT uploaded_by, author_context
+            "SELECT uploaded_by, author_context, member_email
             FROM `{$table}`
             WHERE id = %d AND is_deleted = 0",
             $id
@@ -607,18 +673,42 @@ class ULS_Member_Files_Module {
             wp_send_json_error(['message'=>'Not found'], 404);
         }
 
-        if (
-            (int)$row['uploaded_by'] !== $current_user_id ||
-            $row['author_context'] !== $context
-        ) {
-            wp_send_json_error(['message'=>'Forbidden'], 403);
+        // Prefer stored context; fall back to the page context so older files still resolve
+        $file_context = sanitize_key( (string) ( $row['author_context'] ?? '' ) );
+        $use_context  = $file_context !== '' ? $file_context : $context;
+
+        $assign = class_exists( 'ULS_Member_Provider_Assignment' )
+            ? ULS_Member_Provider_Assignment::instance()
+            : null;
+        $assigned_id = ( $assign && $use_context !== '' )
+            ? $assign->get_assigned_provider_id( $row['member_email'], $use_context )
+            : 0;
+
+        if ( $assigned_id ) {
+            // Assignment exists: only the assigned provider may change private
+            if ( (int) $current_user_id !== $assigned_id ) {
+                wp_send_json_error( [ 'message' => 'Only the assigned provider can change privacy' ], 403 );
+            }
+        } else {
+            // No assignment yet: original uploader rule
+            if ( (int) $row['uploaded_by'] !== $current_user_id ) {
+                wp_send_json_error( [ 'message' => 'Forbidden' ], 403 );
+            }
+        }
+
+        $update = [ 'visibility_scope' => $scope ];
+        $formats = [ '%s' ];
+        // Stamp context on older files so later checks resolve correctly
+        if ( $file_context === '' && $context !== '' ) {
+            $update['author_context'] = $context;
+            $formats[] = '%s';
         }
 
         $wpdb->update(
             $table,
-            [ 'visibility_scope' => $scope ],
+            $update,
             [ 'id' => $id ],
-            [ '%s' ],
+            $formats,
             [ '%d' ]
         );
 
@@ -686,18 +776,24 @@ class ULS_Member_Files_Module {
             );
         }
 
-        // ✅ Provider-facing privacy (OWNER ONLY)
+        // Provider-facing privacy: assigned provider if one exists, else uploader
         if ( isset( $_POST['visibility_scope'] ) ) {
-
-            // Only the uploader may change provider privacy
-            if ( (int) $row['uploaded_by'] !== $current_user_id ) {
-                wp_send_json_error(
-                    [ 'message' => 'Only the uploader can change file privacy' ],
-                    403
-                );
-            }
-
             $scope = sanitize_key( $_POST['visibility_scope'] );
+            $ctx   = sanitize_key( $_POST['context'] ?? '' );
+            $assign = class_exists( 'ULS_Member_Provider_Assignment' )
+                ? ULS_Member_Provider_Assignment::instance()
+                : null;
+            $assigned_id = ( $assign && $ctx !== '' )
+                ? $assign->get_assigned_provider_id( $email, $ctx )
+                : 0;
+
+            if ( $assigned_id ) {
+                if ( (int) $current_user_id !== $assigned_id ) {
+                    wp_send_json_error( [ 'message' => 'Only the assigned provider can change privacy' ], 403 );
+                }
+            } elseif ( (int) $row['uploaded_by'] !== $current_user_id ) {
+                wp_send_json_error( [ 'message' => 'Only the uploader can change file privacy' ], 403 );
+            }
 
             if ( in_array( $scope, [ 'shared', 'private' ], true ) ) {
                 $wpdb->update(
@@ -768,6 +864,23 @@ class ULS_Member_Files_Module {
 
         $member_email = $row['member_email'];
         $note         = $row['note_name'];
+
+        // Private files: only assigned provider (or member if visible) may download
+        if ( ( $row['visibility_scope'] ?? 'shared' ) === 'private' ) {
+            $level = $this->private_access_level(
+                get_current_user_id(),
+                $member_email,
+                $row['author_context'] ?? '',
+                (int) $row['is_member_visible']
+            );
+            if ( $level === 'uploader_fallback' ) {
+                if ( (int) $row['uploaded_by'] !== get_current_user_id() ) {
+                    wp_die( 'Forbidden', 'Forbidden', [ 'response' => 403 ] );
+                }
+            } elseif ( $level !== 'full' ) {
+                wp_die( 'Forbidden', 'Forbidden', [ 'response' => 403 ] );
+            }
+        }
 
         // If the current user is the member, require is_member_visible=1
         $current = wp_get_current_user();
