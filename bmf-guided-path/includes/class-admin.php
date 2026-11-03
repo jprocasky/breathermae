@@ -23,6 +23,7 @@ class BMF_Guided_Path_Admin {
 			return;
 		}
 		wp_enqueue_script( 'jquery' );
+		wp_enqueue_editor();
 	}
 
 	public static function menu() {
@@ -143,7 +144,7 @@ class BMF_Guided_Path_Admin {
 
 		$title = $is_edit ? 'Edit step' : ( $insert_before || $insert_after ? 'Insert step' : 'Add step' );
 		echo '<h2>' . $title . '</h2>';
-		echo '<form method="post">';
+		echo '<form method="post" id="bmf-gp-step-form">';
 		wp_nonce_field( 'bmf_guided_path_step', 'bmf_guided_path_nonce' );
 		echo '<input type="hidden" name="bmf_gp_action" value="' . esc_attr( $action ) . '">';
 		if ( $is_edit ) {
@@ -157,7 +158,28 @@ class BMF_Guided_Path_Admin {
 		}
 		echo '<table class="form-table">';
 		self::field( 'title', 'Title', $step['title'] ?? '' );
-		self::field( 'description', 'Description', $step['description'] ?? '', 'textarea' );
+		echo '<tr><th><label for="bmf_gp_description">Description</label></th><td>';
+		wp_editor(
+			$step['description'] ?? '',
+			'bmf_gp_description',
+			array(
+				'textarea_name' => 'description',
+				'textarea_rows' => 8,
+				'media_buttons' => false,
+				'teeny'         => false,
+				'quicktags'     => true,
+				'wpautop'       => true,
+				'tinymce'       => array(
+					'wpautop'            => true,
+					'force_p_newlines'   => true,
+					'forced_root_block'  => 'p',
+					'convert_newlines_to_brs' => true,
+					'remove_linebreaks'  => false,
+				),
+			)
+		);
+		echo '<p class="description">HTML is allowed. Links, bold, colors, and font size are supported.</p>';
+		echo '</td></tr>';
 
 		echo '<tr><th>All present (every tag required)</th><td>';
 		self::tag_input( 'all_present', $all, $tags );
@@ -196,6 +218,13 @@ class BMF_Guided_Path_Admin {
 			echo ' <a href="' . esc_url( admin_url( 'admin.php?page=bmf-guided-path' ) ) . '">Cancel</a>';
 		}
 		echo '</form>';
+		echo '<script>
+		jQuery(function($){
+			$("#bmf-gp-step-form").on("submit", function(){
+				if (window.tinyMCE) { tinyMCE.triggerSave(); }
+			});
+		});
+		</script>';
 	}
 
 	protected static function tag_input( $name, $current, $tags ) {
@@ -289,7 +318,7 @@ class BMF_Guided_Path_Admin {
 
 		$data = array(
 			'title'       => sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) ),
-			'description' => sanitize_textarea_field( wp_unslash( $_POST['description'] ?? '' ) ),
+			'description' => wp_kses_post( wp_unslash( $_POST['description'] ?? '' ) ),
 			'conditions'  => wp_json_encode( $conditions ),
 			'destination' => sanitize_text_field( wp_unslash( $_POST['destination'] ?? '' ) ),
 			'anchor'      => sanitize_text_field( wp_unslash( $_POST['anchor'] ?? '' ) ),

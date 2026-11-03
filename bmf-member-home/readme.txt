@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.24-poc
+Stable tag: 0.1.26-poc
 License: GPLv2 or later
 
 Logged-in Today dashboard. Dark/light tokens shared with the wellbeing file. Other site pages stay on the current theme until each is redesigned.
@@ -37,6 +37,13 @@ Every link is a page ID plus an optional anchor, set under Settings → Member H
 5. Leave RSI, Pillars, BSI, and the other detail pages alone until each is redesigned.
 
 == Changelog ==
+
+= 0.1.26-poc =
+* Guided Path description: wpautop on output and white-space:pre-line so carriage returns and <br> render.
+
+= 0.1.25-poc =
+* Guided Path description in the info panel now renders safe HTML (links, bold, colors, font size, lists).
+* Styles for the description block and its links.
 
 = 0.1.24-poc =
 * Assessment cards grouped with small uppercase headers and vertical dividers (same layout as wellbeing Systems snapshot).

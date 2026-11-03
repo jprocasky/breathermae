@@ -371,7 +371,9 @@ class BMF_Member_Home_Shortcodes {
 		$html .= '<div>';
 		$html .= '<h3 class="bmf-home-guided-title">' . esc_html( $step['title'] ) . '</h3>';
 		if ( ! empty( $step['description'] ) ) {
-			$html .= '<p>' . esc_html( $step['description'] ) . '</p>';
+			$desc = wp_kses_post( $step['description'] );
+			$desc = wpautop( $desc );
+			$html .= '<div class="bmf-home-guided-desc">' . $desc . '</div>';
 		}
 		if ( ! empty( $step['url'] ) ) {
 			$label = ! empty( $step['button_label'] ) ? $step['button_label'] : 'Continue';

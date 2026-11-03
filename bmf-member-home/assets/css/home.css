@@ -251,6 +251,14 @@
 	border-color:var(--bmf-accent);
 }
 .bmf-home-notice p{margin:0 0 8px;color:var(--bmf-text);font-size:.86rem}
+.bmf-home-guided-desc{margin:0 0 8px;color:var(--bmf-text);font-size:.86rem;white-space:pre-line}
+.bmf-home-guided-desc p{margin:0 0 6px}
+.bmf-home-guided-desc p:last-child{margin-bottom:0}
+.bmf-home-guided-desc a{color:var(--bmf-accent);text-decoration:underline}
+.bmf-home-guided-desc a:hover{opacity:.85}
+.bmf-home-guided-desc ul,
+.bmf-home-guided-desc ol{margin:4px 0 8px 1.2em}
+.bmf-home-guided-desc li{margin:0 0 2px}
 .bmf-home-guided--new .bmf-home-guided-title{
 	color:#2ecc71;
 	font-weight:700;

@@ -4,7 +4,7 @@ Tags: workflow, guidance, wp-fusion, member
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.8-poc
+Stable tag: 0.1.10-poc
 License: GPLv2 or later
 
 Data-driven next-step guidance for logged-in members. Surfaces the matching workflow step on the member-home dashboard.
@@ -38,6 +38,15 @@ Admin (Settings → Guided Path):
 * Destination and anchor are stored separately. Leading `/` and `#` are stripped. Resulting URL is `home_url('/slug')` + `#anchor` (no slash before the hash).
 
 == Changelog ==
+
+= 0.1.10-poc =
+* Description editor preserves line breaks (Enter and Shift+Enter). Form syncs TinyMCE before submit.
+* Front-end runs wpautop so plain newlines become paragraphs and breaks.
+
+= 0.1.9-poc =
+* Description field uses the WordPress visual editor (TinyMCE) in Guided Path settings.
+* HTML is allowed in the description (links, bold, colors, font size, lists). Saved with wp_kses_post.
+* Member-home renders the description with safe HTML.
 
 = 0.1.8-poc =
 * Suppress days 0 = forever once any matching `uls_user_event_log` row exists.
