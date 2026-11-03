@@ -9,6 +9,7 @@ class BMF_Member_Home_Shortcodes {
 		add_shortcode( 'bmf_member_home', array( __CLASS__, 'home' ) );
 		add_shortcode( 'bmf_member_nav', array( __CLASS__, 'nav' ) );
 		add_shortcode( 'bmf_member_today', array( __CLASS__, 'today' ) );
+		add_shortcode( 'bmf_assessment_status', array( __CLASS__, 'assessment_status' ) );
 		add_action( 'wp_ajax_bmf_member_home_theme', array( __CLASS__, 'ajax_theme' ) );
 	}
 
@@ -176,8 +177,8 @@ class BMF_Member_Home_Shortcodes {
 		$html    .= '<span class="bmf-home-chip"' . self::help_attrs( 'membership' ) . '>' . esc_html( self::membership_label() ) . '</span>';
 		$html    .= self::theme_toggle();
 		$html .= '</div></header>';
-		$html .= self::cards_markup( $settings, $user->user_email );
 		$html .= self::notice_markup( $settings );
+		$html .= self::cards_markup( $settings, $user->user_email );
 		$html .= '<div class="bmf-home-grid">';
 		$html .= '<section class="bmf-home-card"' . self::help_attrs( 'agenda' ) . '><h3>Next 30 days</h3>';
 		$html .= self::embed( '[bmf_my_appointments]', 'Appointments shortcode is not active.' );
@@ -191,7 +192,23 @@ class BMF_Member_Home_Shortcodes {
 		return $html;
 	}
 
-	private static function cards_markup( array $settings, string $email ): string {
+
+	public static function assessment_status( $atts = array() ): string {
+		self::enqueue();
+		$atts = shortcode_atts( array( 'bare' => '0' ), $atts, 'bmf_assessment_status' );
+		$settings = BMF_Member_Home_Settings::get();
+		$user = wp_get_current_user();
+		$html = self::cards_markup( $settings, $user->user_email );
+		if ( $atts['bare'] === '1' || $atts['bare'] === 'true' ) {
+			// Strip the accordion chrome so the brief can embed just the grouped cards.
+			if ( preg_match( '/<div class="bmf-home-due-body"[^>]*>(.*)<\/div><\/section>/s', $html, $m ) ) {
+				return $m[1];
+			}
+		}
+		return $html;
+	}
+
+	public static function cards_markup( array $settings, string $email ): string {
 		$user = $email !== '' ? get_user_by( 'email', $email ) : false;
 		$uid  = $user ? (int) $user->ID : 0;
 		$cards = array();
@@ -220,42 +237,83 @@ class BMF_Member_Home_Shortcodes {
 			$card['_results_ok'] = $results_ok;
 			$cards[] = $card;
 		}
-		$html = '<section class="bmf-home-due"' . self::help_attrs( 'assessments' ) . '><div class="bmf-home-due-head"><h3>Assessments</h3></div>';
-		$html .= '<div class="bmf-home-due-grid">';
+
+		// Group by the same tiers as the wellbeing file.
+		$preferred = array( 'Complementary', 'Art of Wellness', '360 Health Intelligence' );
+		$grouped   = array();
+		foreach ( $cards as $card ) {
+			$g = trim( (string) ( $card['group'] ?? 'Other' ) );
+			if ( $g === '' ) {
+				$g = 'Other';
+			}
+			$grouped[ $g ][] = $card;
+		}
+		$ordered = array();
+		foreach ( $preferred as $name ) {
+			if ( isset( $grouped[ $name ] ) ) {
+				$ordered[ $name ] = $grouped[ $name ];
+				unset( $grouped[ $name ] );
+			}
+		}
+		foreach ( $grouped as $name => $list ) {
+			$ordered[ $name ] = $list;
+		}
+
+		$html  = '<section class="bmf-home-due bmf-home-assess-panel" data-bmf-assess-panel' . self::help_attrs( 'assessments' ) . '>';
+		$html .= '<div class="bmf-home-due-head">';
+		$html .= '<button type="button" class="bmf-home-assess-toggle" aria-expanded="false" aria-controls="bmf-assess-body">';
+		$html .= '<span class="bmf-home-assess-title">Assessment Status</span>';
+		$html .= '<svg class="bmf-home-assess-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>';
+		$html .= '</button>';
+		$html .= '<button type="button" class="bmf-home-assess-pin" title="Pin Assessment Status open" aria-label="Pin Assessment Status open" aria-pressed="false">';
+		$html .= '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a1 1 0 00-1 1v1.382l-1.447.724A2 2 0 006 7.236V9H4a1 1 0 000 2h1v5a1 1 0 102 0v-5h6v5a1 1 0 102 0v-5h1a1 1 0 100-2h-2V7.236a2 2 0 00-1.553-1.93L11 4.382V3a1 1 0 00-1-1z"/></svg>';
+		$html .= '</button>';
+		$html .= '</div>';
+		$html .= '<div class="bmf-home-due-body" id="bmf-assess-body" hidden>';
+
 		if ( ! $cards ) {
 			$html .= '<p class="bmf-home-empty">No assessment cards enabled.</p>';
-		}
-		foreach ( $cards as $card ) {
-			$due  = $card['_due'];
-			$take = BMF_Member_Home_Settings::url_for( $card );
-			$open = BMF_Member_Home_Settings::url_for( $card, 'open_page_id', 'open_anchor' );
-			$html .= '<article class="bmf-home-assess is-' . esc_attr( $due['status'] ) . '">';
-			$html .= '<div class="bmf-home-assess-top">' . self::icon( (string) $card['key'] );
-			$html .= '<strong>' . esc_html( $card['label'] ) . '</strong>';
-			$html .= '<span class="bmf-home-badge">' . esc_html( $due['label'] ) . '</span></div>';
-			if ( $due['date'] !== '' ) {
-				$html .= '<p class="bmf-home-meta">Last ' . esc_html( date_i18n( 'M j', strtotime( $due['date'] ) ) );
-				if ( $due['age'] !== null ) {
-					$html .= ' · ' . esc_html( (string) $due['age'] ) . 'd';
+		} else {
+			$html .= '<div class="bmf-home-assess-tiers">';
+			foreach ( $ordered as $group_name => $group_cards ) {
+				$html .= '<div class="bmf-home-assess-tier">';
+				$html .= '<div class="bmf-home-assess-tier-label">' . esc_html( $group_name ) . '</div>';
+				$html .= '<div class="bmf-home-due-grid">';
+				foreach ( $group_cards as $card ) {
+					$due  = $card['_due'];
+					$take = BMF_Member_Home_Settings::url_for( $card );
+					$open = BMF_Member_Home_Settings::url_for( $card, 'open_page_id', 'open_anchor' );
+					$html .= '<article class="bmf-home-assess is-' . esc_attr( $due['status'] ) . '">';
+					$html .= '<div class="bmf-home-assess-top">' . self::icon( (string) $card['key'] );
+					$html .= '<strong>' . esc_html( $card['label'] ) . '</strong>';
+					$html .= '<span class="bmf-home-badge">' . esc_html( $due['label'] ) . '</span></div>';
+					if ( $due['date'] !== '' ) {
+						$html .= '<p class="bmf-home-meta">Last ' . esc_html( date_i18n( 'M j', strtotime( $due['date'] ) ) );
+						if ( $due['age'] !== null ) {
+							$html .= ' · ' . esc_html( (string) $due['age'] ) . 'd';
+						}
+						$html .= '</p>';
+					}
+					$html .= '<div class="bmf-home-actions">';
+					if ( $take !== '' ) {
+						$primary = ( $due['status'] !== 'ok' && $card['_take_ok'] ) ? ' is-primary' : '';
+						$html .= '<a class="bmf-home-btn' . $primary . '" href="' . esc_url( $take ) . '">Take assessment</a>';
+					}
+					if ( $open !== '' ) {
+						$html .= '<a class="bmf-home-btn" href="' . esc_url( $open ) . '">Open results</a>';
+					}
+					if ( $take === '' && $open === '' ) {
+						$html .= '<span class="bmf-home-btn is-disabled">Set pages in settings</span>';
+					}
+					$html .= '</div></article>';
 				}
-				$html .= '</p>';
+				$html .= '</div></div>';
 			}
-			$html .= '<div class="bmf-home-actions">';
-			if ( $take !== '' ) {
-				$primary = ( $due['status'] !== 'ok' && $card['_take_ok'] ) ? ' is-primary' : '';
-				$html .= '<a class="bmf-home-btn' . $primary . '" href="' . esc_url( $take ) . '">Take assessment</a>';
-			}
-			if ( $open !== '' ) {
-				$html .= '<a class="bmf-home-btn" href="' . esc_url( $open ) . '">Open results</a>';
-			}
-			if ( $take === '' && $open === '' ) {
-				$html .= '<span class="bmf-home-btn is-disabled">Set pages in settings</span>';
-			}
-			$html .= '</div></article>';
+			$html .= '</div>';
 		}
-		$html .= '</div>';
-		$html .= '<p class="bmf-home-lag">Status and dates update after overnight scoring, usually within 24 hours of finishing an assessment. Available and the primary Take button also require the tags configured on the card.</p>';
-		$html .= '</section>';
+
+		$html .= '<p class="bmf-home-lag">Statuses may take up to 1 hour for processing your results.</p>';
+		$html .= '</div></section>';
 		return $html;
 	}
 
@@ -267,7 +325,7 @@ class BMF_Member_Home_Shortcodes {
 			if ( $spot === '' ) {
 				return $guided;
 			}
-			return '<div class="bmf-home-info-row">' . $spot . $guided . '</div>';
+			return '<div class="bmf-home-info-row">' . $guided . $spot . '</div>';
 		}
 
 		$notice = self::matching_notice( $settings );
@@ -276,7 +334,7 @@ class BMF_Member_Home_Shortcodes {
 			$spot = self::spot_markup( $settings );
 			return $spot === '' ? '' : '<div class="bmf-home-info-row">' . $spot . '</div>';
 		}
-		$html = '<section class="bmf-home-notice">';
+		$html = '<section class="bmf-home-notice"' . self::help_attrs( 'info' ) . '>';
 		if ( $custom !== '' ) {
 			$html .= '<div><p>' . nl2br( esc_html( $custom ) ) . '</p></div>';
 		} else {
@@ -295,7 +353,7 @@ class BMF_Member_Home_Shortcodes {
 		if ( $spot === '' ) {
 			return $html;
 		}
-		return '<div class="bmf-home-info-row">' . $spot . $html . '</div>';
+		return '<div class="bmf-home-info-row">' . $html . $spot . '</div>';
 	}
 
 	/**
@@ -309,7 +367,7 @@ class BMF_Member_Home_Shortcodes {
 		if ( ! is_array( $step ) || empty( $step['title'] ) ) {
 			return '';
 		}
-		$html  = '<section class="bmf-home-notice bmf-home-guided" data-step-id="' . esc_attr( (string) $step['id'] ) . '">';
+		$html  = '<section class="bmf-home-notice bmf-home-guided" data-step-id="' . esc_attr( (string) $step['id'] ) . '"' . self::help_attrs( 'info' ) . '>';
 		$html .= '<div>';
 		$html .= '<h3 class="bmf-home-guided-title">' . esc_html( $step['title'] ) . '</h3>';
 		if ( ! empty( $step['description'] ) ) {

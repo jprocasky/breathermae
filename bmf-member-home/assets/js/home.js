@@ -93,5 +93,43 @@
 				try { sessionStorage.setItem(key, id); } catch (e) {}
 			}
 		});
+
+		// Assessment Status accordion + pin
+		document.querySelectorAll('[data-bmf-assess-panel]').forEach(function (panel) {
+			var toggle = panel.querySelector('.bmf-home-assess-toggle');
+			var pin = panel.querySelector('.bmf-home-assess-pin');
+			var body = panel.querySelector('.bmf-home-due-body');
+			if (!toggle || !body) return;
+			var key = 'bmf_assess_pinned';
+			function setOpen(open) {
+				panel.classList.toggle('is-open', open);
+				toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+				body.hidden = !open;
+			}
+			function isPinned() {
+				try { return localStorage.getItem(key) === '1'; } catch (e) { return false; }
+			}
+			function setPinned(v) {
+				try { localStorage.setItem(key, v ? '1' : '0'); } catch (e) {}
+				if (pin) pin.setAttribute('aria-pressed', v ? 'true' : 'false');
+			}
+			var pinned = isPinned();
+			setPinned(pinned);
+			setOpen(pinned);
+			toggle.addEventListener('click', function () {
+				var open = !panel.classList.contains('is-open');
+				setOpen(open);
+				if (!open) setPinned(false);
+			});
+			if (pin) {
+				pin.addEventListener('click', function (e) {
+					e.stopPropagation();
+					var next = !isPinned();
+					setPinned(next);
+					if (next) setOpen(true);
+				});
+			}
+		});
+
 	});
 })();

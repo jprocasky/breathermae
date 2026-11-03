@@ -66,6 +66,7 @@ class BMF_Member_Home_Settings {
 				array(
 					'key'     => 'rsi',
 					'label'   => 'RSI',
+					'group'   => 'Complementary',
 					'blurb'   => 'Recovery Stress Index. Two forms.',
 					'page_id' => 0,
 					'anchor'  => '',
@@ -82,6 +83,7 @@ class BMF_Member_Home_Settings {
 				array(
 					'key'     => 'rapid',
 					'label'   => 'Rapid 8 Pillars',
+					'group'   => 'Complementary',
 					'blurb'   => 'Weekly snapshot. One form.',
 					'page_id' => 0,
 					'anchor'  => '',
@@ -98,6 +100,7 @@ class BMF_Member_Home_Settings {
 				array(
 					'key'     => 'keys',
 					'label'   => 'Key Life Essentials',
+					'group'   => 'Art of Wellness',
 					'blurb'   => 'Seven personal-choice forms.',
 					'page_id' => 0,
 					'anchor'  => '',
@@ -114,6 +117,7 @@ class BMF_Member_Home_Settings {
 				array(
 					'key'     => 'pillars',
 					'label'   => 'Complete 8 Pillars',
+					'group'   => 'Art of Wellness',
 					'blurb'   => 'Full lifestyle cycle. Eight forms.',
 					'page_id' => 0,
 					'anchor'  => '',
@@ -130,6 +134,7 @@ class BMF_Member_Home_Settings {
 				array(
 					'key'     => 'bsi',
 					'label'   => 'BSI',
+					'group'   => '360 Health Intelligence',
 					'blurb'   => 'Body Systems Inventory. Nine forms.',
 					'page_id' => 0,
 					'anchor'  => '',
@@ -146,6 +151,7 @@ class BMF_Member_Home_Settings {
 				array(
 					'key'     => 'biovoice',
 					'label'   => 'BioVoicePrint',
+					'group'   => '360 Health Intelligence',
 					'blurb'   => 'Voice regulation sessions. Ongoing after baseline.',
 					'page_id' => 0,
 					'anchor'  => '',
@@ -169,10 +175,11 @@ class BMF_Member_Home_Settings {
 				array( 'key' => 'rail', 'step' => 1, 'enabled' => 1, 'title' => 'Move around', 'text' => 'These links open the rest of your membership. Results and assessments stay one click away.' ),
 				array( 'key' => 'membership', 'step' => 2, 'enabled' => 1, 'title' => 'Your level', 'text' => 'This is your membership: Complementary, Art of Wellness, or 360 Health Intelligence.' ),
 				array( 'key' => 'theme', 'step' => 3, 'enabled' => 1, 'title' => 'Light or dark', 'text' => 'Switch the page between light and dark. The choice is saved for this account.' ),
-				array( 'key' => 'assessments', 'step' => 4, 'enabled' => 1, 'title' => 'Assessments', 'text' => 'Available means it is time to take it. Current means the last result is still in window. Open results goes to the detail page.' ),
-				array( 'key' => 'wellness', 'step' => 5, 'enabled' => 1, 'title' => 'Wellness Index', 'text' => 'A single reading from the assessments you have finished. It appears once enough results are in.' ),
-				array( 'key' => 'agenda', 'step' => 6, 'enabled' => 1, 'title' => 'Next 30 days', 'text' => 'Provider appointments. Reminders on the right are separate.' ),
-				array( 'key' => 'reminders', 'step' => 7, 'enabled' => 1, 'title' => 'Reminders and notes', 'text' => 'Add to Calendar downloads a file for that reminder. Notes are your own.' ),
+				array( 'key' => 'info', 'step' => 4, 'enabled' => 1, 'title' => 'What to do next', 'text' => 'This panel shows your next step. Follow the guidance here to stay on track with your assessments and results.' ),
+				array( 'key' => 'assessments', 'step' => 5, 'enabled' => 1, 'title' => 'Assessments', 'text' => 'Available means it is time to take it. Current means the last result is still in window. Open results goes to the detail page.' ),
+				array( 'key' => 'wellness', 'step' => 6, 'enabled' => 1, 'title' => 'Wellness Index', 'text' => 'A single reading from the assessments you have finished. It appears once enough results are in.' ),
+				array( 'key' => 'agenda', 'step' => 7, 'enabled' => 1, 'title' => 'Next 30 days', 'text' => 'Provider appointments. Reminders on the right are separate.' ),
+				array( 'key' => 'reminders', 'step' => 8, 'enabled' => 1, 'title' => 'Reminders and notes', 'text' => 'Add to Calendar downloads a file for that reminder. Notes are your own.' ),
 			),
 			'notices' => array(
 				array( 'key' => 'welcome', 'enabled' => 0, 'tag' => '', 'max_days' => 14, 'rev' => '1', 'title' => 'Start here', 'body' => 'Take RSI and Rapid 8 Pillars first. Results show up after you submit.', 'link_label' => 'Continue', 'page_id' => 0, 'anchor' => '' ),
@@ -213,6 +220,10 @@ class BMF_Member_Home_Settings {
 				}
 				$out[ $group ][ $i ] = array_merge( $row, $by_key[ $key ] );
 				$out[ $group ][ $i ]['key'] = $key;
+				// Keep the default group when a previously saved card has none.
+				if ( $group === 'cards' && trim( (string) ( $out[ $group ][ $i ]['group'] ?? '' ) ) === '' && ! empty( $row['group'] ) ) {
+					$out[ $group ][ $i ]['group'] = $row['group'];
+				}
 			}
 		}
 		return $out;

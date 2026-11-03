@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.20-poc
+Stable tag: 0.1.24-poc
 License: GPLv2 or later
 
 Logged-in Today dashboard. Dark/light tokens shared with the wellbeing file. Other site pages stay on the current theme until each is redesigned.
@@ -37,6 +37,18 @@ Every link is a page ID plus an optional anchor, set under Settings → Member H
 5. Leave RSI, Pillars, BSI, and the other detail pages alone until each is redesigned.
 
 == Changelog ==
+
+= 0.1.24-poc =
+* Assessment cards grouped with small uppercase headers and vertical dividers (same layout as wellbeing Systems snapshot).
+* Info panel left, Wellness Index right on the top row.
+* [bmf_assessment_status bare="1"] returns just the grouped cards for embedding.
+
+= 0.1.21-poc =
+* Swap Wellness Index / Info panel above Assessments.
+* Assessments panel is now a collapsible accordion (Assessment Status) with pin-to-keep-open. Default closed.
+* Group assessment cards by Complementary / Art of Wellness / 360 Health Intelligence (same as wellbeing file).
+* Status note: "Statuses may take up to 1 hour for processing your results."
+
 
 = 0.1.20-poc =
 * Assessment cards: four optional WP Fusion tag fields (Take required/missing, Results required/missing). Comma-separated, any-logic.

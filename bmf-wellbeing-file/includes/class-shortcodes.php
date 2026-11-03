@@ -207,7 +207,13 @@ class BMF_Wellbeing_Shortcodes {
 		$html  = '<div class="bmf-wb-card bmf-wb-brief" data-voice="' . esc_attr( $voice ) . '">';
 		$html .= '<div class="bmf-wb-head"><h4>Systems snapshot</h4><span class="bmf-wb-member">' . $label . ' ' . $fix . '</span></div>';
 		$html .= '<p class="bmf-wb-sub">Complementary = RSI + Rapid 8 Pillars (weekly) · Art of Wellness = Key Life Essentials + Complete 8 Pillars · 360 = BSI + BioVoice + wearables. Map ' . esc_html( $brief['map_version'] ?? 'v1' ) . '.</p>';
-		$html .= self::markup_tier_chips( $brief );
+		if ( shortcode_exists( 'bmf_assessment_status' ) ) {
+			$html .= '<div class="bmf-wb-assess-wrap">';
+			$html .= do_shortcode( '[bmf_assessment_status bare="1"]' );
+			$html .= '</div>';
+		} else {
+			$html .= self::markup_tier_chips( $brief );
+		}
 		$strip = trim( (string) ( $brief['sources']['profile']['strip'] ?? '' ) );
 		if ( $strip !== '' ) {
 			$html .= '<p class="bmf-wb-profile">' . esc_html( $strip ) . '</p>';

@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.17-poc
+Stable tag: 0.1.19-poc
 License: GPLv2 or later
 
 Canonical wellbeing brief assembled from entry-level self-assessments and wearable nights. WP Fusion gates the page.
@@ -63,6 +63,13 @@ Map version: wellbeing_map_v1.1 in includes/class-map.php
 3. Add shortcodes on a WP Fusion-gated page
 
 == Changelog ==
+
+= 0.1.19-poc =
+* Systems snapshot in [bmf_wellbeing_brief] now shows the shared Assessment Status cards (status, Take, Results) driven by member-home settings, grouped the same way.
+
+= 0.1.18-poc =
+* Status view includes the shared Assessment Status cards (from member-home) when that plugin is active, so Take / Results buttons and status match the dashboard.
+
 
 = 0.1.17-poc =
 * Oura adapter: last-night hours + readiness from `wp_bm_oura_sleep` / `wp_bm_oura_readiness`

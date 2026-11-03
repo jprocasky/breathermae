@@ -225,7 +225,7 @@
 }
 .bmf-home-info-row{
 	display:grid;
-	grid-template-columns:20% minmax(0,1fr);
+	grid-template-columns:minmax(0,1fr) 20%;
 	gap:14px;
 	margin:0 0 14px;
 }
@@ -427,3 +427,67 @@
 	}
 	.bmf-home.is-menu-open .bmf-home-rail{transform:none}
 }
+
+/* Assessment Status accordion */
+.bmf-home-assess-panel .bmf-home-due-head{
+	display:flex;
+	align-items:center;
+	justify-content:space-between;
+	gap:8px;
+	padding:10px 12px;
+	cursor:default;
+}
+.bmf-home-assess-toggle{
+	display:flex;
+	align-items:center;
+	gap:8px;
+	background:none;
+	border:0;
+	padding:0;
+	margin:0;
+	color:var(--bmf-heading);
+	font:inherit;
+	font-weight:700;
+	cursor:pointer;
+	flex:1;
+	text-align:left;
+}
+.bmf-home-assess-title{font-size:.95rem}
+.bmf-home-assess-chevron{
+	width:16px;
+	height:16px;
+	transition:transform .2s ease;
+	flex:0 0 16px;
+}
+.bmf-home-assess-panel.is-open .bmf-home-assess-chevron{transform:rotate(180deg)}
+.bmf-home-assess-pin{
+	background:none;
+	border:0;
+	padding:4px;
+	color:var(--bmf-muted);
+	cursor:pointer;
+	border-radius:6px;
+	display:flex;
+	align-items:center;
+}
+.bmf-home-assess-pin:hover,
+.bmf-home-assess-pin[aria-pressed="true"]{color:var(--bmf-accent);background:var(--bmf-chip)}
+.bmf-home-assess-pin svg{width:16px;height:16px}
+.bmf-home-due-body{padding:0 12px 12px}
+.bmf-home-assess-tiers{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:4px 0 2px}
+.bmf-home-assess-tier{flex:1 1 220px;min-width:200px;padding:0 12px}
+.bmf-home-assess-tier:first-child{padding-left:0}
+.bmf-home-assess-tier:last-child{padding-right:0}
+.bmf-home-assess-tier + .bmf-home-assess-tier{border-left:1px solid var(--bmf-tier-rule,#64748b)}
+.bmf-home-assess-tier-label{
+	font-size:.62rem;
+	letter-spacing:.08em;
+	text-transform:uppercase;
+	color:var(--bmf-muted);
+	font-weight:700;
+	margin:0 0 6px;
+}
+@media (max-width:900px){
+	.bmf-home-assess-tier + .bmf-home-assess-tier{border-left:none;border-top:1px solid var(--bmf-tier-rule,#64748b);margin-top:10px;padding-top:10px}
+}
+.bmf-home-assess-panel:not(.is-open) .bmf-home-due-body{display:none}
