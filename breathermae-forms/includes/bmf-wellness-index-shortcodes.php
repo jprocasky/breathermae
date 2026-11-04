@@ -7,6 +7,8 @@
  * 0–100 synthesis of latest finalized RSI, Pillars (prefer full series),
  * and Key Essentials overall, with a light BMI modifier from biodata.
  * Circular gauge + status word, vertically stacked for a square chip.
+ * Small 30-day change footer (colored, higher is better) when a full index
+ * can be computed as of 30 days ago; otherwise the line is omitted.
  * When there is not enough data, the title stays and the middle falls back
  * to the linked image from Member Home settings (spot_image / spot_link).
  *
@@ -78,6 +80,29 @@ class BMF_Wellness_Index_Shortcodes {
 		$extra   = sanitize_html_class( $atts['class'] );
 		$tip     = 'Synthesis of your latest RSI, Pillars, and Key Essentials (35/35/30). Strong 75+, Building 50–74, Opportunity 25–49, Focus under 25. Based on self-assessments, not a clinical score.';
 
+		// 30-day change: only when a full index can be computed as of 30 days ago.
+		$delta = null;
+		$as_of = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+		$hist  = self::compute( $email, $as_of );
+		if ( ! empty( $hist['ready'] ) && isset( $hist['score'] ) ) {
+			$diff = $score - (int) $hist['score'];
+			if ( $diff > 0 ) {
+				$dir  = 'up';
+				$text = '+' . $diff . ' ↑';
+			} elseif ( $diff < 0 ) {
+				$dir  = 'down';
+				$text = $diff . ' ↓';
+			} else {
+				$dir  = 'flat';
+				$text = '0';
+			}
+			$delta = [
+				'dir'  => $dir,
+				'text' => $text,
+				'diff' => $diff,
+			];
+		}
+
 		ob_start();
 		?>
 		<div class="bmf-wi <?php echo esc_attr( $size ); ?> is-<?php echo esc_attr( $zone ); ?> <?php echo esc_attr( $extra ); ?>"
@@ -103,6 +128,12 @@ class BMF_Wellness_Index_Shortcodes {
 			<div class="bmf-wi-status"><?php echo esc_html( $status ); ?></div>
 			<?php if ( $caption !== '' ) : ?>
 				<div class="bmf-wi-caption"><?php echo esc_html( $caption ); ?></div>
+			<?php endif; ?>
+			<?php if ( $delta ) : ?>
+				<div class="bmf-wi-delta is-<?php echo esc_attr( $delta['dir'] ); ?>">
+					<span class="bmf-wi-delta-val"><?php echo esc_html( $delta['text'] ); ?></span>
+					<span class="bmf-wi-delta-label">30-day change</span>
+				</div>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -174,6 +205,8 @@ class BMF_Wellness_Index_Shortcodes {
 	/**
 	 * Compute the index.
 	 *
+	 * @param string      $email
+	 * @param string|null $as_of Optional Y-m-d cutoff (inclusive). Null = latest.
 	 * @return array{
 	 *   ready:bool,
 	 *   score?:int,
@@ -184,16 +217,17 @@ class BMF_Wellness_Index_Shortcodes {
 	 *   sources?:array
 	 * }
 	 */
-	public static function compute( $email ) {
+	public static function compute( $email, $as_of = null ) {
 		$email = trim( (string) $email );
 		if ( $email === '' ) {
 			return [ 'ready' => false, 'message' => 'No user email.' ];
 		}
+		$as_of = is_string( $as_of ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $as_of ) ? $as_of : null;
 
-		$rsi     = self::get_rsi_score( $email );
-		$pillars = self::get_pillars_score( $email );
-		$keys    = self::get_keys_score( $email );
-		$bmi     = self::get_bmi( $email );
+		$rsi     = self::get_rsi_score( $email, $as_of );
+		$pillars = self::get_pillars_score( $email, $as_of );
+		$keys    = self::get_keys_score( $email, $as_of );
+		$bmi     = self::get_bmi( $email, $as_of );
 
 		$domains = [
 			'rsi'     => $rsi,
@@ -257,21 +291,21 @@ class BMF_Wellness_Index_Shortcodes {
 	 * Data fetchers
 	 * ------------------------------------------------------------------ */
 
-	private static function get_rsi_score( $email ) {
+	private static function get_rsi_score( $email, $as_of = null ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'bm_rsi_results';
 
-		$row = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT master_score, readiness_score, R11, R12, results_date
+		$sql = "SELECT master_score, readiness_score, R11, R12, results_date
 				 FROM {$table}
-				 WHERE user_email = %s AND is_final = 1
-				 ORDER BY results_date DESC, id DESC
-				 LIMIT 1",
-				$email
-			),
-			ARRAY_A
-		);
+				 WHERE user_email = %s AND is_final = 1";
+		$args = [ $email ];
+		if ( $as_of ) {
+			$sql .= " AND results_date <= %s";
+			$args[] = $as_of;
+		}
+		$sql .= " ORDER BY results_date DESC, id DESC LIMIT 1";
+
+		$row = $wpdb->get_row( $wpdb->prepare( $sql, $args ), ARRAY_A );
 		if ( ! $row ) {
 			return null;
 		}
@@ -294,19 +328,28 @@ class BMF_Wellness_Index_Shortcodes {
 		return $parts ? round( array_sum( $parts ) / count( $parts ), 1 ) : null;
 	}
 
-	private static function get_pillars_score( $email ) {
+	private static function get_pillars_score( $email, $as_of = null ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'bm_pillars_results';
+
+		$date_sql = '';
+		$args_full = [ $email ];
+		$args_rapid = [ $email ];
+		if ( $as_of ) {
+			$date_sql = ' AND results_date <= %s';
+			$args_full[] = $as_of;
+			$args_rapid[] = $as_of;
+		}
 
 		// Prefer full series.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT master_score, series, results_date
 				 FROM {$table}
-				 WHERE user_email = %s AND is_final = 1 AND series = 'full'
+				 WHERE user_email = %s AND is_final = 1 AND series = 'full'{$date_sql}
 				 ORDER BY results_date DESC, id DESC
 				 LIMIT 1",
-				$email
+				$args_full
 			),
 			ARRAY_A
 		);
@@ -315,10 +358,10 @@ class BMF_Wellness_Index_Shortcodes {
 				$wpdb->prepare(
 					"SELECT master_score, series, results_date
 					 FROM {$table}
-					 WHERE user_email = %s AND is_final = 1 AND series = 'rapid'
+					 WHERE user_email = %s AND is_final = 1 AND series = 'rapid'{$date_sql}
 					 ORDER BY results_date DESC, id DESC
 					 LIMIT 1",
-					$email
+					$args_rapid
 				),
 				ARRAY_A
 			);
@@ -330,10 +373,10 @@ class BMF_Wellness_Index_Shortcodes {
 		return $v <= 1.0 ? round( $v * 100, 1 ) : round( $v, 1 );
 	}
 
-	private static function get_keys_score( $email ) {
+	private static function get_keys_score( $email, $as_of = null ) {
 		// Prefer existing service if loaded.
 		if ( class_exists( 'BMF_Key_Essentials_Service' ) && method_exists( 'BMF_Key_Essentials_Service', 'overall_as_of' ) ) {
-			$overall = BMF_Key_Essentials_Service::overall_as_of( $email, '' );
+			$overall = BMF_Key_Essentials_Service::overall_as_of( $email, $as_of ?: '' );
 			if ( ! empty( $overall['average'] ) && $overall['average'] !== null ) {
 				$avg = (float) $overall['average'];
 				return round( ( ( $avg - 1 ) / 4 ) * 100, 1 );
@@ -342,16 +385,16 @@ class BMF_Wellness_Index_Shortcodes {
 
 		global $wpdb;
 		$table = 'uls_key_essentials';
-		$rows  = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT form_id, average_score
+		$sql = "SELECT form_id, average_score
 				 FROM {$table}
-				 WHERE user_email = %s
-				 ORDER BY datetime DESC, id DESC",
-				$email
-			),
-			ARRAY_A
-		);
+				 WHERE user_email = %s";
+		$args = [ $email ];
+		if ( $as_of ) {
+			$sql .= " AND datetime <= %s";
+			$args[] = $as_of . ' 23:59:59';
+		}
+		$sql .= " ORDER BY datetime DESC, id DESC";
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
 		if ( ! $rows ) {
 			return null;
 		}
@@ -375,18 +418,25 @@ class BMF_Wellness_Index_Shortcodes {
 		return round( ( ( $avg - 1 ) / 4 ) * 100, 1 );
 	}
 
-	private static function get_bmi( $email ) {
+	private static function get_bmi( $email, $as_of = null ) {
 		global $wpdb;
 		$table = 'uls_ULS_CF_BIO';
+
+		$date_sql = '';
+		$args = [ $email ];
+		if ( $as_of ) {
+			$date_sql = ' AND updated_at <= %s';
+			$args[] = $as_of . ' 23:59:59';
+		}
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT f_heightft, f_heightin, f_weight
 				 FROM {$table}
-				 WHERE email = %s
+				 WHERE email = %s{$date_sql}
 				 ORDER BY updated_at DESC, id DESC
 				 LIMIT 1",
-				$email
+				$args
 			),
 			ARRAY_A
 		);
@@ -394,14 +444,18 @@ class BMF_Wellness_Index_Shortcodes {
 			// Try user_id path if email column differs.
 			$user = get_user_by( 'email', $email );
 			if ( $user ) {
+				$uid_args = [ $user->ID ];
+				if ( $as_of ) {
+					$uid_args[] = $as_of . ' 23:59:59';
+				}
 				$row = $wpdb->get_row(
 					$wpdb->prepare(
 						"SELECT f_heightft, f_heightin, f_weight
 						 FROM {$table}
-						 WHERE user_id = %d
+						 WHERE user_id = %d{$date_sql}
 						 ORDER BY updated_at DESC, id DESC
 						 LIMIT 1",
-						$user->ID
+						$uid_args
 					),
 					ARRAY_A
 				);
@@ -652,6 +706,33 @@ class BMF_Wellness_Index_Shortcodes {
 				max-width: 140px;
 				margin-top: 0.15rem;
 			}
+
+			.bmf-wi-delta {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 0.05rem;
+				margin-top: 0.15rem;
+				line-height: 1.15;
+			}
+			.bmf-wi-delta-val {
+				font-size: 0.72rem;
+				font-weight: 650;
+				font-variant-numeric: tabular-nums;
+				letter-spacing: 0.01em;
+			}
+			.bmf-wi-delta-label {
+				font-size: 0.58rem;
+				font-weight: 500;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				color: #94a3b8;
+				opacity: 0.85;
+			}
+			.bmf-wi-delta.is-up .bmf-wi-delta-val   { color: #34d399; }
+			.bmf-wi-delta.is-down .bmf-wi-delta-val { color: #f87171; }
+			.bmf-wi-delta.is-flat .bmf-wi-delta-val { color: #94a3b8; }
+
 			/* Light theme support when parent has data-bmf-theme="light" */
 			[data-bmf-theme="light"] .bmf-wi,
 			.bmf-wi[data-bmf-theme="light"] {
@@ -669,6 +750,15 @@ class BMF_Wellness_Index_Shortcodes {
 			.bmf-wi[data-bmf-theme="light"] .bmf-wi-label {
 				color: #5b6b82;
 			}
+			[data-bmf-theme="light"] .bmf-wi-delta-label,
+			.bmf-wi[data-bmf-theme="light"] .bmf-wi-delta-label {
+				color: #5b6b82;
+			}
+			[data-bmf-theme="light"] .bmf-wi-delta.is-flat .bmf-wi-delta-val,
+			.bmf-wi[data-bmf-theme="light"] .bmf-wi-delta.is-flat .bmf-wi-delta-val {
+				color: #5b6b82;
+			}
+
 		</style>
 		<script>
 		(function(){
