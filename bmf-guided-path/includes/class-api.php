@@ -78,11 +78,13 @@ class BMF_Guided_Path_API {
 		}
 
 		// Record that the step was presented (lightweight; caller may also record click).
-		BMF_Guided_Path_History::record(
-			$user_id ? (int) $user_id : get_current_user_id(),
-			(int) $step['id'],
-			'presented'
-		);
+		$uid = $user_id ? (int) $user_id : get_current_user_id();
+		BMF_Guided_Path_History::record( $uid, (int) $step['id'], 'presented' );
+
+		// Optional: write the suppress event the first time the step is shown.
+		if ( is_array( $conds ) && ! empty( $conds['record_on_present'] ) && $key !== '' ) {
+			BMF_Guided_Path_Evaluator::record_event( $uid, $key );
+		}
 
 		return array(
 			'id'           => (int) $step['id'],

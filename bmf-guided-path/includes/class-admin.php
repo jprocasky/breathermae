@@ -139,6 +139,7 @@ class BMF_Guided_Path_Admin {
 		$days_lt = isset( $conds['days_since_lt'] ) ? (int) $conds['days_since_lt'] : '';
 		$suppress_key  = (string) ( $conds['suppress_event_key'] ?? '' );
 		$suppress_days = isset( $conds['suppress_if_seen_days'] ) ? (int) $conds['suppress_if_seen_days'] : '';
+		$record_on_present = ! empty( $conds['record_on_present'] );
 
 		$tags = self::available_tags();
 
@@ -202,9 +203,13 @@ class BMF_Guided_Path_Admin {
 		echo '<p class="description">Match if fewer than this many days since last activity. Leave blank to ignore.</p></td></tr>';
 
 		echo '<tr><th>Suppress if event seen</th><td>';
-		echo '<input type="text" class="regular-text" name="suppress_event_key" value="' . esc_attr( $suppress_key ) . '" placeholder="rsi_results_viewed"> ';
+		echo '<input type="text" class="regular-text" id="bmf-gp-suppress-key" name="suppress_event_key" value="' . esc_attr( $suppress_key ) . '" placeholder="rsi_results_viewed"> ';
 		echo '<input type="number" min="0" class="small-text" name="suppress_if_seen_days" value="' . esc_attr( $suppress_days ) . '" placeholder="days">';
-		echo '<p class="description">Optional. Event key from <code>uls_user_event_log</code> and a day window. If a matching row exists and <code>last_updated</code> is within that many days, this step is skipped. Set days to <strong>0</strong> to suppress forever once the event exists (one-time notice). Leave the key blank to ignore.</p></td></tr>';
+		$rop_disabled = $suppress_key === '' ? ' disabled' : '';
+		$rop_checked  = ( $record_on_present && $suppress_key !== '' ) ? ' checked' : '';
+		echo '<label style="margin-left:12px"><input type="checkbox" id="bmf-gp-record-on-present" name="record_on_present" value="1"' . $rop_checked . $rop_disabled . '> Record on present</label>';
+		echo '<p class="description">Optional. Event key from <code>uls_user_event_log</code> and a day window. If a matching row exists and <code>last_updated</code> is within that many days, this step is skipped. Set days to <strong>0</strong> to suppress forever once the event exists (one-time notice). Leave the key blank to ignore.</p>';
+		echo '<p class="description"><strong>Record on present</strong> writes the event the first time this step is shown on member-home (not only when the button is clicked). Available only when an event key is entered. Use with days = 1 to hide the step for the rest of the day after it has been seen.</p></td></tr>';
 
 		self::field( 'destination', 'Destination (slug or path)', $step['destination'] ?? '' );
 		self::field( 'anchor', 'Anchor', $step['anchor'] ?? '' );
@@ -223,6 +228,15 @@ class BMF_Guided_Path_Admin {
 			$("#bmf-gp-step-form").on("submit", function(){
 				if (window.tinyMCE) { tinyMCE.triggerSave(); }
 			});
+			var $key = $("#bmf-gp-suppress-key");
+			var $rop = $("#bmf-gp-record-on-present");
+			function syncRop(){
+				var has = $.trim($key.val()) !== "";
+				$rop.prop("disabled", !has);
+				if (!has) $rop.prop("checked", false);
+			}
+			$key.on("input change", syncRop);
+			syncRop();
 		});
 		</script>';
 	}
@@ -311,6 +325,9 @@ class BMF_Guided_Path_Admin {
 		$suppress_key = sanitize_text_field( wp_unslash( $_POST['suppress_event_key'] ?? '' ) );
 		if ( $suppress_key !== '' ) {
 			$conditions['suppress_event_key'] = $suppress_key;
+			if ( ! empty( $_POST['record_on_present'] ) ) {
+				$conditions['record_on_present'] = 1;
+			}
 		}
 		if ( isset( $_POST['suppress_if_seen_days'] ) && $_POST['suppress_if_seen_days'] !== '' ) {
 			$conditions['suppress_if_seen_days'] = (int) $_POST['suppress_if_seen_days'];
