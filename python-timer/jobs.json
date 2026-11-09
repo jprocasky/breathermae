@@ -1,0 +1,158 @@
+{
+  "jobs": [
+    {
+      "id": "db_ping",
+      "name": "DB Connection Test",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": "08:00",
+      "window_end": "20:00",
+      "callable": "jobs.db_ping:run",
+      "description": "Simple connectivity check to the WordPress database"
+    },
+    {
+      "id": "tag_diff",
+      "name": "Tag Diff",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.tag_diff:run",
+      "description": "Compare live WPF tags to snapshot and log additions/removals",
+      "write": true
+    },
+    {
+      "id": "name_fill",
+      "name": "Name Fill",
+      "enabled": true,
+      "write": true,
+      "interval_minutes": 60,
+      "callable": "jobs.name_fill:run",
+      "description": "Copy health profile name into WordPress when first name is blank"
+    },
+    {
+      "id": "rsi_score",
+      "name": "RSI Score",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.rsi_score:run",
+      "description": "Compute RSI scores for complete unscored rows and log them",
+      "write": true,
+      "local": false
+    },
+    {
+      "id": "bsi_score",
+      "name": "BSI Score",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.bsi_score:run",
+      "description": "Compute BSI scores for complete unscored rows and log them (governor = F9)",
+      "write": true,
+      "local": false
+    },
+    {
+      "id": "pillars_render",
+      "name": "Pillars Render",
+      "enabled": true,
+      "interval_minutes": 60,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.pillars_render:run",
+      "description": "Build Physical pillar section summary from the pivot view and subcategory JSON",
+      "write": true,
+      "local": false
+    },
+    {
+      "id": "tag_reset",
+      "name": "Tag Reset",
+      "enabled": true,
+      "interval_minutes": 60,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.tag_reset:run",
+      "description": "Log form tags that would be removed after the completion window",
+      "write": true,
+      "local": false
+    },
+    {
+      "id": "tag_rules",
+      "name": "Tag Rules",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.tag_rules:run",
+      "description": "Log users who qualify for a completion tag they do not yet have",
+      "write": true,
+      "local": false
+    },
+    {
+      "id": "tag_snapshot",
+      "name": "Tag Snapshot Refresh",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.tag_snapshot:run",
+      "description": "Pull WPF tags from usermeta into uls_bm_tag_snapshots",
+      "write": true
+    },
+    {
+      "id": "kbmo_orders",
+      "name": "KBMO Orders",
+      "enabled": true,
+      "write": true,
+      "interval_minutes": 1440,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.kbmo_orders:run",
+      "description": "Place completed Woo KBMO orders. Write off logs only.",
+      "local": false
+    },
+    {
+      "id": "email_rules",
+      "name": "Date-based Emails",
+      "enabled": true,
+      "write": true,
+      "interval_minutes": 1440,
+      "callable": "jobs.email_rules:run",
+      "description": "First matching template rule, 3-day floor, date-driven only"
+    },
+    {
+      "id": "code_sync",
+      "name": "Code Sync",
+      "enabled": true,
+      "write": true,
+      "interval_minutes": 30,
+      "callable": "jobs.code_sync:run",
+      "local": true,
+      "description": "Copy app code from the Settings source path",
+      "window_start": null,
+      "window_end": null
+    },
+    {
+      "id": "timer_log_sync",
+      "name": "Timer Log Sync",
+      "enabled": true,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.timer_log_sync:run",
+      "description": "Replace uls_breathermae_process_log with the newest timer runs",
+      "write": true
+    },
+    {
+      "id": "user_cleanup",
+      "name": "User Cleanup",
+      "enabled": false,
+      "write": true,
+      "interval_minutes": 1440,
+      "callable": "jobs.user_cleanup:run",
+      "description": "Delete uls_wptm_tbl_4 rows whose email is gone from uls_users"
+    }
+  ]
+}

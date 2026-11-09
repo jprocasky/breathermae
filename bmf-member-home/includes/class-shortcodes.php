@@ -10,6 +10,7 @@ class BMF_Member_Home_Shortcodes {
 		add_shortcode( 'bmf_member_nav', array( __CLASS__, 'nav' ) );
 		add_shortcode( 'bmf_member_today', array( __CLASS__, 'today' ) );
 		add_shortcode( 'bmf_assessment_status', array( __CLASS__, 'assessment_status' ) );
+		add_shortcode( 'bmf_assessment_timeline', array( __CLASS__, 'assessment_timeline' ) );
 		add_action( 'wp_ajax_bmf_member_home_theme', array( __CLASS__, 'ajax_theme' ) );
 	}
 
@@ -119,8 +120,24 @@ class BMF_Member_Home_Shortcodes {
 		} else {
 			$html .= '<p class="bmf-home-rail-label">Site</p>' . $site;
 		}
+		$html .= self::rail_graphic( $settings );
 		$html .= '</aside>';
 		return $html;
+	}
+
+	/**
+	 * Info Panel Graphic under the rail links, when a path is set.
+	 * Same spot_image / spot_link used in the info row. Width is the rail.
+	 */
+	private static function rail_graphic( array $settings ): string {
+		$image = esc_url( $settings['spot_image'] ?? '' );
+		if ( $image === '' ) {
+			return '';
+		}
+		$link = esc_url( $settings['spot_link'] ?? '' );
+		$img  = '<img src="' . $image . '" alt="" />';
+		$inner = $link !== '' ? '<a href="' . $link . '">' . $img . '</a>' : $img;
+		return '<div class="bmf-home-rail-graphic">' . $inner . '</div>';
 	}
 
 	private static function link_list( array $items, bool $with_dividers ): string {
@@ -178,6 +195,7 @@ class BMF_Member_Home_Shortcodes {
 		$html    .= self::theme_toggle();
 		$html .= '</div></header>';
 		$html .= self::notice_markup( $settings );
+		$html .= self::timeline_markup( $settings, $user->user_email );
 		$html .= self::cards_markup( $settings, $user->user_email );
 		$html .= '<div class="bmf-home-grid">';
 		$html .= '<section class="bmf-home-card"' . self::help_attrs( 'agenda' ) . '><h3>Next 30 days</h3>';
@@ -288,9 +306,10 @@ class BMF_Member_Home_Shortcodes {
 					$html .= '<strong>' . esc_html( $card['label'] ) . '</strong>';
 					$html .= '<span class="bmf-home-badge">' . esc_html( $due['label'] ) . '</span></div>';
 					if ( $due['date'] !== '' ) {
-						$html .= '<p class="bmf-home-meta">Last ' . esc_html( date_i18n( 'M j', strtotime( $due['date'] ) ) );
+						$utc = (string) ( $due['utc'] ?? $due['date'] );
+						$html .= '<p class="bmf-home-meta">Last <span data-bmf-local-date="' . esc_attr( $utc ) . '">' . esc_html( date_i18n( 'M j', strtotime( $due['date'] ) ) ) . '</span>';
 						if ( $due['age'] !== null ) {
-							$html .= ' · ' . esc_html( (string) $due['age'] ) . 'd';
+							$html .= ' · <span data-bmf-local-age="' . esc_attr( $utc ) . '">' . esc_html( (string) $due['age'] ) . 'd</span>';
 						}
 						$html .= '</p>';
 					}
@@ -313,6 +332,123 @@ class BMF_Member_Home_Shortcodes {
 		}
 
 		$html .= '<p class="bmf-home-lag">Statuses may take up to 1 hour for processing your results.</p>';
+		$html .= '</div></section>';
+		return $html;
+	}
+
+	/**
+	 * Gantt-style assessment timeline panel.
+	 * Lanes only for entitled assessments that already have at least one result.
+	 * Origin for each lane is the first result date.
+	 */
+	public static function assessment_timeline( $atts = array() ): string {
+		self::enqueue();
+		$settings = BMF_Member_Home_Settings::get();
+		$user     = wp_get_current_user();
+		return self::timeline_markup( $settings, $user->user_email );
+	}
+
+	private static function timeline_markup( array $settings, string $email ): string {
+		$user = $email !== '' ? get_user_by( 'email', $email ) : false;
+		$uid  = $user ? (int) $user->ID : 0;
+		// Cumulative membership: Complementary < Art of Wellness < 360 Health Intelligence.
+		$has = static function ( $tag ) use ( $uid ) {
+			if ( function_exists( 'wpf_has_tag' ) && $uid > 0 ) {
+				return (bool) wpf_has_tag( $tag, $uid );
+			}
+			return false;
+		};
+		$is_s360 = $has( 'S360' );
+		$is_art  = $is_s360 || $has( 'ART' );
+		// Complementary is the base; everyone entitled to a higher tier also sees it.
+		$allowed_groups = array( 'Complementary' );
+		if ( $is_art ) {
+			$allowed_groups[] = 'Art of Wellness';
+		}
+		if ( $is_s360 ) {
+			$allowed_groups[] = '360 Health Intelligence';
+		}
+		$lanes = array();
+		foreach ( $settings['cards'] as $card ) {
+			if ( empty( $card['enabled'] ) ) {
+				continue;
+			}
+			$group = trim( (string) ( $card['group'] ?? 'Other' ) );
+			if ( $group === '' ) {
+				$group = 'Other';
+			}
+			if ( ! in_array( $group, $allowed_groups, true ) ) {
+				continue;
+			}
+			$source = (string) ( $card['source'] ?? '' );
+			// v1: assessments only. BioVoice and wearables are a later slice.
+			if ( ! in_array( $source, array( 'rsi', 'pillars_rapid', 'keys', 'pillars_full', 'bsi' ), true ) ) {
+				continue;
+			}
+			$dates = BMF_Member_Home_Due::all_dates( $source, $email );
+			$lanes[] = array(
+				'key'     => (string) $card['key'],
+				'label'   => (string) $card['label'],
+				'group'   => $group,
+				'cadence' => max( 1, (int) ( $card['cadence'] ?? 90 ) ),
+				'first'   => $dates ? $dates[0] : '',
+				'last'    => $dates ? $dates[ count( $dates ) - 1 ] : '',
+				'actuals' => $dates,
+				'url'     => BMF_Member_Home_Settings::url_for( $card, 'open_page_id', 'open_anchor' ),
+			);
+		}
+		if ( ! $lanes ) {
+			return '';
+		}
+
+		$preferred = array( 'Complementary', 'Art of Wellness', '360 Health Intelligence' );
+		$grouped   = array();
+		foreach ( $lanes as $lane ) {
+			$g = trim( $lane['group'] ) !== '' ? $lane['group'] : 'Other';
+			$grouped[ $g ][] = $lane;
+		}
+		$ordered = array();
+		foreach ( $preferred as $name ) {
+			if ( isset( $grouped[ $name ] ) ) {
+				$ordered[ $name ] = $grouped[ $name ];
+				unset( $grouped[ $name ] );
+			}
+		}
+		foreach ( $grouped as $name => $list ) {
+			$ordered[ $name ] = $list;
+		}
+
+		$payload = array(
+			'groups' => $ordered,
+		);
+		$json = wp_json_encode( $payload );
+		if ( ! $json ) {
+			return '';
+		}
+
+		$html  = '<section class="bmf-home-due bmf-home-timeline" data-bmf-timeline' . self::help_attrs( 'timeline' ) . '>';
+		$html .= '<div class="bmf-home-due-head">';
+		$html .= '<button type="button" class="bmf-home-assess-toggle" aria-expanded="false" aria-controls="bmf-timeline-body">';
+		$html .= '<span class="bmf-home-assess-title">Wellness Timeline</span>';
+		$html .= '<svg class="bmf-home-assess-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>';
+		$html .= '</button>';
+		$html .= '<button type="button" class="bmf-home-assess-pin" title="Pin Wellness Timeline open" aria-label="Pin Wellness Timeline open" aria-pressed="false">';
+		$html .= '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a1 1 0 00-1 1v1.382l-1.447.724A2 2 0 006 7.236V9H4a1 1 0 000 2h1v5a1 1 0 102 0v-5h6v5a1 1 0 102 0v-5h1a1 1 0 100-2h-2V7.236a2 2 0 00-1.553-1.93L11 4.382V3a1 1 0 00-1-1z"/></svg>';
+		$html .= '</button>';
+		$html .= '</div>';
+		$html .= '<div class="bmf-home-due-body" id="bmf-timeline-body" hidden>';
+		$html .= '<div class="bmf-tl-toolbar">';
+		$html .= '<div class="bmf-tl-ranges" role="group" aria-label="Date range">';
+		$html .= '<button type="button" data-months="1">1 mo</button>';
+		$html .= '<button type="button" data-months="3">3 mo</button>';
+		$html .= '<button type="button" data-months="6" class="is-active">6 mo</button>';
+		$html .= '<button type="button" data-months="9">9 mo</button>';
+		$html .= '<button type="button" data-months="12">1 yr</button>';
+		$html .= '</div>';
+		$html .= '<p class="bmf-tl-legend"><span class="bmf-tl-key bmf-tl-key-actual"></span> Completed <span class="bmf-tl-key bmf-tl-key-next"></span> Next available <span class="bmf-tl-key bmf-tl-key-adj"></span> Scheduled</p>';
+		$html .= '</div>';
+		$html .= '<div class="bmf-tl-scroll"><div class="bmf-tl-canvas" data-timeline="' . esc_attr( $json ) . '"></div></div>';
+		$html .= '<p class="bmf-home-lag">Completed results in green. The solid marker shows when the assessment is next expected to be available, based on the last result and the normal interval.</p>';
 		$html .= '</div></section>';
 		return $html;
 	}

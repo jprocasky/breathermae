@@ -1,0 +1,143 @@
+:root {
+  --bg: #0f1419;
+  --panel: #1a2332;
+  --text: #e6edf3;
+  --muted: #8b9cb3;
+  --accent: #3d8bfd;
+  --ok: #3fb950;
+  --fail: #f85149;
+  --border: #30363d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+header h1 { margin: 0; font-size: 1.25rem; }
+nav a {
+  color: var(--accent);
+  text-decoration: none;
+  margin-right: 1rem;
+}
+nav a:hover { text-decoration: underline; }
+.now { margin-left: auto; color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.now.stale { color: var(--fail); }
+.restart {
+  color: #1a1205;
+  background: #f2c94c;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.restart.small {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+main { padding: 1.25rem; max-width: 1100px; margin: 0 auto; }
+section { margin-bottom: 2rem; }
+h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border-radius: 6px;
+  overflow: hidden;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+th { color: var(--muted); font-weight: 600; }
+tr.disabled { opacity: 0.55; }
+.mode {
+  display: inline-block;
+  padding: 0 0.35rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+.mode.ro { color: var(--muted); background: #243044; }
+.mode.write { color: #1a1205; background: #e3b341; }
+tr.ok td:nth-child(3) { color: var(--ok); }
+tr.fail td:nth-child(3) { color: var(--fail); }
+button, .button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 0.85rem;
+}
+button.small, a.button.small { padding: 0.2rem 0.5rem; font-size: 0.8rem; }
+button:disabled { opacity: 0.4; cursor: default; }
+button.danger { background: var(--fail); }
+button:hover, .button:hover { filter: brightness(1.1); }
+.form label {
+  display: block;
+  margin-bottom: 0.6rem;
+}
+.form input[type="text"],
+.form input[type="number"],
+.form input:not([type="checkbox"]) {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.35rem 0.5rem;
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+}
+.split { display: flex; gap: 1rem; align-items: flex-start; }
+.split section { flex: 1; min-width: 0; }
+.split.controls-errors .controls { flex: 0 0 25%; }
+.split.controls-errors .errors { flex: 1; }
+.control-box { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; }
+.control-box form { display: inline-block; margin: 0 0.25rem 0.5rem 0; }
+.control-box .state { margin: 0 0 0.6rem; }
+.control-box .hint { margin: 0.5rem 0 0; font-size: 0.8rem; color: var(--muted); }
+.scroll { min-height: 16rem; max-height: 16rem; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+table.compact th, table.compact td { font-size: 0.78rem; padding: 0.3rem 0.45rem; }
+tr.warn td { background: #3d2a14; color: #f2c94c; }
+.dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+.dot.green { background: #3b7e23; }
+.dot.yellow { background: #f2c94c; }
+.dot.blue { background: #3d8bfd; }
+.dot.red { background: #cc5854; }
+.form textarea {
+  width: 100%;
+  max-width: 640px;
+  min-height: 140px;
+  padding: 0.35rem 0.5rem;
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  font-family: inherit;
+}
+code { background: #0d1117; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }

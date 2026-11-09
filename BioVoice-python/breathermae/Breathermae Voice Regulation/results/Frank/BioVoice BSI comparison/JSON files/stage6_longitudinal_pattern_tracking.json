@@ -1,0 +1,26 @@
+{
+  "trend_summary": {
+    "comparison_session_count": 1,
+    "comparison_model_version": "bsi_comparison_zscore_range_v4_reliability_flags",
+    "rdi_trend_slope": 0.0,
+    "overall_pattern_shift_slope": 0.0,
+    "regulation_consistency_shift_slope": 0.0,
+    "return_to_baseline_window_shift_slope": 0.0,
+    "adaptive_transition_pattern_shift_slope": 0.0,
+    "stability_window_status": "provisional",
+    "variability_cluster": "insufficient_comparison_history",
+    "trend_note": "Trend values become more meaningful after several comparison sessions."
+  },
+  "history": [
+    {
+      "session_id": "Frank Comparison Session 1",
+      "timestamp": "2026-07-14 17:19:27",
+      "comparison_model_version": "bsi_comparison_zscore_range_v4_reliability_flags",
+      "rdi_score_0_100": 21.807777,
+      "overall_voice_pattern_shift": 19.767495,
+      "regulation_consistency_shift": 14.414765,
+      "return_to_baseline_window_shift": 17.271882,
+      "adaptive_transition_pattern_shift": 11.474358
+    }
+  ]
+}

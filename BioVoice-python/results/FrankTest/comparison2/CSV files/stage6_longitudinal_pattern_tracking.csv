@@ -1,0 +1,2 @@
+comparison_session_count,comparison_model_version,rdi_trend_slope,overall_pattern_shift_slope,regulation_consistency_shift_slope,return_to_baseline_window_shift_slope,adaptive_transition_pattern_shift_slope,stability_window_status,variability_cluster,trend_note
+1,bsi_comparison_zscore_range_v4_reliability_flags,0.0,0.0,0.0,0.0,0.0,provisional,insufficient_comparison_history,Trend values become more meaningful after several comparison sessions.

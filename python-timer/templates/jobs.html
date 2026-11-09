@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Manage jobs</h2>
+  <p><a href="{{ url_for('add_job') }}" class="button">Add job</a></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Order</th>
+        <th>Name</th>
+        <th>ID</th>
+        <th>Enabled</th>
+        <th>Write</th>
+        <th>Interval</th>
+        <th>Callable</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr title="{{ j.description or '' }}">
+        <td>{{ loop.index }}</td>
+        <td>{{ j.name }}</td>
+        <td><code>{{ j.id }}</code></td>
+        <td>{{ "yes" if j.enabled else "no" }}</td>
+        <td>{{ "yes" if j.write else "no" }}</td>
+        <td>{{ j.interval_minutes }} min</td>
+        <td><code>{{ j.callable }}</code></td>
+        <td>
+          <form method="post" action="{{ url_for('move_job', job_id=j.id, direction='up') }}" style="display:inline">
+            <button type="submit" class="small" {% if loop.first %}disabled{% endif %}>Up</button>
+          </form>
+          <form method="post" action="{{ url_for('move_job', job_id=j.id, direction='down') }}" style="display:inline">
+            <button type="submit" class="small" {% if loop.last %}disabled{% endif %}>Down</button>
+          </form>
+          <form method="post" action="{{ url_for('toggle_job', job_id=j.id) }}" style="display:inline">
+            <button type="submit" class="small">{{ "Disable" if j.enabled else "Enable" }}</button>
+          </form>
+          <form method="post" action="{{ url_for('toggle_write', job_id=j.id) }}" style="display:inline">
+            <button type="submit" class="small">{{ "Read only" if j.write else "Allow write" }}</button>
+          </form>
+          <a class="button small" href="{{ url_for('edit_job', job_id=j.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('delete_job', job_id=j.id) }}" style="display:inline" onsubmit="return confirm('Delete this job?');">
+            <button type="submit" class="small danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No jobs.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

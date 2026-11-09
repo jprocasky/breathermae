@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>{{ "Edit job" if job else "Add job" }}</h2>
+  <form method="post" class="form">
+    <label>ID
+      <input name="id" required placeholder="rsi_score" value="{{ job.id if job else '' }}" {% if job %}readonly{% endif %}>
+    </label>
+    <label>Name
+      <input name="name" required placeholder="RSI Scoring" value="{{ job.name if job else '' }}">
+    </label>
+    <label>Callable
+      <input name="callable" required placeholder="jobs.rsi:run" value="{{ job.callable if job else '' }}">
+    </label>
+    <label>Interval (minutes)
+      <input name="interval_minutes" type="number" min="1" value="{{ job.interval_minutes if job else 60 }}">
+    </label>
+    <label>Window start
+      <input name="window_start" placeholder="08:00" value="{{ job.window_start or '' if job else '' }}">
+    </label>
+    <label>Window end
+      <input name="window_end" placeholder="20:00" value="{{ job.window_end or '' if job else '' }}">
+    </label>
+    <label>Description
+      <input name="description" value="{{ job.description if job else '' }}">
+    </label>
+    <label class="check">
+      <input type="checkbox" name="enabled" {% if not job or job.enabled %}checked{% endif %}> Enabled
+    </label>
+    <label class="check">
+      <input type="checkbox" name="write" {% if job and job.write %}checked{% endif %}> Allow write
+    </label>
+    <button type="submit">{{ "Save" if job else "Add" }}</button>
+  </form>
+  <p><a href="{{ url_for('jobs_page') }}">Cancel</a></p>
+</section>
+{% endblock %}

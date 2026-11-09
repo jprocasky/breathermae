@@ -6,16 +6,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BMF_Member_Home_Due {
 
 	/**
-	 * @return array{status:string,label:string,date:string,age:?int}
+	 * @return array{status:string,label:string,date:string,utc:string,age:?int}
 	 */
 	public static function for_card( array $card, string $email ): array {
 		$cadence = max( 1, (int) ( $card['cadence'] ?? 90 ) );
-		$date    = self::latest_date( (string) ( $card['source'] ?? '' ), $email );
+		$utc     = self::latest_utc( (string) ( $card['source'] ?? '' ), $email );
+		$date    = self::date_from_utc( $utc );
 		if ( $date === '' ) {
 			return array(
 				'status' => 'missing',
 				'label'  => 'Not started',
 				'date'   => '',
+				'utc'    => '',
 				'age'    => null,
 			);
 		}
@@ -25,35 +27,37 @@ class BMF_Member_Home_Due {
 				'status' => 'missing',
 				'label'  => 'Not started',
 				'date'   => '',
+				'utc'    => '',
 				'age'    => null,
 			);
 		}
+		$base = array(
+			'date' => $date,
+			'utc'  => $utc,
+			'age'  => $age,
+		);
 		if ( $age >= $cadence ) {
-			return array(
+			return $base + array(
 				'status' => 'due',
 				'label'  => 'Available',
-				'date'   => $date,
-				'age'    => $age,
 			);
 		}
-		return array(
+		return $base + array(
 			'status' => 'ok',
 			'label'  => 'Current',
-			'date'   => $date,
-			'age'    => $age,
 		);
 	}
 
-	private static function latest_date( string $source, string $email ): string {
+	private static function latest_utc( string $source, string $email ): string {
 		if ( $email === '' || $source === '' ) {
 			return '';
 		}
 		global $wpdb;
 		if ( $source === 'keys' ) {
-			return self::keys_date( $email );
+			return self::keys_utc( $email );
 		}
 		if ( $source === 'biovoice' ) {
-			return self::biovoice_date( $email );
+			return self::biovoice_utc( $email );
 		}
 		$table = $wpdb->prefix . 'bm_rsi_results';
 		$extra = '';
@@ -71,12 +75,16 @@ class BMF_Member_Home_Due {
 		if ( ! self::table_exists( $table ) ) {
 			return '';
 		}
-		$sql = "SELECT results_date FROM {$table} WHERE user_email = %s AND is_final = 1{$extra} ORDER BY results_date DESC, id DESC LIMIT 1";
+		$sql = "SELECT COALESCE(updated_at, results_date) FROM {$table} WHERE user_email = %s AND is_final = 1{$extra} ORDER BY COALESCE(updated_at, results_date) DESC, id DESC LIMIT 1";
 		$raw = $wpdb->get_var( $wpdb->prepare( $sql, $email ) );
-		return self::normalize_date( $raw );
+		return self::to_iso( $raw );
 	}
 
-	private static function biovoice_date( string $email ): string {
+	private static function latest_date( string $source, string $email ): string {
+		return self::date_from_utc( self::latest_utc( $source, $email ) );
+	}
+
+	private static function biovoice_utc( string $email ): string {
 		global $wpdb;
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
@@ -90,10 +98,10 @@ class BMF_Member_Home_Due {
 			"SELECT updated_at FROM {$table} WHERE user_id = %d ORDER BY updated_at DESC LIMIT 1",
 			$user->ID
 		) );
-		return self::normalize_date( $raw );
+		return self::to_iso( $raw );
 	}
 
-	private static function keys_date( string $email ): string {
+	private static function keys_utc( string $email ): string {
 		global $wpdb;
 		$candidates = array( 'uls_key_essentials', $wpdb->prefix . 'uls_key_essentials' );
 		foreach ( $candidates as $table ) {
@@ -101,12 +109,20 @@ class BMF_Member_Home_Due {
 				continue;
 			}
 			$raw = $wpdb->get_var( $wpdb->prepare( "SELECT datetime FROM {$table} WHERE user_email = %s ORDER BY datetime DESC, id DESC LIMIT 1", $email ) );
-			$date = self::normalize_date( $raw );
-			if ( $date !== '' ) {
-				return $date;
+			$iso = self::to_iso( $raw );
+			if ( $iso !== '' ) {
+				return $iso;
 			}
 		}
 		return '';
+	}
+
+	private static function biovoice_date( string $email ): string {
+		return self::date_from_utc( self::biovoice_utc( $email ) );
+	}
+
+	private static function keys_date( string $email ): string {
+		return self::date_from_utc( self::keys_utc( $email ) );
 	}
 
 	private static function table_exists( string $table ): bool {
@@ -116,15 +132,36 @@ class BMF_Member_Home_Due {
 	}
 
 	private static function normalize_date( $raw ): string {
+		return self::date_from_utc( self::to_iso( $raw ) );
+	}
+
+	/**
+	 * Datetime values become UTC ISO (…Z) so the browser can shift to local.
+	 * Date-only values stay YYYY-MM-DD so they are not shifted.
+	 */
+	private static function to_iso( $raw ): string {
 		$raw = trim( (string) $raw );
 		if ( $raw === '' ) {
 			return '';
+		}
+		if ( preg_match( '/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/', $raw, $m ) ) {
+			return $m[1] . 'T' . $m[2] . 'Z';
 		}
 		if ( preg_match( '/^(\d{4}-\d{2}-\d{2})/', $raw, $m ) ) {
 			return $m[1];
 		}
 		$ts = strtotime( $raw );
-		return $ts ? gmdate( 'Y-m-d', $ts ) : '';
+		return $ts ? gmdate( 'Y-m-d\TH:i:s\Z', $ts ) : '';
+	}
+
+	private static function date_from_utc( string $iso ): string {
+		if ( $iso === '' ) {
+			return '';
+		}
+		if ( preg_match( '/^(\d{4}-\d{2}-\d{2})/', $iso, $m ) ) {
+			return $m[1];
+		}
+		return '';
 	}
 
 	/**
@@ -165,6 +202,99 @@ class BMF_Member_Home_Due {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * All finalized result dates for a source, ascending.
+	 *
+	 * @return string[] YYYY-MM-DD
+	 */
+	public static function all_dates( string $source, string $email ): array {
+		if ( $email === '' || $source === '' ) {
+			return array();
+		}
+		global $wpdb;
+		if ( $source === 'keys' ) {
+			return self::keys_all_dates( $email );
+		}
+		if ( $source === 'biovoice' ) {
+			return self::biovoice_all_dates( $email );
+		}
+		$table = $wpdb->prefix . 'bm_rsi_results';
+		$extra = '';
+		if ( $source === 'bsi' ) {
+			$table = $wpdb->prefix . 'bm_bsi_results';
+		} elseif ( $source === 'pillars_rapid' ) {
+			$table = $wpdb->prefix . 'bm_pillars_results';
+			$extra = " AND series = 'rapid'";
+		} elseif ( $source === 'pillars_full' ) {
+			$table = $wpdb->prefix . 'bm_pillars_results';
+			$extra = " AND ( series = 'full' OR series IS NULL OR series = '' )";
+		} elseif ( $source !== 'rsi' ) {
+			return array();
+		}
+		if ( ! self::table_exists( $table ) ) {
+			return array();
+		}
+		$sql = "SELECT COALESCE(updated_at, results_date) FROM {$table} WHERE user_email = %s AND is_final = 1{$extra} ORDER BY COALESCE(updated_at, results_date) ASC, id ASC";
+		$rows = $wpdb->get_col( $wpdb->prepare( $sql, $email ) );
+		$out  = array();
+		foreach ( (array) $rows as $raw ) {
+			$d = self::to_iso( $raw );
+			if ( $d !== '' && ! in_array( $d, $out, true ) ) {
+				$out[] = $d;
+			}
+		}
+		return $out;
+	}
+
+	private static function keys_all_dates( string $email ): array {
+		global $wpdb;
+		$candidates = array( 'uls_key_essentials', $wpdb->prefix . 'uls_key_essentials' );
+		foreach ( $candidates as $table ) {
+			if ( ! self::table_exists( $table ) ) {
+				continue;
+			}
+			$rows = $wpdb->get_col( $wpdb->prepare(
+				"SELECT datetime FROM {$table} WHERE user_email = %s ORDER BY datetime ASC, id ASC",
+				$email
+			) );
+			$out = array();
+			foreach ( (array) $rows as $raw ) {
+				$d = self::to_iso( $raw );
+				if ( $d !== '' && ! in_array( $d, $out, true ) ) {
+					$out[] = $d;
+				}
+			}
+			if ( $out ) {
+				return $out;
+			}
+		}
+		return array();
+	}
+
+	private static function biovoice_all_dates( string $email ): array {
+		global $wpdb;
+		$user = get_user_by( 'email', $email );
+		if ( ! $user ) {
+			return array();
+		}
+		$table = $wpdb->prefix . 'bm_biovoice_session_groups';
+		if ( ! self::table_exists( $table ) ) {
+			return array();
+		}
+		$rows = $wpdb->get_col( $wpdb->prepare(
+			"SELECT updated_at FROM {$table} WHERE user_id = %d AND status = 'final' ORDER BY updated_at ASC, id ASC",
+			$user->ID
+		) );
+		$out = array();
+		foreach ( (array) $rows as $raw ) {
+			$d = self::to_iso( $raw );
+			if ( $d !== '' && ! in_array( $d, $out, true ) ) {
+				$out[] = $d;
+			}
+		}
+		return $out;
 	}
 
 	private static function parse_tags( string $csv ): array {

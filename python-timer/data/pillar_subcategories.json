@@ -1,0 +1,390 @@
+{
+  "physical": [
+    {
+      "section": "Overall Physical Health",
+      "description": "General perception of physical well-being, energy, and bodily function",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou generally feel physically capable, resilient, and supported in your body. Energy levels, recovery, and day-to-day functioning feel stable.\n\nSelf-efficacy impact:\nStrong confidence in your ability to maintain and influence physical health.\n\nWays to strengthen further:\n• Continue reinforcing habits that support energy and recovery\n• Track subtle signals (fatigue, stiffness) before they escalate\n• Use this stability as a foundation for performance or longevity goals",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYour physical health is functional but inconsistent. You may feel well at times, with periodic dips in energy, stamina, or comfort.\n\nSelf-efficacy impact:\nYou know improvement is possible but may feel unsure where to focus.\n\nWays to improve:\n• Identify patterns (sleep, nutrition, stress, movement) that affect how you feel\n• Make small, targeted adjustments rather than broad changes\n• Reinforce progress by tracking improvements, not just symptoms",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may experience frequent fatigue, discomfort, or limitations that affect daily life.\n\nSelf-efficacy impact:\nConfidence in the body’s reliability or ability to improve may feel reduced.\n\nWays to improve:\n• Focus first on stabilization (rest, nourishment, consistency)\n• Avoid “all-or-nothing” thinking around physical health\n• Rebuild trust in the body through gentle, repeatable actions"
+      }
+    },
+    {
+      "section": "Physical Activity & Daily Movement",
+      "description": "Consistency and adequacy of movement throughout the day",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou engage in regular movement that supports strength, mobility, and circulation. Activity feels integrated into daily life rather than forced.\n\nSelf-efficacy impact:\nStrong belief that movement is accessible and beneficial.\n\nWays to sustain:\n• Balance intensity with recovery\n• Vary movement types to support joints and nervous system\n• Use movement as regulation, not just exercise",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou move some days but not consistently, or activity levels fluctuate due to time, motivation, or energy.\n\nSelf-efficacy impact:\nYou recognize the value of movement but struggle with follow-through.\n\nWays to improve:\n• Shift focus from “exercise” to “daily movement”\n• Reduce barriers (shorter sessions, fewer rules)\n• Anchor movement to existing routines",
+        "0": "Scores in this range are commonly associated with patterns such as:\nMovement is minimal or inconsistent, often due to fatigue, discomfort, time constraints, or low motivation.\n\nSelf-efficacy impact:\nMovement may feel overwhelming, inaccessible, or disconnected from benefit.\n\nWays to improve:\n• Start with very small, achievable movement goals\n• Emphasize circulation and mobility over performance\n• Pair movement with energy-restoring practices, not depletion"
+      }
+    },
+    {
+      "section": "Daily Habits & Health Behaviors",
+      "description": "Consistency of behaviors that support physical health (sleep, hydration, nutrition, routines)",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou maintain supportive daily habits that align with your body’s needs and lifestyle.\n\nSelf-efficacy impact:\nStrong sense of control and intentionality around health behaviors.\n\nWays to reinforce:\n• Periodically reassess habits as life demands change\n• Fine-tune timing and consistency\n• Avoid rigidity—flexibility supports sustainability",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou practice some healthy habits, but consistency varies or certain areas feel harder to maintain.\n\nSelf-efficacy impact:\nYou know what helps but may struggle with execution.\n\nWays to improve:\n• Identify one habit with the highest return on energy\n• Simplify routines to reduce friction\n• Focus on “most days,” not perfection",
+        "0": "Scores in this range are commonly associated with patterns such as:\nDaily habits may feel inconsistent, disrupted, or misaligned with your body’s needs.\n\nSelf-efficacy impact:\nYou may feel stuck or unsure how to create lasting change.\n\nWays to improve:\n• Rebuild habits one at a time\n• Anchor new behaviors to existing cues\n• Emphasize restoration before optimization"
+      }
+    },
+    {
+      "section": "Health Maintenance & Medical Beliefs",
+      "description": "Attitudes toward preventive care, medical engagement, and responsibility for health",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou value preventive care, understand your role in health maintenance, and engage proactively with healthcare resources.\n\nSelf-efficacy impact:\nStrong sense of partnership with your body and healthcare system.\n\nWays to maintain:\n• Continue asking informed questions\n• Integrate preventive insights into daily choices\n• Balance medical guidance with self-awareness",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou recognize the importance of health maintenance but may be inconsistent with follow-up, screenings, or proactive care.\n\nSelf-efficacy impact:\nYou believe in prevention but may delay action.\n\nWays to improve:\n• Clarify which actions truly matter most\n• Reduce overwhelm by prioritizing essentials\n• Strengthen understanding of how prevention supports autonomy",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel disconnected from healthcare, unsure whom to trust, or reactive rather than proactive about health.\n\nSelf-efficacy impact:\nHealth may feel externally controlled rather than internally guided.\n\nWays to improve:\n• Reframe healthcare as a support tool, not a judgment\n• Start with education and clarity before action\n• Build confidence through small, informed decisions"
+      }
+    }
+  ],
+  "emotional": [
+    {
+      "section": "Emotion Regulation (ERQ)",
+      "description": "Ability to manage emotional responses in adaptive ways",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou are generally able to regulate emotional responses without suppressing or becoming overwhelmed. Emotions feel manageable and informative rather than disruptive.\n\nSelf-efficacy impact:\nStrong confidence in your ability to handle emotional experiences as they arise.\n\nWays to strengthen further:\n• Continue using adaptive strategies (reframing, grounding, recovery)\n• Notice early emotional cues before escalation\n• Use emotions as signals for needs or boundaries",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou can regulate emotions at times, but regulation may break down during stress, fatigue, or emotional intensity.\n\nSelf-efficacy impact:\nYou know regulation is possible, but it may feel inconsistent.\n\nWays to improve:\n• Identify which emotions are hardest to regulate\n• Practice regulation skills when calm, not only when distressed\n• Pair emotional awareness with physiological regulation (breath, posture)",
+        "0": "Scores in this range are commonly associated with patterns such as:\nEmotions may feel overwhelming, suppressed, or difficult to manage. Reactions may feel automatic rather than intentional.\n\nSelf-efficacy impact:\nYou may feel emotions “happen to you” rather than being something you can influence.\n\nWays to improve:\n• Focus first on nervous system stabilization\n• Reduce pressure to “control” emotions\n• Build regulation skills gradually through safe, repeatable practices"
+      }
+    },
+    {
+      "section": "Emotional Self-Efficacy (PROMIS)",
+      "description": "Belief in one’s ability to cope with emotional challenges",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou engage in regular movement that supports strength, mobility, and circulation. Activity feels integrated into daily life rather than forced.\n\nSelf-efficacy impact:\nStrong belief that movement is accessible and beneficial.\n\nWays to sustain:\n• Balance intensity with recovery\n• Vary movement types to support joints and nervous system\n• Use movement as regulation, not just exercise",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou can manage emotions in some situations but may doubt yourself during prolonged stress or uncertainty.\n\nSelf-efficacy impact:\nConfidence exists but may be fragile.\n\nWays to improve:\n• Track moments when you successfully cope\n• Break emotional challenges into manageable steps\n• Reinforce the belief that skills improve with practice",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel unsure of your ability to handle emotional stress or believe emotions are overpowering.\n\nSelf-efficacy impact:\nLow confidence in emotional coping abilities.\n\nWays to improve:\n• Rebuild confidence through small emotional wins\n• Separate emotional intensity from personal capability\n• Develop a short list of reliable coping tools"
+      }
+    },
+    {
+      "section": "Emotional Self-Awareness (TAS-20)",
+      "description": "Ability to recognize, identify, and describe emotions",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou are aware of what you feel and can name emotions accurately. Emotional signals are clear and interpretable.\n\nSelf-efficacy impact:\nStrong sense of emotional literacy and internal clarity.\n\nWays to enhance:\n• Continue refining emotional vocabulary\n• Track patterns between emotions and behavior\n• Use awareness to guide decision-making",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou recognize some emotions but may struggle to identify subtle or mixed feelings.\n\nSelf-efficacy impact:\nPartial clarity; emotions may feel confusing at times.\n\nWays to improve:\n• Practice naming emotions without judgment\n• Use journaling or check-in tools\n• Increase body awareness to support emotional insight",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may have difficulty identifying or describing emotions, or feel disconnected from emotional experience.\n\nSelf-efficacy impact:\nEmotions may feel vague, confusing, or inaccessible.\n\nWays to improve:\n• Start with bodily sensations rather than labels\n• Normalize emotional awareness as a skill—not a trait\n• Build awareness slowly through curiosity, not pressure"
+      }
+    },
+    {
+      "section": "Self-Compassion",
+      "description": "How kindly and understandingly one responds to personal struggle",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou treat yourself with understanding during difficulty and avoid excessive self-criticism.\n\nSelf-efficacy impact:\nStrong emotional resilience and internal safety.\n\nWays to sustain:\n• Maintain balanced self-reflection\n• Continue reframing mistakes as learning\n• Model compassion in self-talk",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou can be compassionate at times but may revert to self-criticism under stress.\n\nSelf-efficacy impact:\nCompassion is available but inconsistent.\n\nWays to improve:\n• Notice tone of internal dialogue\n• Practice responding to difficulty as you would to a friend\n• Pair self-compassion with accountability, not avoidance",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may be highly self-critical or struggle to extend kindness toward yourself.\n\nSelf-efficacy impact:\nEmotional growth may feel unsafe or punitive.\n\nWays to improve:\n• Reduce self-judgment before increasing positivity\n• Practice neutral self-talk before compassionate self-talk\n• Recognize that self-compassion supports motivation, not complacency"
+      }
+    },
+    {
+      "section": "Resilience (Brief Resilience Scale)",
+      "description": "Ability to recover after stress or emotional strain",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou tend to rebound effectively after challenges and regain emotional balance.\n\nSelf-efficacy impact:\nStrong trust in your capacity to recover.\n\nWays to maintain:\n• Protect recovery time\n• Continue using adaptive coping strategies\n• Monitor cumulative stress load",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou recover from stress, but it may take longer or require more effort.\n\nSelf-efficacy impact:\nYou know recovery is possible but may feel slowed.\n\nWays to improve:\n• Improve recovery inputs (sleep, boundaries, support)\n• Reduce unnecessary stressors\n• Normalize recovery time as part of resilience",
+        "0": "Scores in this range are commonly associated with patterns such as:\nStress may linger, and emotional recovery may feel difficult or incomplete.\n\nSelf-efficacy impact:\nYou may feel worn down or discouraged.\n\nWays to improve:\n• Focus on restoration before growth\n• Reduce exposure to repeated stress\n• Build resilience through consistency, not intensity"
+      }
+    },
+    {
+      "section": "Self-Care (Adapted SCI-R)",
+      "description": "Intentional behaviors that support emotional well-being",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou regularly engage in practices that support emotional health and recovery.\n\nSelf-efficacy impact:\nStrong sense of emotional responsibility and agency.\n\nWays to sustain:\n• Keep self-care aligned with actual needs\n• Adjust practices as life changes\n• Avoid turning self-care into obligation",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou engage in some self-care but may struggle with consistency or prioritization.\n\nSelf-efficacy impact:\nYou value self-care but may deprioritize yourself.\n\nWays to improve:\n• Identify which practices have the highest emotional return\n• Schedule self-care intentionally\n• Reduce guilt around rest and recovery",
+        "0": "Scores in this range are commonly associated with patterns such as:\nSelf-care may feel inaccessible, undeserved, or difficult to maintain.\n\nSelf-efficacy impact:\nEmotional needs may be overlooked or minimized.\n\nWays to improve:\n• Start with basic emotional needs (rest, safety, routine)\n• Remove pressure to “do self-care correctly”\n• Reframe self-care as maintenance, not indulgence"
+      }
+    }
+  ],
+  "mental": [
+    {
+      "section": "Cognitive Functioning",
+      "description": "Ability to focus, concentrate, remember, organize, and mentally process information",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYour cognitive clarity, focus, and mental processing feel reliable. You’re generally able to think clearly, stay organized, and manage mental demands.\n\nSelf-efficacy impact:\nStrong confidence in your mental capacity and ability to handle complexity.\n\nWays to strengthen further:\n• Protect sleep, hydration, and recovery\n• Reduce cognitive overload through prioritization\n• Use cognitive strengths for learning or creative problem-solving",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYour thinking is generally functional, but focus, memory, or mental stamina may fluctuate—often influenced by stress, fatigue, or workload.\n\nSelf-efficacy impact:\nYou know you can think clearly, but consistency varies.\n\nWays to improve:\n• Identify when cognition declines (time of day, stress level)\n• Reduce multitasking and mental clutter\n• Pair cognitive tasks with recovery periods",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may experience brain fog, difficulty concentrating, forgetfulness, or mental fatigue that interferes with daily functioning.\n\nSelf-efficacy impact:\nMental performance may feel unreliable, leading to frustration or self-doubt.\n\nWays to improve:\n• Normalize cognitive strain is often physiological, not personal\n• Focus on restoring energy before pushing performance\n• Support cognition through sleep, nutrition, stress regulation, and pacing"
+      }
+    },
+    {
+      "section": "Self-Efficacy",
+      "description": "Belief in one’s ability to learn, adapt, and mentally handle challenges",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou strongly believe in your ability to think through problems, learn new skills, and adapt mentally—even under pressure.\n\nSelf-efficacy impact:\nHigh confidence, resilience, and psychological agency.\n\nWays to sustain:\n• Continue engaging in meaningful challenges\n• Reflect on past problem-solving successes\n• Use confidence to support areas under strain (like cognition)",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou believe in your mental abilities most of the time but may doubt yourself in unfamiliar or prolonged challenges.\n\nSelf-efficacy impact:\nConfidence is present but situational.\n\nWays to improve:\n• Break challenges into smaller mental wins\n• Track evidence of competence\n• Reframe mistakes as feedback, not failure",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may doubt your ability to cope mentally or feel easily overwhelmed by cognitive demands.\n\nSelf-efficacy impact:\nReduced confidence in mental problem-solving.\n\nWays to improve:\n• Start with achievable cognitive tasks\n• Separate capacity from current fatigue\n• Build confidence through repetition, not pressure"
+      }
+    },
+    {
+      "section": "Curiosity (ECQ)",
+      "description": "Drive to explore, learn, ask questions, and engage intellectually",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou are naturally curious, engaged, and motivated to explore ideas, concepts, or new experiences.\n\nSelf-efficacy impact:\nStrong learning orientation and adaptability.\n\nWays to leverage:\n• Channel curiosity into structured learning\n• Use curiosity to counter cognitive fatigue\n• Balance exploration with rest to avoid burnout",
+        "40": "Scores in this range are commonly associated with patterns such as:\nCuriosity is present but may be dampened by stress, routine, or fatigue.\n\nSelf-efficacy impact:\nInterest exists but may feel inconsistent.\n\nWays to improve:\n• Reconnect curiosity to personal meaning\n• Reduce external pressure to “perform curiosity”\n• Allow low-stakes exploration",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel mentally disengaged, uninterested, or mentally flat.\n\nSelf-efficacy impact:\nLearning or exploration may feel effortful or unrewarding.\n\nWays to improve:\n• Restore energy before expecting interest\n• Start with familiar or enjoyable topics\n• Normalize curiosity as something that returns with capacity"
+      }
+    },
+    {
+      "section": "Growth Mindset",
+      "description": "Belief that abilities and intelligence can develop over time",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou see challenges as opportunities to learn and believe growth is possible through effort and experience.\n\nSelf-efficacy impact:\nStrong adaptability and persistence.\n\nWays to sustain:\n• Continue reframing setbacks as learning\n• Protect mindset from burnout or over-optimization\n• Pair growth with compassion",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou sometimes believe in growth but may feel stuck or discouraged in certain areas.\n\nSelf-efficacy impact:\nGrowth feels possible, but uneven.\n\nWays to improve:\n• Identify where mindset becomes fixed\n• Focus on progress rather than outcomes\n• Celebrate learning, not just success",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel stuck, discouraged, or doubtful that change is possible.\n\nSelf-efficacy impact:\nMotivation and confidence may feel limited.\n\nWays to improve:\n• Start with one small area of growth\n• Reduce comparison and external pressure\n• Rebuild belief through lived experience, not affirmations"
+      }
+    }
+  ],
+  "spiritual": [
+    {
+      "section": "Meaning and Purpose",
+      "description": "Sense of direction, significance, and alignment with what matters most",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou experience a clear sense of meaning and purpose. Your values guide decisions, and life feels oriented toward something that matters to you.\n\nSelf-efficacy impact:\nStrong inner compass and confidence in life direction.\n\nWays to sustain:\n• Periodically revisit values as life evolves\n• Align daily actions with long-term meaning\n• Use purpose as a stabilizer during uncertainty",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou have a general sense of meaning, but clarity or consistency may fluctuate depending on life demands or transitions.\n\nSelf-efficacy impact:\nPurpose exists, but may feel less accessible at times.\n\nWays to strengthen:\n• Reflect on moments that feel most meaningful\n• Clarify short-term purpose even if long-term feels unclear\n• Reduce pressure to have everything “figured out”",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel disconnected from meaning or unsure what gives life direction right now.\n\nSelf-efficacy impact:\nLife may feel reactive rather than intentional.\n\nWays to strengthen:\n• Start with what feels meaningful now, not forever\n• Explore values through curiosity, not obligation\n• Normalize periods of questioning as part of growth"
+      }
+    },
+    {
+      "section": "Spirituality",
+      "description": "Personal sense of connection to something greater than oneself (values, nature, humanity, faith, or inner life)",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel connected to something larger than yourself, whether through beliefs, nature, service, reflection, or inner awareness.\n\nSelf-efficacy impact:\nStrong sense of grounding and inner support.\n\nWays to sustain:\n• Continue practices that reinforce connection\n• Allow spirituality to evolve over time\n• Balance transcendence with practical living",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou experience connection at times, but it may feel inconsistent or underdeveloped.\n\nSelf-efficacy impact:\nConnection is available, but not always prioritized.\n\nWays to strengthen:\n• Clarify what spirituality means to you\n• Engage in moments of awe, reflection, or service\n• Release rigid definitions of what spirituality “should” look like",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel disconnected, skeptical, or uncertain about spiritual concepts or connection.\n\nSelf-efficacy impact:\nInner grounding may feel limited during stress.\n\nWays to strengthen:\n• Begin with values, meaning, or presence rather than belief\n• Explore connection through nature, creativity, or service\n• Respect your own pace—spirituality is not a requirement"
+      }
+    },
+    {
+      "section": "Mindful Attention (MAAS)",
+      "description": "Ability to stay present and aware in daily life",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou are generally present and aware in daily activities, noticing experiences without excessive distraction.\n\nSelf-efficacy impact:\nStrong sense of presence and internal steadiness.\n\nWays to sustain:\n• Protect moments of quiet and reflection\n• Avoid multitasking overload\n• Use mindfulness to regulate stress",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou are mindful at times, but attention may drift due to stress, busyness, or mental load.\n\nSelf-efficacy impact:\nPresence is possible but inconsistent.\n\nWays to strengthen:\n• Practice brief, informal mindfulness moments\n• Pair attention with routine activities\n• Reduce self-criticism when attention wanders",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel frequently distracted, rushed, or disconnected from the present moment.\n\nSelf-efficacy impact:\nLife may feel automatic rather than intentional.\n\nWays to strengthen:\n• Start with sensory grounding (breath, body, environment)\n• Shorten mindfulness to seconds, not minutes\n• Focus on awareness, not calm"
+      }
+    },
+    {
+      "section": "Everyday Practice Frequency",
+      "description": "Consistency of practices that support spiritual or inner well-being",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou regularly engage in practices that support reflection, connection, or inner balance.\n\nSelf-efficacy impact:\nStrong sense of intentional inner care.\n\nWays to sustain:\n• Keep practices flexible and meaningful\n• Adapt frequency as life changes\n• Avoid turning practice into obligation",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou engage in practices occasionally, but consistency varies.\n\nSelf-efficacy impact:\nYou value practice but may struggle with follow-through.\n\nWays to strengthen:\n• Link practice to existing routines\n• Reduce expectations around duration or “quality”\n• Focus on consistency over intensity",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may not currently engage in regular practices that support inner reflection or connection.\n\nSelf-efficacy impact:\nInner nourishment may be deprioritized.\n\nWays to strengthen:\n• Start with micro-practices (1–2 minutes)\n• Choose practices that feel natural, not prescribed\n• Reframe practice as support, not self-improvement"
+      }
+    }
+  ],
+  "social": [
+    {
+      "section": "Social Satisfaction & Comfort",
+      "description": "How at ease and fulfilled a person feels in social settings",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou generally feel comfortable, accepted, and fulfilled in your social interactions. Social settings feel natural rather than draining, and you tend to show up authentically.\n\nSelf-efficacy impact:\nStrong belief in your ability to engage socially and navigate relationships with ease.\n\nWays to strengthen further:\n• Maintain consistency in social routines that feel nourishing\n• Mentor or support others socially (reinforces confidence)\n• Reflect on why certain interactions work well to replicate them intentionally",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou feel socially comfortable at times, but confidence may fluctuate depending on the setting, people involved, or your emotional state.\n\nSelf-efficacy impact:\nYou know you can connect socially, but you may not always trust that ability.\n\nWays to improve:\n• Identify environments where you feel most at ease and expand gradually from there\n• Prepare mentally before social interactions (intent-setting, grounding)\n• Celebrate small wins to reinforce positive feedback loops",
+        "0": "Scores in this range are commonly associated with patterns such as:\nSocial situations often feel uncomfortable, draining, or unsatisfying. You may feel disconnected or unsure of how you’re perceived.\n\nSelf-efficacy impact:\nReduced confidence in social capability; avoidance may develop.\n\nWays to improve:\n• Start with low-pressure, one-on-one interactions\n• Build social exposure gradually rather than forcing large settings\n• Work on internal narratives (“I don’t belong”) and replace them with neutral truths"
+      }
+    },
+    {
+      "section": "Social Anxiety",
+      "description": "Level of fear, tension, or worry related to social interactions",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou experience little fear or distress in social situations and can engage without excessive self-monitoring.\n\nSelf-efficacy impact:\nStrong sense of social competence and emotional regulation.\n\nWays to maintain:\n• Continue stress-regulation practices (breathwork, recovery)\n• Stay attuned to early signs of overload before anxiety escalates\n• Maintain healthy boundaries to prevent burnout",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou experience anxiety in certain social situations, such as unfamiliar groups, conflict, or performance-based interactions.\n\nSelf-efficacy impact:\nConfidence is situational rather than stable.\n\nWays to improve:\n• Identify specific triggers (crowds, authority figures, unpredictability)\n• Practice exposure in controlled steps\n• Pair social situations with calming physiological anchors (breath, posture)",
+        "0": "Scores in this range are commonly associated with patterns such as:\nSocial interactions frequently trigger fear, tension, or avoidance. You may overanalyze interactions before or after they occur.\n\nSelf-efficacy impact:\nBelief in social ability is undermined by fear responses.\n\nWays to improve:\n• Normalize anxiety as a physiological response, not a personal failure\n• Focus on regulating the nervous system first, not “fixing” behavior\n• Use gradual exposure paired with recovery, not force"
+      }
+    },
+    {
+      "section": "Emotional Support",
+      "description": "Access to people who provide understanding, care, and reassurance",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel emotionally supported and know you can rely on others during stress or challenge.\n\nSelf-efficacy impact:\nConfidence is reinforced through connection and reassurance.\n\nWays to sustain:\n• Express appreciation to strengthen reciprocal bonds\n• Continue open communication about needs\n• Offer support to others (strengthens mutual trust)",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou have some emotional support, but it may feel inconsistent or limited to certain people.\n\nSelf-efficacy impact:\nYou can ask for support, but may hesitate or downplay your needs.\n\nWays to improve:\n• Clarify who feels emotionally safe and deepen those relationships\n• Practice articulating needs clearly and without apology\n• Reduce self-reliance when connection would be beneficial",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel emotionally isolated or unsupported, even if others are present in your life.\n\nSelf-efficacy impact:\nYou may feel you must handle everything alone, reducing resilience.\n\nWays to improve:\n• Start with one trusted person or professional\n• Practice naming emotions internally before sharing externally\n• Build support gradually; safety comes before vulnerability"
+      }
+    },
+    {
+      "section": "Communication",
+      "description": "Ability to express thoughts, needs, and emotions clearly",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou communicate clearly, listen effectively, and feel understood in most interactions.\n\nSelf-efficacy impact:\nStrong belief in your ability to express yourself and be heard.\n\nWays to enhance:\n• Refine assertive communication skills\n• Continue balancing speaking and listening\n• Use communication to prevent rather than repair conflict",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou communicate well in some situations but struggle with difficult conversations or emotional expression.\n\nSelf-efficacy impact:\nConfidence varies depending on topic or audience.\n\nWays to improve:\n• Prepare key points before important conversations\n• Practice expressing needs without over-explaining\n• Strengthen emotional vocabulary",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may struggle to express yourself, avoid difficult conversations, or feel misunderstood.\n\nSelf-efficacy impact:\nReduced belief that your voice matters or will be received well.\n\nWays to improve:\n• Start with written expression or low-stakes conversations\n• Focus on clarity over perfection\n• Build communication confidence through repetition and support"
+      }
+    },
+    {
+      "section": "Taking Part in Activities",
+      "description": "Engagement in social, community, or group activities",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou regularly engage in activities that provide connection, purpose, or enjoyment.\n\nSelf-efficacy impact:\nConfidence grows through participation and shared experience.\n\nWays to maintain:\n• Balance engagement with recovery time\n• Choose activities aligned with values\n• Invite others to strengthen connection",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou participate occasionally but may struggle with consistency, motivation, or energy.\n\nSelf-efficacy impact:\nYou know participation helps, but momentum can be inconsistent.\n\nWays to improve:\n• Schedule activities intentionally\n• Start with shorter or lower-commitment options\n• Pair activities with intrinsic rewards",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel withdrawn, disengaged, or disconnected from group activities.\n\nSelf-efficacy impact:\nReduced belief that participation will be enjoyable or worthwhile.\n\nWays to improve:\n• Begin with interest-based or purpose-driven activities\n• Focus on presence, not performance\n• Reframe participation as exploration, not obligation"
+      }
+    },
+    {
+      "section": "Boundaries & Conflict Resolution",
+      "description": "Ability to set limits and navigate disagreement respectfully",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou can set boundaries, address conflict calmly, and protect your energy without guilt.\n\nSelf-efficacy impact:\nStrong sense of personal agency and relational safety.\n\nWays to sustain:\n• Continue reinforcing boundaries early rather than late\n• Reflect on conflict as information, not failure\n• Model healthy boundaries for others",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou understand boundaries but may struggle to enforce them consistently or avoid conflict.\n\nSelf-efficacy impact:\nConfidence exists but weakens under pressure.\n\nWays to improve:\n• Practice boundary-setting in low-risk situations\n• Use clear, simple language\n• Separate disagreement from personal rejection",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may avoid conflict, overextend yourself, or struggle to say no.\n\nSelf-efficacy impact:\nReduced sense of control and increased stress.\n\nWays to improve:\n• Start with internal boundaries (recognizing limits)\n• Practice saying no without justification\n• Reframe boundaries as protective, not selfish"
+      }
+    },
+    {
+      "section": "SOCIAL WELLNESS",
+      "description": "",
+      "bands": {}
+    },
+    {
+      "section": "Ability to form, navigate, and sustain healthy social connections",
+      "description": "",
+      "bands": {}
+    },
+    {
+      "section": "Social Satisfaction & Comfort",
+      "description": "",
+      "bands": {}
+    }
+  ],
+  "occupational": [
+    {
+      "section": "Work–Life Balance",
+      "description": "Ability to manage work responsibilities alongside personal well-being",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou are able to meet work demands while preserving personal time, energy, and recovery. Boundaries are generally respected.\n\nSelf-efficacy impact:\nStrong confidence in managing time, priorities, and personal limits.\n\nWays to sustain:\n• Maintain clear boundaries around availability\n• Protect recovery time with intention\n• Periodically reassess workload as roles evolve",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou manage work and life reasonably well, but balance may feel strained during busy periods or transitions.\n\nSelf-efficacy impact:\nYou can manage balance, but it may feel fragile.\n\nWays to improve:\n• Identify specific pressure points rather than “work” as a whole\n• Introduce micro-boundaries (meeting buffers, cutoff times)\n• Align workload with energy rhythms",
+        "0": "Scores in this range are commonly associated with patterns such as:\nWork demands may be encroaching on personal well-being, recovery, or relationships.\n\nSelf-efficacy impact:\nYou may feel limited control over time or expectations.\n\nWays to improve:\n• Start by protecting one non-negotiable personal boundary\n• Normalize recalibration rather than “failure”\n• Seek structural solutions before relying on personal endurance"
+      }
+    },
+    {
+      "section": "Job Satisfaction",
+      "description": "Fulfillment, engagement, and meaning derived from one’s work",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel fulfilled, engaged, and aligned with your work. Your role feels meaningful or rewarding.\n\nSelf-efficacy impact:\nStrong motivation and professional confidence.\n\nWays to sustain:\n• Continue aligning tasks with strengths\n• Protect engagement from burnout\n• Share what makes work meaningful to reinforce alignment",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou find some satisfaction in your role, but engagement may fluctuate or feel incomplete.\n\nSelf-efficacy impact:\nMotivation exists but may vary.\n\nWays to improve:\n• Identify which aspects of work feel most rewarding\n• Increase exposure to meaningful tasks\n• Clarify expectations and success metrics",
+        "0": "Scores in this range are commonly associated with patterns such as:\nWork may feel disengaging, misaligned, or draining.\n\nSelf-efficacy impact:\nMotivation and enthusiasm may feel reduced.\n\nWays to improve:\n• Separate dissatisfaction with role from self-worth\n• Explore small changes before large decisions\n• Identify transferable strengths and interests"
+      }
+    },
+    {
+      "section": "Confidence in Work Abilities",
+      "description": "Belief in one’s professional skills and competence",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel capable, skilled, and confident in your ability to perform your work effectively.\n\nSelf-efficacy impact:\nStrong professional agency and resilience.\n\nWays to sustain:\n• Continue skill development\n• Mentor others to reinforce confidence\n• Use confidence to advocate for appropriate challenges",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou believe in your abilities but may doubt yourself in new or high-pressure situations.\n\nSelf-efficacy impact:\nConfidence is present but situational.\n\nWays to improve:\n• Document accomplishments to counter self-doubt\n• Seek feedback for calibration, not validation\n• Build confidence through repetition and mastery",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may doubt your skills or feel unsure of your competence at work.\n\nSelf-efficacy impact:\nProfessional confidence may feel fragile.\n\nWays to improve:\n• Separate learning curves from inadequacy\n• Focus on strengths before gaps\n• Seek structured development rather than self-criticism"
+      }
+    },
+    {
+      "section": "Workplace Relationships & Support",
+      "description": "Quality of professional relationships and perceived support at work",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel supported, respected, and connected in your workplace relationships.\n\nSelf-efficacy impact:\nStronger sense of safety and collaboration.\n\nWays to sustain:\n• Continue open communication\n• Express appreciation and recognition\n• Maintain boundaries alongside connection",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou have some supportive relationships, but connection or trust may be inconsistent.\n\nSelf-efficacy impact:\nSupport is available but not always reliable.\n\nWays to improve:\n• Strengthen one key professional relationship\n• Clarify communication expectations\n• Seek support proactively rather than reactively",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel isolated, unsupported, or strained in workplace relationships.\n\nSelf-efficacy impact:\nWork may feel less psychologically safe.\n\nWays to improve:\n• Identify safe points of connection (peer, mentor, manager)\n• Address relational strain early when possible\n• Seek structural or HR support if appropriate"
+      }
+    },
+    {
+      "section": "Career Growth & Work Environment",
+      "description": "Opportunities for development and alignment with the work setting",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou perceive opportunities for growth, learning, and advancement in a supportive environment.\n\nSelf-efficacy impact:\nOptimism and long-term professional confidence.\n\nWays to sustain:\n• Set development goals intentionally\n• Advocate for learning opportunities\n• Align environment with values and strengths",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou see some growth opportunities, but progression may feel slow or unclear.\n\nSelf-efficacy impact:\nGrowth feels possible but uncertain.\n\nWays to improve:\n• Clarify career pathways and expectations\n• Seek feedback on advancement criteria\n• Invest in skill-building aligned with goals",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel limited in growth or constrained by the work environment.\n\nSelf-efficacy impact:\nProfessional stagnation may impact motivation.\n\nWays to improve:\n• Distinguish between role limitations and personal limitations\n• Explore lateral growth or skill expansion\n• Evaluate environment fit without self-blame"
+      }
+    },
+    {
+      "section": "Occupational Wellness",
+      "description": "",
+      "bands": {}
+    }
+  ],
+  "financial": [
+    {
+      "section": "Financial Security and Stability",
+      "description": "Current financial circumstances and lived financial experiences",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel relatively stable in your financial situation and have navigated financial experiences with a sense of control or adaptability.\n\nSelf-efficacy impact:\nStrong sense of financial stability and resilience.\n\nWays to sustain:\n• Continue planning for both short- and long-term needs\n• Maintain emergency and contingency strategies\n• Periodically reassess goals as circumstances change",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYour financial situation is functional, but stress or uncertainty may arise at times—often tied to life transitions or external pressures.\n\nSelf-efficacy impact:\nYou can manage financially, but confidence may fluctuate.\n\nWays to improve:\n• Identify specific stress points (cash flow, debt, unpredictability)\n• Strengthen buffers where possible\n• Focus on progress rather than comparison",
+        "0": "Scores in this range are commonly associated with patterns such as:\nFinancial strain, instability, or past challenges may be impacting your sense of security or well-being.\n\nSelf-efficacy impact:\nYou may feel limited control or heightened stress around finances.\n\nWays to improve:\n• Separate financial circumstance from personal worth\n• Focus first on stabilization, not optimization\n• Seek clarity and support rather than carrying stress alone"
+      }
+    },
+    {
+      "section": "Financial Self-Efficacy",
+      "description": "Belief in one’s ability to manage, influence, and improve financial circumstances",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou trust your ability to make financial decisions, solve problems, and adapt when challenges arise.\n\nSelf-efficacy impact:\nStrong financial confidence and agency.\n\nWays to sustain:\n• Continue building financial knowledge\n• Use confidence to plan proactively\n• Support others where appropriate to reinforce mastery",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou have some confidence in managing finances, but doubt may surface during uncertainty or complex decisions.\n\nSelf-efficacy impact:\nConfidence exists, but may feel situational.\n\nWays to improve:\n• Break financial decisions into smaller, manageable steps\n• Track financial wins, not just challenges\n• Build confidence through consistency rather than perfection",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel uncertain, overwhelmed, or powerless when it comes to finances.\n\nSelf-efficacy impact:\nLow confidence can increase avoidance or stress.\n\nWays to improve:\n• Start with understanding rather than action\n• Build confidence through education and small successes\n• Reframe financial skill as learnable, not innate"
+      }
+    },
+    {
+      "section": "Financial Control and Self-Efficacy",
+      "description": "Belief in one’s ability to manage, influence, and improve financial circumstances",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou trust your ability to make financial decisions, solve problems, and adapt when challenges arise.\n\nSelf-efficacy impact:\nStrong financial confidence and agency.\n\nWays to sustain:\n• Continue building financial knowledge\n• Use confidence to plan proactively\n• Support others where appropriate to reinforce mastery",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou have some confidence in managing finances, but doubt may surface during uncertainty or complex decisions.\n\nSelf-efficacy impact:\nConfidence exists, but may feel situational.\n\nWays to improve:\n• Break financial decisions into smaller, manageable steps\n• Track financial wins, not just challenges\n• Build confidence through consistency rather than perfection",
+        "0": "Scores in this range are commonly associated with patterns such as:\nYou may feel uncertain, overwhelmed, or powerless when it comes to finances.\n\nSelf-efficacy impact:\nLow confidence can increase avoidance or stress.\n\nWays to improve:\n• Start with understanding rather than action\n• Build confidence through education and small successes\n• Reframe financial skill as learnable, not innate"
+      }
+    },
+    {
+      "section": "Financial Management Habits",
+      "description": "Daily and ongoing behaviors related to budgeting, saving, spending, and planning",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou maintain habits that support financial organization and awareness.\n\nSelf-efficacy impact:\nStrong sense of control and predictability.\n\nWays to sustain:\n• Review habits periodically to ensure alignment\n• Adjust systems as income or expenses change\n• Keep habits flexible rather than rigid",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou practice some effective financial habits, but consistency may vary.\n\nSelf-efficacy impact:\nYou know what helps, but execution may fluctuate.\n\nWays to improve:\n• Simplify systems to reduce friction\n• Focus on one habit with the highest impact\n• Prioritize sustainability over strict rules",
+        "0": "Scores in this range are commonly associated with patterns such as:\nFinancial habits may feel inconsistent, unclear, or difficult to maintain.\n\nSelf-efficacy impact:\nFinances may feel reactive rather than intentional.\n\nWays to improve:\n• Start with visibility (tracking, awareness)\n• Reduce shame around past habits\n• Build routines gradually, one habit at a time"
+      }
+    },
+    {
+      "section": "Financial Reflection",
+      "description": "Ability to reflect on financial choices, patterns, and goals without judgment",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou can reflect on finances thoughtfully, learn from experience, and adjust decisions without excessive stress.\n\nSelf-efficacy impact:\nStrong learning mindset around money.\n\nWays to sustain:\n• Continue periodic financial check-ins\n• Use reflection to guide intentional choices\n• Balance analysis with self-compassion",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou reflect on finances at times, but may avoid deeper reflection during stress.\n\nSelf-efficacy impact:\nInsight is available but not always accessed.\n\nWays to improve:\n• Schedule brief, regular reflection moments\n• Focus on understanding patterns rather than judging outcomes\n• Use reflection to clarify priorities",
+        "0": "Scores in this range are commonly associated with patterns such as:\nFinancial reflection may trigger stress, avoidance, or self-criticism.\n\nSelf-efficacy impact:\nLearning opportunities may feel emotionally unsafe.\n\nWays to improve:\n• Shift reflection from “what went wrong” to “what can I learn”\n• Reduce frequency and intensity of reflection\n• Build emotional safety around money conversations"
+      }
+    },
+    {
+      "section": "Financial Wellness",
+      "description": "",
+      "bands": {}
+    }
+  ],
+  "environmental": [
+    {
+      "section": "Connection to Nature",
+      "description": "Frequency and quality of engagement with natural environments",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou feel connected to nature and regularly benefit from time outdoors or natural elements. Nature serves as a source of grounding, restoration, or inspiration.\n\nSelf-efficacy impact:\nStrong belief that environment can support your well-being.\n\nWays to sustain:\n• Protect regular nature exposure\n• Vary settings (parks, water, green spaces)\n• Use nature intentionally for recovery or reflection",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou appreciate nature and experience its benefits at times, but connection may be inconsistent due to schedule, location, or access.\n\nSelf-efficacy impact:\nYou know nature helps, but it may not be prioritized.\n\nWays to strengthen:\n• Integrate short, accessible nature moments\n• Bring natural elements indoors\n• Reframe nature as a health input, not a luxury",
+        "0": "Scores in this range are commonly associated with patterns such as:\nFinancial strain, instability, or past challenges may be impacting your sense of security or well-being.\n\nSelf-efficacy impact:\nYou may feel limited control or heightened stress around finances.\n\nWays to improve:\n• Separate financial circumstance from personal worth\n• Focus first on stabilization, not optimization\n• Seek clarity and support rather than carrying stress alone"
+      }
+    },
+    {
+      "section": "Environmental Actions & Behaviors",
+      "description": "Daily choices that influence environmental quality and personal exposure",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou regularly engage in behaviors that support a healthier environment for yourself and others.\n\nSelf-efficacy impact:\nStrong sense of agency and responsibility without overwhelm.\n\nWays to sustain:\n• Continue practical, values-aligned actions\n• Avoid all-or-nothing thinking\n• Adapt behaviors as circumstances change",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou take some environmentally supportive actions, but consistency or clarity may vary.\n\nSelf-efficacy impact:\nYou care, but may feel unsure where to focus.\n\nWays to strengthen:\n• Identify one or two high-impact actions\n• Reduce decision fatigue by simplifying choices\n• Focus on what’s feasible within your context",
+        "0": "Scores in this range are commonly associated with patterns such as:\nEnvironmental actions may feel overwhelming, unclear, or deprioritized due to competing demands.\n\nSelf-efficacy impact:\nYou may feel limited influence over environmental factors.\n\nWays to strengthen:\n• Start with personal environment (home, workspace)\n• Reduce pressure to “do it all”\n• Focus on health-protective actions rather than ideals"
+      }
+    },
+    {
+      "section": "Environmental Identity",
+      "description": "How strongly environmental values are part of one’s self-concept",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nCaring for the environment is an important part of who you are and how you see yourself.\n\nSelf-efficacy impact:\nStrong alignment between values and behavior.\n\nWays to sustain:\n• Translate values into sustainable routines\n• Balance advocacy with self-care\n• Avoid burnout by setting realistic expectations",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou value environmental well-being, but it may not always feel central to your identity.\n\nSelf-efficacy impact:\nValues are present but flexible.\n\nWays to strengthen:\n• Clarify what environmental care means personally\n• Integrate values into daily life in small ways\n• Avoid comparison to others’ levels of engagement",
+        "0": "Scores in this range are commonly associated with patterns such as:\nEnvironmental identity may feel distant, unclear, or secondary to other priorities.\n\nSelf-efficacy impact:\nMotivation to engage environmentally may feel low.\n\nWays to strengthen:\n• Start with personal health and safety benefits\n• Explore connection through lived experience, not ideology\n• Allow identity to evolve naturally over time"
+      }
+    },
+    {
+      "section": "Limiting Radiation & Device Exposure",
+      "description": "Awareness and management of technology-related environmental exposure",
+      "bands": {
+        "80": "Scores in this range are commonly associated with patterns such as:\nYou are mindful of technology use and take steps to reduce unnecessary exposure or overstimulation.\n\nSelf-efficacy impact:\nStrong sense of control over digital and environmental inputs.\n\nWays to sustain:\n• Maintain tech boundaries that support recovery\n• Balance connectivity with restoration\n• Update habits as technology changes",
+        "40": "Scores in this range are commonly associated with patterns such as:\nYou are aware of device exposure but may struggle with consistency due to work, convenience, or habits.\n\nSelf-efficacy impact:\nYou recognize impact but feel partially constrained.\n\nWays to strengthen:\n• Identify specific exposure hotspots (sleep, work, downtime)\n• Introduce simple changes (breaks, distance, timing)\n• Focus on reducing strain rather than eliminating devices",
+        "0": "Scores in this range are commonly associated with patterns such as:\nTechnology exposure may feel constant, unavoidable, or unmanaged.\n\nSelf-efficacy impact:\nEnvironmental stress may feel out of your control.\n\nWays to strengthen:\n• Start with one small boundary (sleep, meals, recovery time)\n• Reduce cognitive and sensory load before physical exposure\n• Normalize modern constraints while reclaiming choice where possible"
+      }
+    },
+    {
+      "section": "Environmental Wellness",
+      "description": "",
+      "bands": {}
+    }
+  ]
+}

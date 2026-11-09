@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.4/tinymce.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  tinymce.init({
+    selector: "textarea[name=body]",
+    height: 420,
+    menubar: false,
+    plugins: "link lists image code",
+    toolbar: "bold italic underline | fontsize forecolor | alignleft aligncenter alignright | bullist numlist | link image | code | removeformat",
+    font_size_formats: "11pt 13pt 16pt 18pt",
+    branding: false,
+    license_key: "gpl",
+    valid_elements: "*[*]",
+    extended_valid_elements: "div[style|class|align],img[src|alt|width|height|style|class],a[href|style|class|target],span[style|class],p[style|align]",
+    verify_html: false,
+    color_map: [
+      "000000", "Black",
+      "4a4a4a", "Gray",
+      "e03e2d", "Red",
+      "c0392b", "Dark red",
+      "e97132", "Orange",
+      "f2c94c", "Gold",
+      "3b7e23", "Green",
+      "1e8449", "Dark green",
+      "001d50", "Navy",
+      "0070c0", "Blue",
+      "40c6ff", "Light blue",
+      "8e44ad", "Purple",
+      "ffffff", "White"
+    ],
+    custom_colors: false,
+    formats: {
+      alignleft: { selector: "p,div,h1,h2,h3", styles: { "text-align": "left" } },
+      aligncenter: { selector: "p,div,h1,h2,h3", styles: { "text-align": "center" } },
+      alignright: { selector: "p,div,h1,h2,h3", styles: { "text-align": "right" } }
+    }
+  });
+});
+</script>
+{% endblock %}
+{% block content %}
+<section>
+  <h2>{{ "Edit template" if template else "Add template" }}</h2>
+  {% if notice %}<p>{{ notice }}</p>{% endif %}
+  <form method="post" class="form">
+    <label>ID
+      <input name="id" type="number" required value="{{ template.id if template else next_id }}" readonly>
+    </label>
+    <label>Name
+      <input name="name" required value="{{ template.name if template else '' }}">
+    </label>
+    <label>Subject
+      <input name="subject" required value="{{ template.subject if template else '' }}">
+    </label>
+    <label>Body
+      <textarea name="body">{{ template.body if template else '' }}</textarea>
+    </label>
+    <label>CTA url
+      <input name="cta_url" value="{{ template.cta_url if template else '' }}">
+    </label>
+    <label>CTA label
+      <input name="cta_label" value="{{ template.cta_label if template else '' }}">
+    </label>
+    <label>BCC
+      <input name="bcc" value="{{ template.bcc if template else '' }}" placeholder="support@breathermae.com">
+    </label>
+
+    <h3>Rule</h3>
+    <p>Leave this off for job-triggered templates (results ready, retake). Turn it on for date rules or user-event rules.</p>
+    <label class="check">
+      <input type="checkbox" name="has_rule" {% if template and template.rule %}checked{% endif %}> Use as a scheduled rule
+    </label>
+    {% set r = template.rule if template and template.rule else {} %}
+    <label>Order
+      <input name="order" type="number" value="{{ r.order or 100 }}">
+    </label>
+    <label>Event key (from uls_user_event_log)
+      <input name="event_key" value="{{ r.event_key or '' }}" placeholder="rsi_results_viewed">
+    </label>
+    <label>Event
+      <select name="event_mode">
+        <option value="" {% if not r.event_mode %}selected{% endif %}>ignore</option>
+        <option value="seen" {% if r.event_mode == 'seen' %}selected{% endif %}>user has this event</option>
+        <option value="missing" {% if r.event_mode == 'missing' %}selected{% endif %}>user does not have this event</option>
+      </select>
+    </label>
+    <label>Days since event
+      <input name="days_since_event" type="number" value="{{ r.days_since_event or '' }}">
+    </label>
+    <label>Tags required (comma)
+      <input name="tags_required" value="{{ (r.tags_required or [])|join(', ') }}">
+    </label>
+    <label>Tags missing (comma)
+      <input name="tags_missing" value="{{ (r.tags_missing or [])|join(', ') }}">
+    </label>
+    <label>Requires sent template ids (comma)
+      <input name="requires_sent" value="{{ (r.requires_sent or [])|join(', ') }}">
+    </label>
+    <label>Days since visit
+      <input name="days_since_visit" type="number" value="{{ r.days_since_visit or '' }}">
+    </label>
+    <label>Max days since register
+      <input name="max_days_since_register" type="number" value="{{ r.max_days_since_register or '' }}">
+    </label>
+    <label>Min days since register
+      <input name="min_days_since_register" type="number" value="{{ r.min_days_since_register or '' }}">
+    </label>
+    <label>Max sends
+      <input name="max_sends" type="number" value="{{ r.max_sends or '' }}">
+    </label>
+    <button type="submit">Save</button>
+  </form>
+  {% if template %}
+  <h3>Send test</h3>
+  <p>Sends the saved template. Save first if you just edited it.</p>
+  <form method="post" action="{{ url_for('test_email', template_id=template.id) }}" class="form">
+    <label>To
+      <input name="to" type="email" value="{{ test_email }}" required>
+    </label>
+    <button type="submit">Send test</button>
+  </form>
+  {% endif %}
+  <p><a href="{{ url_for('emails_page') }}">Cancel</a></p>
+</section>
+{% endblock %}

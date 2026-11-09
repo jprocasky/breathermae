@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Settings</h2>
+  {% if notice %}<p>{{ notice }}</p>{% endif %}
+  <form method="post" class="form">
+    <label>Instance name
+      <input name="name" required value="{{ settings.name }}">
+    </label>
+    <label>Code source path
+      <input name="source_path" value="{{ settings.source_path or '' }}" placeholder="C:\Users\...\python-timer">
+    </label>
+    <label>Role
+      <select name="role">
+        <option value="primary" {% if settings.role == 'primary' %}selected{% endif %}>Primary</option>
+        <option value="secondary" {% if settings.role == 'secondary' %}selected{% endif %}>Secondary</option>
+      </select>
+    </label>
+    <label>Handback to primary (minutes)
+      <input name="handback_minutes" type="number" min="1" value="{{ settings.handback_minutes or 60 }}">
+      <span class="hint">Secondary releases the lease to a healthy primary after this long</span>
+    </label>
+    <button type="submit">Save</button>
+  </form>
+  <form method="post">
+    <input type="hidden" name="action" value="release">
+    <button type="submit">Release lease</button>
+  </form>
+  <p>
+    This machine’s public IP must be whitelisted on SiteGround before it can
+    reach the WordPress database. Only an admin can add that IP. A secondary
+    stays idle while another instance holds a live lease, and it will not take
+    over until the lease has expired and the grace period has passed. The
+    primary does not steal a live lease back. A secondary that has held the
+    lease longer than Handback minutes will release it when a healthy primary
+    is online and not paused. Use Release lease for an immediate handback.
+  </p>
+</section>
+{% endblock %}

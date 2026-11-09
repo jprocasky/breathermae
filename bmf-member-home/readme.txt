@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.26-poc
+Stable tag: 0.1.36-poc
 License: GPLv2 or later
 
 Logged-in Today dashboard. Dark/light tokens shared with the wellbeing file. Other site pages stay on the current theme until each is redesigned.
@@ -27,6 +27,7 @@ Every link is a page ID plus an optional anchor, set under Settings → Member H
 * [bmf_member_home] — rail plus Today column. Use this on the dashboard page.
 * [bmf_member_nav] — rail only. context="results" adds the full-results links.
 * [bmf_member_today] — main column only.
+* [bmf_assessment_timeline] — standalone Assessment Timeline panel.
 
 == Installation ==
 
@@ -37,6 +38,36 @@ Every link is a page ID plus an optional anchor, set under Settings → Member H
 5. Leave RSI, Pillars, BSI, and the other detail pages alone until each is redesigned.
 
 == Changelog ==
+
+= 0.1.36-poc =
+* Assessment cards and Wellness Timeline convert UTC datetimes to the browser’s local timezone for displayed dates, ages, marker placement, and the Today line. Date-only values are not shifted.
+
+= 0.1.35-poc =
+* Assessment cards and Wellness Timeline use updated_at (fallback results_date) for RSI, BSI, and Pillars so a multi-day completion shows the finish date.
+
+= 0.1.34-poc =
+* Help Tour includes the Wellness Timeline panel (step after the next-step panel). Copy is editable under Settings → Member Home.
+
+= 0.1.33-poc =
+* Wellness Timeline date header is a two-row Gantt axis: full month name on top, day numbers in boxes below. Subtle dotted vertical lines mark each Sunday.
+
+= 0.1.32-poc =
+* Wellness Timeline: group labels sit on the first lane of each membership instead of a full-width header row (removes the blank row under the last assessment in a group). Sticky labels stay above markers while scrolling.
+
+= 0.1.31-poc =
+* Wellness Timeline: original baseline removed. Actuals are bright green. Next available marker is solid accent; later adjusted markers stay outlined. Single row per assessment (blank sub-rows removed). Scrollbar styled for dark mode.
+
+= 0.1.30-poc =
+* Wellness Timeline lanes use cumulative membership groups (Complementary < Art of Wellness < 360 Health Intelligence) instead of each card’s Take tags. S360 members see all assessment lanes.
+
+= 0.1.29-poc =
+* Wellness Timeline: title changed. Lanes now appear for every entitled assessment (RSI, Rapid, Keys, Complete Pillars, BSI) even before the first result. Each lane has two sub-rows (Actual on top, Baseline/Adjusted on bottom). Date axis added. Pin justified right. Today line positioned ~25% into the viewport on open.
+
+= 0.1.28-poc =
+* Assessment Timeline panel (Gantt-style) under the info panel. Lanes per entitled assessment that has at least one result. Origin is the first result date. Filled diamonds = actual completions; outlined diamonds = baseline cadence from first result; slightly stronger outlined diamonds = adjusted cadence from latest result. Default 6-month view with 1/3/6/9/12 month selector, horizontal scroll, bright today line positioned near 25% on open. Same membership tag gates and result tables as the assessment cards. Collapsible with pin, matching the Assessment Status panel.
+
+= 0.1.27-poc =
+* Info Panel graphic (spot_image) also renders under the nav rail when a path is set. Width limited to the rail; sits in the blank space below the links.
 
 = 0.1.26-poc =
 * Guided Path description: wpautop on output and white-space:pre-line so carriage returns and <br> render.

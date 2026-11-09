@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block head %}
+<meta http-equiv="refresh" content="30">
+<script>
+async function refreshInstances() {
+  try {
+    const r = await fetch("/instances");
+    if (!r.ok) return;
+    const d = await r.json();
+    const body = document.getElementById("instances");
+    if (!body || !d.instances) return;
+    if (!d.instances.length) {
+      body.innerHTML = '<tr><td colspan="4">No instances have reported yet.</td></tr>';
+      return;
+    }
+    const titles = {green:"Active", yellow:"Active Standby", blue:"Paused", red:"Down"};
+    body.innerHTML = d.instances.map(i =>
+      `<tr><td><span class="dot ${i.status}" title="${titles[i.status] || i.status}"></span></td>` +
+      `<td>${i.name}${i.mine ? " *" : ""}${i.restart_required ? ' <span class="restart small">Restart</span>' : ""}</td>` +
+      `<td>${i.role}</td><td>${i.last_seen}</td></tr>`
+    ).join("");
+  } catch (e) {}
+}
+setInterval(refreshInstances, 10000);
+document.addEventListener("DOMContentLoaded", refreshInstances);
+
+async function refreshOrders() {
+  try {
+    const r = await fetch("/orders");
+    if (!r.ok) return;
+    const d = await r.json();
+    const body = document.getElementById("orders");
+    if (!body || !d.orders) return;
+    if (!d.orders.length) {
+      body.innerHTML = '<tr><td colspan="4">No KBMO orders yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = d.orders.map(o =>
+      `<tr class="${o.status === "no_client" ? "warn" : ""}">` +
+      `<td>${o.order_date || "—"}</td><td>${o.email || ""}</td>` +
+      `<td>${o.product_id || ""}</td><td>${o.status}</td></tr>`
+    ).join("");
+  } catch (e) {}
+}
+setInterval(refreshOrders, 15000);
+document.addEventListener("DOMContentLoaded", refreshOrders);
+</script>
+{% endblock %}
+{% block content %}
+<div class="split">
+<section>
+  <h2>Instances</h2>
+  <div class="scroll">
+  <table class="compact">
+    <thead>
+      <tr><th></th><th>Name</th><th>Role</th><th>Seen</th></tr>
+    </thead>
+    <tbody id="instances">
+      {% for i in instances %}
+      <tr>
+        <td><span class="dot {{ i.status }}" title="{{ {'green':'Active','yellow':'Active Standby','blue':'Paused','red':'Down'}.get(i.status, i.status) }}"></span></td>
+        <td>{{ i.name }}{% if i.mine %} *{% endif %}{% if i.restart_required %} <span class="restart small">Restart</span>{% endif %}</td>
+        <td>{{ i.role }}</td>
+        <td>{{ i.last_seen }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">No instances yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>KBMO orders</h2>
+  <div class="scroll">
+  <table class="compact">
+    <thead>
+      <tr><th>Ordered</th><th>Email</th><th>Product</th><th>Status</th></tr>
+    </thead>
+    <tbody id="orders">
+      <tr><td colspan="4">Loading…</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+</div>
+
+<div class="split controls-errors">
+<section class="controls">
+  <h2>Controls</h2>
+  <div class="control-box">
+    <p class="state">Timer: <strong>{% if paused %}Paused{% else %}Running{% endif %}</strong></p>
+    <form method="post" action="{{ url_for('control', action='start') }}">
+      <button type="submit" {% if not paused %}disabled{% endif %}>Start</button>
+    </form>
+    <form method="post" action="{{ url_for('control', action='pause') }}">
+      <button type="submit" {% if paused %}disabled{% endif %}>Pause</button>
+    </form>
+    <form method="post" action="{{ url_for('control', action='exit') }}"
+          onsubmit="return confirm('Exit the timer app on this machine?');">
+      <button type="submit" class="danger">Exit</button>
+    </form>
+    <p class="hint">Pause stops jobs only. Heartbeats and this page stay up. Exit is local.</p>
+  </div>
+</section>
+
+<section class="errors">
+  <h2>Errors
+    <form method="post" action="{{ url_for('errors_clear') }}" style="display:inline">
+      <button type="submit" class="small">Clear</button>
+    </form>
+  </h2>
+  <table>
+    <thead>
+      <tr><th>When</th><th>Source</th><th>Message</th></tr>
+    </thead>
+    <tbody>
+      {% for e in errors %}
+      <tr class="fail">
+        <td>{{ e.seen_at }}</td>
+        <td>{{ e.source }}</td>
+        <td>{{ e.message }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">No errors.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+</div>
+
+<section>
+  <h2>Jobs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Name</th>
+        <th>ID</th>
+        <th>Enabled</th>
+        <th>Interval</th>
+        <th>Window</th>
+        <th>Next run</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr class="{{ 'disabled' if not j.enabled else '' }}" title="{{ j.description or '' }}">
+        <td>
+          {% if j.write %}
+          <span class="mode write" title="Write enabled">W</span>
+          {% else %}
+          <span class="mode ro" title="Read only">R</span>
+          {% endif %}
+        </td>
+        <td>{{ j.name }}</td>
+        <td><code>{{ j.id }}</code></td>
+        <td>{{ "yes" if j.enabled else "no" }}</td>
+        <td>{{ j.interval_minutes }} min</td>
+        <td>{{ j.window_start or "—" }} – {{ j.window_end or "—" }}</td>
+        <td>{{ next_runs.get(j.id, "—") }}</td>
+        <td>
+          <form method="post" action="{{ url_for('run_now', job_id=j.id) }}" style="display:inline">
+            <button type="submit" class="small">Run now</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No jobs defined.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Recent runs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Started</th>
+        <th>Job</th>
+        <th>Status</th>
+        <th>Message</th>
+        <th>Finished</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      <tr class="{{ 'ok' if r.ok else 'fail' }}">
+        <td>{{ r.started_at }}</td>
+        <td>{{ r.job_name or r.job_id }}</td>
+        <td>{{ "OK" if r.ok else "FAIL" }}</td>
+        <td>{{ r.message }}</td>
+        <td>{{ r.finished_at or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">No runs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

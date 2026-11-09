@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Python Timer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <h1>Python Timer</h1>
+    <nav>
+      <a href="{{ url_for('index') }}">Dashboard</a>
+      <a href="{{ url_for('jobs_page') }}">Jobs</a>
+      <a href="{{ url_for('emails_page') }}">Emails</a>
+      <a href="{{ url_for('settings_page') }}">Settings</a>
+    </nav>
+    <span class="now" id="heartbeat">{{ now }}</span>
+    <span id="restart" class="restart" hidden>Restart required</span>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    async function tick() {
+      try {
+        const r = await fetch("/heartbeat");
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        const el = document.getElementById("heartbeat");
+        if (el) {
+          el.textContent = d.time;
+          el.classList.remove("stale");
+          el.title = "Backend responding · " + d.jobs_loaded + " jobs";
+        }
+        const note = document.getElementById("restart");
+        if (note) note.hidden = !d.restart_required;
+      } catch (e) {
+        const el = document.getElementById("heartbeat");
+        if (el) el.classList.add("stale");
+      }
+    }
+    setInterval(tick, 5000);
+    tick();
+  </script>
+</body>
+</html>

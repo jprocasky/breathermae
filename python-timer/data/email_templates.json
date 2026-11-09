@@ -1,0 +1,236 @@
+[
+  {
+    "id": 11,
+    "name": "RSI retake",
+    "subject": "Your Rapid Systems Intelligence assessment is available again",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hello! </span></p>\r\n<p>Previously you have taken the <strong>Rapid Systems Intelligence assessment (RSI)</strong>.</p>\r\n<p>This assessment may be taken as often as every 7 days which allows you to monior your progress.</p>\r\n<p>The RSI assessment is now available for you to be taken again.</p>\r\n<p>Simply log into the Breathermae site and use the Assessments link to access the 2 RSI sections - <strong><em>Core</em> </strong>and <strong><em>Performance</em></strong>.</p>\r\n<div style=\"text-align: center; margin: 20px 0; padding: 20px 20px;\"><a href=\"https://breathermae.com/welcomesurveys/\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Assessments </a></div>\r\n<p>Thank you for being part of the Breathermae family!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Take the assessment"
+  },
+  {
+    "id": 19,
+    "name": "BSI retake",
+    "subject": "Your Breathermae Systems Intelligence assessment is available again",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hi there [first_name], </span></p>\r\n<p>The <strong>BSI assessment</strong> is now available for you to be taken again.</p>\r\n<p>Simply log into the Breathermae site and use the Assessments link to access the 9 BSI sections.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0; padding: 20px 20px;\"><a href=\"https://breathermae.com/welcomesurveys/#bsi\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Assessments </a></div>\r\n<p></p>\r\n<p>Thank you for being part of the Breathermae family!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Take the assessment"
+  },
+  {
+    "id": 20,
+    "name": "RSI results ready",
+    "subject": "Your Rapid Systems Intelligence results are ready",
+    "body": "<p><span style=\"color: rgb(0, 29, 80); font-size: 18pt;\">Hello [first_name], </span></p>\r\n<p>Your <strong>Rapid Systems Intelligence (RSI) </strong>assessment results are ready.</p>\r\n<p>Log into the Breathermae site and view your complete RSI results.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0; padding: 20px 20px;\"><a href=\"https://breathermae.com/rsi-results/\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> RSI Results </a></div>\r\n<p></p>\r\n<p>Thank you for being part of the Breathermae family!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "View your results"
+  },
+  {
+    "id": 21,
+    "name": "BSI results ready",
+    "subject": "Your Breathermae Systems Intelligence results are ready",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hi [first_name],</span></p>\r\n<p>Your <strong>Breathermae Systems Intelligence&trade;</strong> results are ready.</p>\r\n<p>Take a moment to review them when you have a chance.</p>\r\n<p>[cta_link]</p>\r\n<p></p>\r\n<p>Let us know if you have any questions by simply replying to this email.</p>\r\n<p></p>\r\n<p>Warmly,</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/bsi-results",
+    "cta_label": "View your BSI results"
+  },
+  {
+    "id": 22,
+    "name": "Key Essentials retake",
+    "subject": "Your Key Life Essentials assessment is available again",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Greetings [first_name],</span></p>\r\n<p></p>\r\n<p><strong>The Key Life Essentials</strong> assessments are now available to be taken again.</p>\r\n<p>Log into the Breathermae site using the link below and access the 7 Key Life Essentials assessment sections.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0; padding: 20px 20px;\"><a href=\"https://breathermae.com/welcomesurveys/#key\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Assessments </a></div>\r\n<p></p>\r\n<p>Thank you for being part of the Breathermae family!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Take the assessment"
+  },
+  {
+    "id": 23,
+    "name": "8 Pillars retake",
+    "subject": "Your 8 Pillars of Wellness assessment is available again",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hello again [first_name], </span></p>\r\n<p>The <strong>8 Pillars of Wellness</strong> assessments are now available to be taken again.</p>\r\n<p></p>\r\n<p>Log into the Breathermae site using the link below and access the 8 Pillars of Wellness assessment sections.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0; padding: 20px 20px;\"><a href=\"https://breathermae.com/welcomesurveys/#pillars\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Assessments </a></div>\r\n<p>As always, thank you for being part of the Breathermae family!&nbsp;</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Take the assessment"
+  },
+  {
+    "id": 24,
+    "name": "Rapid 8 Pillars retake",
+    "subject": "Your Rapid 8 Pillars assessment is available again",
+    "body": "<p><span style=\"font-size: 18pt; color: rgb(0, 112, 192);\">Hi [first_name], </span></p>\r\n<p>The <strong>Rapid 8 Pillars of Wellness</strong> assessments are now available to you.</p>\r\n<p>Log into the Breathermae site using the link below and access the Rapid 8 Pillars of Wellness assessment.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0; padding: 20px 20px;\"><a href=\"https://breathermae.com/welcomesurveys/#pillars\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Assessments </a></div>\r\n<p></p>\r\n<p>Thank you!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Take the assessment"
+  },
+  {
+    "id": 25,
+    "name": "Key Essentials results ready",
+    "subject": "Your Key Life Essentials results are ready",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hi [first_name],</span></p>\r\n<p>Your Key Life Essentials&trade; results are ready.</p>\r\n<p>Take a moment to review them when you have a chance.</p>\r\n<p>[cta_link]</p>",
+    "cta_url": "https://breathermae.com/dashboard-key-life-essentials/",
+    "cta_label": "View your Key Life Essentials results"
+  },
+  {
+    "id": 26,
+    "name": "8 Pillars results ready",
+    "subject": "Your 8 Pillars of Wellness results are ready",
+    "body": "<p>Hi [first_name],</p>\r\n<p>Your <strong>Complete 8 Pillars of Wellness&trade;</strong> results are ready.</p>\r\n<p>Take a moment to review them when you have a chance.</p>\r\n<p>[cta_link]</p>",
+    "cta_url": "https://breathermae.com/dashboard-8-pillars/",
+    "cta_label": "View your results"
+  },
+  {
+    "id": 18,
+    "name": "Welcome",
+    "subject": "Welcome to Breathermae",
+    "body": "<p><span style=\"font-size: 18pt; color: rgb(0, 112, 192);\">Welcome to Breathermae!</span></p>\r\n<p>Our mission is simple: help you better understand the interconnected patterns influencing your health, well-being, and performance so you can make more informed decisions with confidence.</p>\r\n<p>Whether you&rsquo;re seeking greater balance, improved resilience, enhanced performance, or simply a deeper understanding of yourself, Breathermae provides tools, education, assessments, and personalized insights designed to support your journey.</p>\r\n<p>Start by filling out the&nbsp;<a href=\"https://breathermae.com/authorization-forms/\">Authorization Form</a> which includes our Terms of Service and Privacy Policy. Once completed, explore what our site has to offer including the many self-assessments, laboratory testing products, educational tools, and more!</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0;\"><a href=\"https://breathermae.com\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Breathermae </a></div>\r\n<p>Thank you!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/login-2/",
+    "cta_label": "Get started",
+    "bcc": "",
+    "rule": {
+      "order": 10,
+      "tags_required": [
+        "REGISTERED"
+      ],
+      "max_days_since_register": 3,
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 12,
+    "name": "Consciousness Spectrum",
+    "subject": "Your Consciousness Spectrum guide",
+    "body": "<p>Welcome to Breathermae's Art of Wellness You can now continue your journey by exploring our many tools and assessments available including the <a href=\"https://breathermae.com/educational-tools/\">Consciousness Spectrum</a> which helps you recognize patterns of awareness and identify opportunities for growth, regulation, resilience, and personal development.</p>\r\n<div style=\"text-align: center; margin: 20px 0;\">&nbsp; <img src=\"https://breathermae.com/wp-content/uploads/2026/06/Screenshot-2026-06-04-173257.png\" alt=\"Consciousness Spectrum\" width=\"300\" style=\"display: inline-block;\"></div>\r\n<div style=\"text-align: center; margin: 20px 0;\">&nbsp;<a href=\"https://breathermae.com/educational-tools/\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> &nbsp;Consciousness Spectrum &nbsp;</a></div>\r\n<p>Thank you for joining the Breathermae memberships!</p>",
+    "cta_url": "https://breathermae.com/educational-tools/",
+    "cta_label": "Consciousness Spectrum",
+    "rule": {
+      "order": 20,
+      "tags_required": [
+        "ART"
+      ],
+      "max_days_since_register": 10,
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 13,
+    "name": "Energy Frequency Resonance",
+    "subject": "Energy, Frequency, Resonance",
+    "body": "<p><span style=\"font-size: 18pt; color: rgb(0, 112, 192);\">Continue Learning...</span></p>\r\n<p></p>\r\n<p style=\"text-align: center;\"><strong>Energy &bull; Frequency &bull; Resonance Guide</strong></p>\r\n<p></p>\r\n<p style=\"text-align: left;\">Discover a simple framework for understanding how repeated thoughts, emotions, behaviors, and experiences influence your overall state of well-being.</p>\r\n<p style=\"text-align: left;\">This companion guide introduces the concepts of Energy, Frequency, and Resonance and how they relate to awareness, balance, and personal transformation.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0;\"><img src=\"https://breathermae.com/wp-content/uploads/2026/06/Screenshot-2026-06-06-131059.png\" alt=\"Energy Guide\" width=\"300\" style=\"display: inline-block;\"></div>\r\n<div style=\"text-align: center; margin: 20px 0;\"><a href=\"https://breathermae.com/educational-tools/#efr\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> View the EFR Guide </a></div>\r\n<p>Thank you and enjoy!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/",
+    "cta_label": "Continue",
+    "rule": {
+      "order": 30,
+      "tags_required": [
+        "ART"
+      ],
+      "requires_sent": [
+        12
+      ],
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 14,
+    "name": "Wellness Profile",
+    "subject": "Complete your Wellness Profile",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hello [first name]!&nbsp;</span></p>\r\n<p>A good way to get started with Breathermae is to complete a very short <strong><span style=\"color: rgb(0, 112, 192);\">Wellness Profile</span></strong>.</p>\r\n<p>By answering a short series of questions, you&rsquo;ll help us uncover what matters most to you&mdash;whether that&rsquo;s performance, energy, stress, lifestyle habits, or overall health awareness.</p>\r\n<p>Your responses allow us to tailor the experience specifically to your situation, rather than offering one\u2011size\u2011fits\u2011all recommendations. This quick set of questions is free and will help guide you to the next level with immediate feedback.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0;\"><a href=\"https://breathermae.com/wellness-profile/\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Wellness Profile </a></div>\r\n<p>Thank you for considering Breathermae!</p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Continue",
+    "rule": {
+      "order": 40,
+      "tags_required": [
+        "REGISTERED"
+      ],
+      "tags_missing": [
+        "WELLNESS",
+        "ART",
+        "S360"
+      ],
+      "max_days_since_register": 10,
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 17,
+    "name": "Health Profile",
+    "subject": "Complete your Health Profile",
+    "body": "<p><span style=\"font-size: 18pt; color: rgb(0, 112, 192);\">Hi there [first_name], </span></p>\r\n<p>Before you continue exploring Breathermae, we&rsquo;d love to learn a little more about you.</p>\r\n<p>Your <strong><span style=\"color: rgb(0, 112, 192);\">Health Profile</span></strong> helps us tailor your experience with more accurate insights, personalized recommendations, and assessments that reflect your unique wellness picture. It only takes a moment to complete, and includes basic information such as your name, sex, gender, height, weight, and birthday.&nbsp; There is other information that is optional that helps us understand your current needs as well, but only if you wish to share with us.</p>\r\n<p>Once it&rsquo;s filled out, the platform can adapt to your needs and provide a more meaningful, relevant experience. You can update your Health Profile anytime &mdash; but completing it now ensures you get the most out of everything Breathermae offers.&nbsp;</p>\r\n<p>If you have any questions or need help along the way, we&rsquo;re here for you. Simply reply to this email with any questions that you may have and someone will get back with you shortly.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0;\"><a href=\"https://breathermae.com\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Breathermae </a></div>\r\n<p>Warmly,</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/health-bio/",
+    "cta_label": "Health Information Form",
+    "rule": {
+      "order": 50,
+      "tags_missing": [
+        "HEALTH"
+      ],
+      "days_since_visit": 5,
+      "max_sends": 2
+    }
+  },
+  {
+    "id": 15,
+    "name": "Rapid 8 Pillars nudge",
+    "subject": "Your Rapid 8 Pillars assessment is waiting",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">Hello again [first_name]! </span></p>\r\n<p>Gain a quick snapshot of your wellness patterns across the Eight Pillars of Wellness. Compare your perceptions with your assessment results to uncover areas of alignment, opportunities for growth, and actionable next steps.</p>\r\n<p>This is a free assessment designed to provide a general overview of your current well-being across the eight pillars of wellness: Physical, Emotional, Mental, Social, Spiritual, Occupational, Financial, and Environmental.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0;\"><img src=\"https://breathermae.com/wp-content/uploads/2026/06/8-PILLAR-RAPID-692x1024.png\" alt=\"Rapid 8 Pillars of Wellness\" width=\"300\" style=\"display: inline-block;\"></div>\r\n<div style=\"text-align: center; margin: 20px 0;\"><a href=\"https://breathermae.com/rapid-8-pillars/\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Rapid 8-Pillars of Wellness </a></div>\r\n<p>Thank you!</p>",
+    "cta_url": "https://breathermae.com/welcomesurveys/",
+    "cta_label": "Take the assessment",
+    "rule": {
+      "order": 60,
+      "tags_missing": [
+        "PILLARS"
+      ],
+      "max_days_since_register": 30,
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 4,
+    "name": "Not seen in 7 days",
+    "subject": "We have not seen you in a while",
+    "body": "<p><span style=\"color: rgb(0, 112, 192); font-size: 18pt;\">We're Missing You! </span></p>\r\n<p>Hello <strong>[first_name]</strong>, It&rsquo;s been a while since your last visit&mdash;<em>over 7 days! </em></p>\r\n<p>We&rsquo;ve added new content and offerings designed to help you stay proactive with your health and wellness.</p>\r\n<p style=\"text-align: center;\"><span style=\"font-size: 16pt; color: rgb(0, 112, 192);\"></span></p>\r\n<p style=\"text-align: center;\"><span style=\"font-size: 16pt; color: rgb(0, 112, 192);\">Here&rsquo;s What&rsquo;s New:</span></p>\r\n<p>&bull; A new look and feel including your <strong>Wellness Dashboard</strong> and <strong>Results</strong></p>\r\n<p>&bull; Switch between Dark and Light modes for best readability</p>\r\n<p>&bull; Deeper analysis via Breathermae's Systems Intelligence (BSI)</p>\r\n<p>&bull; Integrate your Fitbit or Oura ring device data for additional insights</p>\r\n<p>[cta_link]</p>\r\n<p>Come back and see us again!</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/",
+    "cta_label": "Come back to Breathermae",
+    "bcc": "",
+    "rule": {
+      "order": 70,
+      "tags_required": [
+        "REGISTERED"
+      ],
+      "days_since_visit": 7,
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 9,
+    "name": "Not seen in 15 days",
+    "subject": "Checking in",
+    "body": "<p><span style=\"color: rgb(0, 29, 80); font-size: 18pt;\">Hello [first_name]! </span></p>\r\n<p>It&rsquo;s been a little while since you visited the Breathermae site, and we&rsquo;ve been busy!</p>\r\n<p>\u2705 New wellness resources<br>\u2705 Fresh tips to support your journey<br>\u2705 Special offers just for our community</p>\r\n<p>Don&rsquo;t miss out&mdash;click below to see what&rsquo;s new:</p>\r\n<p>[cta_link]</p>\r\n<p>As always, thank you for being part of Breathermae. We&rsquo;re here to help you achieve your wellness goals!&nbsp;</p>\r\n<p>Warm regards,</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/",
+    "cta_label": "Come back",
+    "rule": {
+      "order": 80,
+      "tags_required": [
+        "REGISTERED"
+      ],
+      "days_since_visit": 14,
+      "max_sends": 2
+    }
+  },
+  {
+    "id": 16,
+    "name": "Not seen in 30 days",
+    "subject": "It has been a month since we've seen you!",
+    "body": "<p><span style=\"font-size: 18pt; color: rgb(0, 29, 80);\">We have something new for you! </span></p>\r\n<p>Hi there <strong>[first_name]</strong>,</p>\r\n<p>It&rsquo;s been a little while since your last visit &mdash; <em>about 30 days</em> &mdash; and we wanted to check in because a lot has changed at Breathermae.</p>\r\n<p>We&rsquo;ve added new and updated content across several wellness areas, along with fresh assessments designed to give you even deeper insight into your health and well\u2011being.</p>\r\n<p>If you haven&rsquo;t explored the platform recently, now is a great time to jump back in and see what&rsquo;s new.</p>\r\n<p>Here&rsquo;s a quick snapshot of what&rsquo;s waiting for you:</p>\r\n<p>\u2705 Updated wellness content and expanded guidance <br>\u2705 Newly released assessments across multiple pillars <br>\u2705 Improvements to the overall experience based on user feedback</p>\r\n<p>Your wellness journey evolves &mdash; and so does Breathermae.</p>\r\n<p>We&rsquo;d love for you to come back, explore the new tools, and continue building your personalized path forward.</p>\r\n<p>If you have any questions or need help getting started again, we&rsquo;re here for you.</p>\r\n<p></p>\r\n<div style=\"text-align: center; margin: 20px 0;\"><a href=\"https://breathermae.com\" style=\"display: inline-block; background-color: #40c6ff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 2px solid #001d50; box-shadow: 0 6px 12px rgba(0,0,0,0.65);\"> Breathermae </a></div>\r\n<p>Warmly,</p>\r\n<p><strong>The Breathermae Team</strong></p>",
+    "cta_url": "https://breathermae.com/",
+    "cta_label": "Come back",
+    "rule": {
+      "order": 90,
+      "tags_required": [
+        "REGISTERED"
+      ],
+      "days_since_visit": 29,
+      "max_sends": 1
+    }
+  },
+  {
+    "id": 27,
+    "name": "Lab Order - No Client info",
+    "subject": "Breathermae Order - Missing information",
+    "body": "<p>Hello,</p>\r\n<p>Thank you for your purchase.</p>\r\n<p>In order to process the lab test purchased, we need some additional information from you regarding your Health Profile.</p>\r\n<p>Please log into Breathermae.com and fill in the required fields on the Health Profile page.</p>\r\n<p></p>\r\n<p>[cta_link]</p>\r\n<p>Thank you,</p>\r\n<p><strong>The Breathermae Support Team</strong></p>",
+    "cta_url": "https://breathermae.com/health-bio/",
+    "cta_label": "Health Profile",
+    "bcc": "support@breathermae.com"
+  }
+]

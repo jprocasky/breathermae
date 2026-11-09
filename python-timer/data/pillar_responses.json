@@ -1,0 +1,146 @@
+[
+  {
+    "survey": "Physical",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest a balanced and proactive approach to your physical health. You are demonstrating a commitment to integrating healthy habits into your daily life, such as prioritizing regular exercise, nutritious eating, and sufficient sleep. You understand the importance of consistency and resilience in your journey toward sustained health and well-being.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path</span><span style=\"font-size:11pt;color:#000000;\">: Your path is now focused on continued growth and optimization. Consider exploring new forms of exercise to challenge your body or refining your nutrition to further enhance your energy.</span></p>"
+  },
+  {
+    "survey": "Physical",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate that you possess an awareness of what it takes to achieve a balanced state of physical well-being, but you may struggle to consistently apply this knowledge in your daily life. You may experience fluctuations in energy levels or minor setbacks, but you are likely to seek out resources and strategies to improve.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> Research shows that the most effective way to build a new habit is to start small. A personalized plan could start by focusing on one of these areas:  <br><br></span><span style=\"font-size:11pt;color:#000000;font-weight:bold;\">Movement:</span><span style=\"font-size:11pt;color:#000000;\"> Integrate short, manageable bursts of activity, like a 10-minute walk after lunch. <br></span><span style=\"font-size:11pt;color:#000000;font-weight:bold;\">Rest: </span><span style=\"font-size:11pt;color:#000000;\">Try a simple bedtime routine to prepare your body for sleep, like stretching for 5 minutes. <br></span><span style=\"font-size:11pt;color:#000000;font-weight:bold;\">Nutrition:</span><span style=\"font-size:11pt;color:#000000;\"> Explore small, sustainable changes, such as drinking an extra glass of water each morning.</span></p>"
+  },
+  {
+    "survey": "Physical",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest that you may be facing significant challenges in managing your physical wellness, such as a lack of regular exercise, poor dietary habits, or neglecting preventive care. This can lead to decreased energy levels and a diminished overall quality of life.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path</span><span style=\"font-size:11pt;color:#000000;font-weight:bold;\">: </span><span style=\"font-size:11pt;color:#000000;\">The most important thing is to start with a habit that feels achievable and builds from there. A personalized plan could start by: <br>Building a foundational movement habit, like a 10-minute walk around your neighborhood. <br>Establishing a consistent bedtime to help your body prioritize restorative rest.</span></p>"
+  },
+  {
+    "survey": "Emotional",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to sustain an optimal state of emotional well-being. You demonstrate a commitment to understanding and regulating your emotions, cultivating resilience, and fostering positive relationships. You prioritize self-care practices like mindfulness or journaling and actively seek healthy coping mechanisms for stress.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> Your path is now focused on maintaining and deepening your emotional intelligence. Consider exploring new ways to further enhance your resilience, such as practicing advanced mindfulness techniques.</span></p>"
+  },
+  {
+    "survey": "Emotional",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate an awareness of what is required to achieve a balanced emotional state, but you may struggle to consistently apply this knowledge in your daily life. You may experience fluctuations in mood or feel overwhelmed by negative emotions at times, but you are likely to be developing some coping strategies.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> A personalized plan could start by focusing on a simple daily practice that builds your awareness and helps you release stress. <br>Practice 2-3 minutes of conscious breathing when you feel stressed. <br>Take a few minutes to consciously identify a negative thought (e.g., “I never do anything right”) and reframe it in a positive way (e.g., “I make mistakes, but I can learn from them”).</span></p>"
+  },
+  {
+    "survey": "Emotional",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest that you may be struggling to regulate your emotions effectively. You may feel frequently overwhelmed by negative emotions, and your emotional responses may be reactive and impulsive. This can lead to conflicts in relationships and make it difficult to manage life's challenges.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> The most important thing is to start with a habit that feels achievable. A personalized plan could start by focusing on building emotional awareness. <br>Spend a few minutes each day identifying one emotion you feel and where it’s located in your body. <br>Schedule a 15-minute walk outside to help clear your mind. <br>Make a list of one or two things that bring you a sense of joy and try to do one of them this week.</span></p>"
+  },
+  {
+    "survey": "Mental",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to cultivate and sustain an optimal state of mental well-being. You demonstrate a commitment to lifelong learning, critical thinking, and intellectual curiosity. You prioritize activities that challenge your mind, recognizing their impact on personal development and problem-solving skills.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> Your path is now focused on maintaining these habits and seeking out new challenges. Consider exploring new ways to further expand your mental capacity and intellectual fulfillment.</span></p>"
+  },
+  {
+    "survey": "Mental",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate an awareness of the importance of nurturing your mental capacities, but you may struggle to consistently prioritize activities that stimulate your mind. You may experience periods of intellectual stagnation, but you recognize the value of intellectual exploration.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path</span><span style=\"font-size:11pt;color:#000000;\">: A personalized plan could start by finding new, simple ways to engage your mind. <br>Read for 15 minutes on a topic you’re curious about. <br>Spend 5 minutes solving a simple puzzle, like a crossword or sudoku. <br>Set a goal to spend 5 minutes challenging your mind with a creative idea.</span></p>"
+  },
+  {
+    "survey": "Mental",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest that you may lack awareness or engagement in nurturing your mental curiosity and growth. You may not prioritize activities that stimulate your mind, which can result in a lack of intellectual fulfillment or satisfaction.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> The most important thing is to start with a habit that feels achievable. A personalized plan could start by: <br>Identifying one new thing you would like to learn this week and making a plan to research it for 10 minutes. <br>Establishing a habit of reading a few pages of a book or magazine each day.</span></p>"
+  },
+  {
+    "survey": "Spiritual",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to cultivate and sustain an optimal state of spiritual well-being. You are committed to nurturing your spiritual self through practices such as meditation, prayer, or mindfulness. You prioritize self-reflection and connection to something larger than yourself, which helps shape your sense of fulfillment and purpose.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> Your path is now focused on maintaining these practices and deepening your connection. Consider exploring new ways to integrate your values into your daily actions.</span></p>"
+  },
+  {
+    "survey": "Spiritual",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate an awareness of the importance of nurturing your spiritual self, but you may struggle to consistently incorporate spiritual practices into your daily life. You may have an interest in exploring deeper beliefs but find it challenging to maintain a regular practice.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path: </span><span style=\"font-size:11pt;color:#000000;\">A personalized plan could start by finding a simple practice that builds your self-reflection and inner growth. <br>Take a few minutes each day to sit quietly and simply breathe. <br>Spend 5 minutes quietly reflecting on what is most important to you. <br>Take a few minutes to be grateful for one thing in your life.</span></p>"
+  },
+  {
+    "survey": "Spiritual",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest a lack of connection to your spiritual self, which can lead to feelings of emptiness, disconnection, or a lack of purpose. You may not prioritize practices that nurture spiritual well-being and may feel disconnected from larger existential questions.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> </span><span style=\"font-size:11pt;color:#000000;\">The most important thing is to start with a habit that feels achievable. A personalized plan could start by focusing on one key habit at a time. <br>Identify one new community or cause you care about and explore ways to contribute to it. <br>Take a few minutes each day to simply sit quietly and breathe.</span></p>"
+  },
+  {
+    "survey": "Social",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to cultivate and sustain an optimal state of social well-being. You are committed to nurturing meaningful relationships, building supportive social networks, and fostering a sense of community. You understand the importance of social support in promoting overall well-being.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path</span><span style=\"font-size:11pt;color:#000000;\">:</span><span style=\"font-size:11pt;color:#000000;\"> Your focus now is on maintaining these healthy habits and deepening your social connections. Consider exploring new ways to share your passions and build community.</span></p>"
+  },
+  {
+    "survey": "Social",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate an awareness of the importance of fostering social connections, but you may struggle to consistently prioritize or maintain them. You may experience periods of social isolation or fluctuating levels of social engagement, leading to feelings of disconnectedness at times.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> A personalized plan could start by building consistency in your relationships and practicing healthy boundaries. <br>Schedule a 15-minute phone call or text with a supportive friend you haven't spoken to in a while. <br>Practice saying \"no\" to one request that would overextend you. <br>Find new opportunities to connect with people who share your interests.</span></p>"
+  },
+  {
+    "survey": "Social",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest a lack of engagement in nurturing your social connections, which can lead to feelings of loneliness, isolation, or disconnection from others. You may struggle to form meaningful relationships or maintain a supportive social network.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> The most important thing is to find a starting point that feels achievable. A personalized plan could start by building a foundational habit of social connection. <br>Make a list of one or two people you’d like to reach out to this week and make a plan to do so. <br>Join a group or community related to a hobby or interest you have.</span></p>"
+  },
+  {
+    "survey": "Occupational",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to cultivate and sustain an optimal state of occupational wellbeing. You are committed to pursuing meaningful work that aligns with your interests and values, and you actively seek out opportunities for career growth. You prioritize work-life balance and personal fulfillment in your professional pursuits.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> Your path is now focused on maintaining these healthy habits. A personalized plan could explore new ways to further optimize your work life and support your professional growth.</span></p>"
+  },
+  {
+    "survey": "Occupational",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate that you are aware of the importance of finding fulfillment and balance in your work life, but you may struggle to consistently prioritize or achieve this goal. You may experience periods of job dissatisfaction or career uncertainty.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> A personalized plan could start by building small, practical routines that improve your work-life balance and explore new opportunities. <br>Block out 30 minutes in your calendar to dedicate to a personal activity this week.<br>Research one new skill that could help you advance your career.</span></p>"
+  },
+  {
+    "survey": "Occupational",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest that you may lack fulfillment in your work life, which can lead to feelings of dissatisfaction, disengagement, or burnout. You may feel stuck in a job that doesn't align with your interests or skills, which can result in decreased productivity and overall job dissatisfaction.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> The most important thing is to find a starting point that feels achievable. A personalized plan could start by identifying one small way you could find meaning within your current role or setting a goal to create more work-life balance. <br>Set a goal to leave or end work on time one day this week. <br>Identify one small way you could find meaning within your current role.</span></p>"
+  },
+  {
+    "survey": "Environmental",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to cultivate and sustain an optimal state of environmental well-being. You demonstrate a commitment to living in harmony with nature, reducing your ecological footprint, and advocating for conservation. You prioritize eco-friendly practices in your daily life.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;font-weight:bold;\"> </span><span style=\"font-size:11pt;color:#000000;\">Your focus now is on maintaining these healthy habits and deepening your connection to the world around you. Consider exploring new ways to engage in conservation or community projects.</span></p>"
+  },
+  {
+    "survey": "Environmental",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate that you are aware of the importance of environmental sustainability but may struggle to consistently prioritize or implement eco-friendly practices in your daily life. You may face barriers such as limited access to sustainable options or ingrained habits.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> A personalized plan could start by building small, practical routines that improve your connection to nature. <br>Take a 15-minute walk in a park or local green space this week. <br>Dedicating 5 minutes to identifying one thing you could recycle that you normally throw away.</span></p>"
+  },
+  {
+    "survey": "Environmental",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest a lack of concern for the impact of your actions on the environment. You may engage in behaviors such as excessive consumption or wastefulness without considering the long-term consequences.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> The most important thing is to find a starting point that feels achievable. A personalized plan could start by focusing on one key habit at a time. <br>Use a reusable bag the next time you go shopping. <br>Make a plan to spend 15 minutes outdoors this week.</span></p>"
+  },
+  {
+    "survey": "Financial",
+    "low": 80,
+    "high": 100,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest you are actively striving to cultivate and sustain an optimal state of financial well-being. You are committed to financial literacy, planning, and discipline, and you actively work towards achieving your financial goals. You prioritize budgeting, saving, and investing effectively.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> Your focus now is on maintaining these healthy habits and exploring new opportunities for growth. A personalized plan could explore advanced financial strategies.</span></p>"
+  },
+  {
+    "survey": "Financial",
+    "low": 40,
+    "high": 80,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses indicate that you are aware of the importance of financial responsibility, but you may struggle to consistently implement healthy financial practices in your life. You may face barriers such as impulse spending or unexpected expenses.<br><br></span><span style=\"font-size:11pt;color:#4472C4;font-weight:bold;\">Your Action Path:</span><span style=\"font-size:11pt;color:#000000;\"> A personalized plan could start by building a better understanding of your finances and creating a simple budget. <br>Track your spending for one day to see where your money is going. <br>Review your bank statement for 15 minutes to gain clarity on your finances.</span></p>"
+  },
+  {
+    "survey": "Financial",
+    "low": 0,
+    "high": 40,
+    "html": "<p><span style=\"font-size:11pt;color:#000000;\">Your responses suggest that you may lack effective management of your financial resources, which can lead to financial instability, stress, or debt. You may struggle to budget effectively or save for the future, resulting in a cycle of financial insecurity and uncertainty.<br><br></span><span style=\"font-size:11pt;color:#000000;font-weight:bold;\">Actionable Next Steps:</span><span style=\"font-size:11pt;color:#000000;\"> </span><span style=\"font-size:11pt;color:#000000;\">The most important thing is to find a starting point that feels achievable. Your next step is to build a foundational habit of managing your finances. A personalized plan could start by: <br>Making a list of all your debts and monthly payments. <br>Dedicating 15 minutes to setting one small financial goal, like saving $5.</span></p>"
+  }
+]
