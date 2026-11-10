@@ -511,10 +511,15 @@ class BMF_Member_Home_Shortcodes {
 			$desc = wpautop( $desc );
 			$html .= '<div class="bmf-home-guided-desc">' . $desc . '</div>';
 		}
+		$html .= '<div class="bmf-home-guided-buttons">';
 		if ( ! empty( $step['url'] ) ) {
 			$label = ! empty( $step['button_label'] ) ? $step['button_label'] : 'Continue';
 			$html .= '<a class="bmf-home-btn is-primary" href="' . esc_url( $step['url'] ) . '">' . esc_html( $label ) . '</a>';
 		}
+		if ( ! empty( $step['skip_url'] ) ) {
+			$html .= '<a class="bmf-home-btn is-skip" href="' . esc_url( $step['skip_url'] ) . '">Skip</a>';
+		}
+		$html .= '</div>';
 		$html .= '</div>';
 		$html .= '</section>';
 		return $html;

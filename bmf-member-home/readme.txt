@@ -2,7 +2,7 @@
 Contributors: breathermae
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 0.1.36-poc
+Stable tag: 0.1.37-poc
 License: GPLv2 or later
 
 Logged-in Today dashboard. Dark/light tokens shared with the wellbeing file. Other site pages stay on the current theme until each is redesigned.
@@ -38,6 +38,14 @@ Every link is a page ID plus an optional anchor, set under Settings → Member H
 5. Leave RSI, Pillars, BSI, and the other detail pages alone until each is redesigned.
 
 == Changelog ==
+
+= 0.1.38-poc =
+* Skip button now sits immediately to the right of Continue (flex-start + gap) instead of space-between, so placement is consistent regardless of text length.
+
+= 0.1.37-poc =
+* Guided Path info panel gains a Skip button (horizontally opposite Continue, less highlighted). Clicking advances to the next matching step for the session (4-hour transient).
+* When the last matching step is skipped, the list wraps around and the original first step is shown again.
+* Requires BMF Guided Path 0.1.12-poc or later.
 
 = 0.1.36-poc =
 * Assessment cards and Wellness Timeline convert UTC datetimes to the browser’s local timezone for displayed dates, ages, marker placement, and the Today line. Date-only values are not shifted.

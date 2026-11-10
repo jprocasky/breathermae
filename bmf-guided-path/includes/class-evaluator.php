@@ -17,11 +17,13 @@ class BMF_Guided_Path_Evaluator {
 	 * @param int $user_id
 	 * @return array|null Step row as associative array, or null.
 	 */
-	public static function get_current_step( $user_id = 0 ) {
+	public static function get_current_step( $user_id = 0, $exclude_ids = array() ) {
 		$user_id = $user_id ? (int) $user_id : get_current_user_id();
 		if ( ! $user_id ) {
 			return null;
 		}
+
+		$exclude_ids = array_map( 'intval', (array) $exclude_ids );
 
 		global $wpdb;
 		$table = $wpdb->prefix . 'bm_workflow_steps';
@@ -36,14 +38,50 @@ class BMF_Guided_Path_Evaluator {
 		}
 
 		foreach ( $steps as $step ) {
+			$step_id = (int) $step['id'];
+			if ( in_array( $step_id, $exclude_ids, true ) ) {
+				continue;
+			}
 			if ( self::step_matches( $step, $user_id ) ) {
-				self::cache_state( $user_id, (int) $step['id'] );
+				self::cache_state( $user_id, $step_id );
 				return $step;
 			}
 		}
 
 		self::cache_state( $user_id, null );
 		return null;
+	}
+
+	/**
+	 * Session skip list helpers (transient, ~4 hours).
+	 */
+	public static function get_skip_ids( $user_id ) {
+		$user_id = (int) $user_id;
+		if ( ! $user_id ) {
+			return array();
+		}
+		$raw = get_transient( 'bmf_gp_skips_' . $user_id );
+		return is_array( $raw ) ? array_map( 'intval', $raw ) : array();
+	}
+
+	public static function add_skip( $user_id, $step_id ) {
+		$user_id = (int) $user_id;
+		$step_id = (int) $step_id;
+		if ( ! $user_id || ! $step_id ) {
+			return;
+		}
+		$skips = self::get_skip_ids( $user_id );
+		if ( ! in_array( $step_id, $skips, true ) ) {
+			$skips[] = $step_id;
+		}
+		set_transient( 'bmf_gp_skips_' . $user_id, $skips, 4 * HOUR_IN_SECONDS );
+	}
+
+	public static function clear_skips( $user_id ) {
+		$user_id = (int) $user_id;
+		if ( $user_id ) {
+			delete_transient( 'bmf_gp_skips_' . $user_id );
+		}
 	}
 
 	/**

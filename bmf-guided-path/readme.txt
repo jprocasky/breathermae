@@ -4,7 +4,7 @@ Tags: workflow, guidance, wp-fusion, member
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.11-poc
+Stable tag: 0.1.12-poc
 License: GPLv2 or later
 
 Data-driven next-step guidance for logged-in members. Surfaces the matching workflow step on the member-home dashboard.
@@ -38,6 +38,12 @@ Admin (Settings → Guided Path):
 * Destination and anchor are stored separately. Leading `/` and `#` are stripped. Resulting URL is `home_url('/slug')` + `#anchor` (no slash before the hash).
 
 == Changelog ==
+
+= 0.1.12-poc =
+* Session Skip: temporary skip list (transient, 4 hours) so the member-home panel can advance to the next matching step without changing permanent rules.
+* Wrap-around: when skips exhaust all current matches, the skip list is cleared and the original first matching step is shown again.
+* Display API now returns `skip_url`. History records `skipped` actions.
+* Evaluator `get_current_step()` accepts an optional exclude list.
 
 = 0.1.11-poc =
 * Optional “Record on present” checkbox on a step. Writes the suppress event the first time the step is shown on member-home, not only on button click.

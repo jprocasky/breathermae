@@ -13,6 +13,7 @@ class BMF_Guided_Path_API {
 
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'maybe_record_seen' ) );
+		add_action( 'init', array( __CLASS__, 'maybe_skip_step' ) );
 	}
 
 	/**
@@ -43,6 +44,27 @@ class BMF_Guided_Path_API {
 	}
 
 	/**
+	 * Session skip: add the step to the skip list and redirect to a clean URL.
+	 * Wrap-around is handled on the next display evaluation.
+	 */
+	public static function maybe_skip_step() {
+		if ( empty( $_GET['bmf_gp_skip'] ) || ! is_user_logged_in() ) {
+			return;
+		}
+		$step_id = (int) $_GET['bmf_gp_skip'];
+		$nonce   = sanitize_text_field( wp_unslash( $_GET['bmf_gp_skip_nonce'] ?? '' ) );
+		if ( ! $step_id || ! wp_verify_nonce( $nonce, 'bmf_gp_skip_' . $step_id ) ) {
+			return;
+		}
+		$user_id = get_current_user_id();
+		BMF_Guided_Path_Evaluator::add_skip( $user_id, $step_id );
+		BMF_Guided_Path_History::record( $user_id, $step_id, 'skipped' );
+		$clean = remove_query_arg( array( 'bmf_gp_skip', 'bmf_gp_skip_nonce' ) );
+		wp_safe_redirect( $clean );
+		exit;
+	}
+
+	/**
 	 * Get the current matching step for a user, ready for display.
 	 *
 	 * Returns null if no step matches or user is not logged in.
@@ -53,12 +75,26 @@ class BMF_Guided_Path_API {
 	 *     @type string $title
 	 *     @type string $description
 	 *     @type string $url          Full URL including anchor if present.
+	 *     @type string $skip_url     URL that skips this step for the session.
 	 *     @type string $destination
 	 *     @type string $anchor
 	 * }
 	 */
 	public static function get_current_step_for_display( $user_id = 0 ) {
-		$step = BMF_Guided_Path_Evaluator::get_current_step( $user_id );
+		$uid = $user_id ? (int) $user_id : get_current_user_id();
+		if ( ! $uid ) {
+			return null;
+		}
+
+		$skips = BMF_Guided_Path_Evaluator::get_skip_ids( $uid );
+		$step  = BMF_Guided_Path_Evaluator::get_current_step( $uid, $skips );
+
+		// Wrap-around: if skips exhausted all matches, clear and take the original first.
+		if ( ! $step && ! empty( $skips ) ) {
+			BMF_Guided_Path_Evaluator::clear_skips( $uid );
+			$step = BMF_Guided_Path_Evaluator::get_current_step( $uid );
+		}
+
 		if ( ! $step ) {
 			return null;
 		}
@@ -78,7 +114,6 @@ class BMF_Guided_Path_API {
 		}
 
 		// Record that the step was presented (lightweight; caller may also record click).
-		$uid = $user_id ? (int) $user_id : get_current_user_id();
 		BMF_Guided_Path_History::record( $uid, (int) $step['id'], 'presented' );
 
 		// Optional: write the suppress event the first time the step is shown.
@@ -86,11 +121,21 @@ class BMF_Guided_Path_API {
 			BMF_Guided_Path_Evaluator::record_event( $uid, $key );
 		}
 
+		// Build skip URL for the current step.
+		$skip_url = add_query_arg(
+			array(
+				'bmf_gp_skip'       => (int) $step['id'],
+				'bmf_gp_skip_nonce' => wp_create_nonce( 'bmf_gp_skip_' . (int) $step['id'] ),
+			),
+			remove_query_arg( array( 'bmf_gp_seen', 'bmf_gp_nonce', 'bmf_gp_skip', 'bmf_gp_skip_nonce' ) )
+		);
+
 		return array(
 			'id'           => (int) $step['id'],
 			'title'        => $step['title'],
 			'description'  => $step['description'],
 			'url'          => $url,
+			'skip_url'     => $skip_url,
 			'destination'  => $step['destination'],
 			'anchor'       => $step['anchor'],
 			'button_label' => isset( $step['button_label'] ) ? (string) $step['button_label'] : '',
