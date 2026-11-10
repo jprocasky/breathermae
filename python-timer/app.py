@@ -109,6 +109,18 @@ def orders():
         conn.close()
 
 
+
+@app.context_processor
+def inject_instance():
+    """Make the current instance available to the header."""
+    try:
+        from lease import instance_status
+        mine = next((i for i in instance_status() if i.get("mine")), None)
+    except Exception:
+        mine = None
+    return {"current_instance": mine}
+
+
 @app.route("/heartbeat")
 def heartbeat():
     """Lightweight endpoint for the live clock."""
@@ -151,9 +163,11 @@ def index():
     jobs = load_jobs()
     runs = get_recent_runs(40)
     next_runs = {j.get("id"): timer.next_run_label(j) for j in jobs}
+    emergency = False
     try:
-        from lease import instance_status
+        from lease import instance_status, emergency_paused
         instances = instance_status()
+        emergency = emergency_paused()
     except Exception as e:
         record_error("instances", str(e))
         instances = []
@@ -166,6 +180,7 @@ def index():
         errors=recent_errors(),
         now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         paused=timer.paused,
+        emergency=emergency,
     )
 
 
@@ -386,6 +401,14 @@ def test_email(template_id):
     set_write(True)
     result = send(to, template_id, trigger="test", first_name="Test")
     return redirect(url_for("edit_email", template_id=template_id, notice=result.get("message")))
+
+
+
+@app.route("/emergency/<action>", methods=["POST"])
+def emergency(action):
+    from lease import set_emergency_pause
+    set_emergency_pause(action == "on")
+    return redirect(url_for("index"))
 
 
 @app.route("/settings", methods=["GET", "POST"])

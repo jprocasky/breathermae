@@ -266,7 +266,7 @@ def run():
                 uid = user_ids.get(email)
                 current = by_email.get(email, [])
                 if uid and current:
-                    new_tags = write_tag_changes(conn, uid, current, remove=remove)
+                    new_tags = write_tag_changes(conn, uid, current, remove=remove, email=email)
                     if new_tags != current:
                         retagged += 1
                         by_email[email] = new_tags

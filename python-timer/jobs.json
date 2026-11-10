@@ -153,6 +153,17 @@
       "interval_minutes": 1440,
       "callable": "jobs.user_cleanup:run",
       "description": "Delete uls_wptm_tbl_4 rows whose email is gone from uls_users"
+    },
+    {
+      "id": "biovoice_worker",
+      "name": "BioVoice Worker",
+      "enabled": false,
+      "write": false,
+      "interval_minutes": 15,
+      "window_start": null,
+      "window_end": null,
+      "callable": "jobs.biovoice_worker:run",
+      "description": "Poll BioVoice queue, run baseline/comparison, post results. Requires BIOVOICE_* env."
     }
   ]
 }

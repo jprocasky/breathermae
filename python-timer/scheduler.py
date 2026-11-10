@@ -245,10 +245,15 @@ class TimerApp:
         from lease import heartbeat
 
         try:
-            state = heartbeat(paused=self.paused)
+            from lease import emergency_paused
+            forced = emergency_paused()
+            state = heartbeat(paused=self.paused or forced)
         except Exception as e:
             logger.exception("Lease heartbeat failed — skipping jobs")
             record_error("lease", str(e))
+            return
+        if forced:
+            logger.info("Emergency pause is on. Heartbeat only.")
             return
         if self.paused:
             logger.info("Paused. Heartbeat only.")

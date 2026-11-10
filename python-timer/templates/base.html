@@ -10,6 +10,9 @@
 <body>
   <header>
     <h1>Python Timer</h1>
+    {% if current_instance %}
+    <span class="instance-name dot-{{ current_instance.status }}">{{ current_instance.name }}</span>
+    {% endif %}
     <nav>
       <a href="{{ url_for('index') }}">Dashboard</a>
       <a href="{{ url_for('jobs_page') }}">Jobs</a>

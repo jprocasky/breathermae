@@ -5,6 +5,7 @@ Appends new rows (with machine name) and prunes the table to ~1000 rows.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 import sqlite3
 from pathlib import Path
 
@@ -70,7 +71,16 @@ def run():
             for r in runs:
                 method = (r.get("job_name") or r.get("job_id") or "")[:190]
                 when = (r.get("started_at") or "")[:19].replace("T", " ")
-                if not when or when <= latest_str:
+                if not when:
+                    continue
+                # status.db is local; WP table is UTC for the shortcode.
+                try:
+                    local = datetime.strptime(when, "%Y-%m-%d %H:%M:%S")
+                    local = local.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                    when = local.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    pass
+                if when <= latest_str:
                     continue
                 status = r.get("message") or ("OK" if r.get("ok") else "FAIL")
                 payload.append((method, when, status[:500], machine))

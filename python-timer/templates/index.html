@@ -19,6 +19,12 @@ async function refreshInstances() {
       `<td>${i.name}${i.mine ? " *" : ""}${i.restart_required ? ' <span class="restart small">Restart</span>' : ""}</td>` +
       `<td>${i.role}</td><td>${i.last_seen}</td></tr>`
     ).join("");
+    const mine = d.instances.find(i => i.mine);
+    const name = document.querySelector(".instance-name");
+    if (mine && name) {
+      name.textContent = mine.name;
+      name.className = "instance-name dot-" + mine.status;
+    }
   } catch (e) {}
 }
 setInterval(refreshInstances, 10000);
@@ -47,6 +53,11 @@ document.addEventListener("DOMContentLoaded", refreshOrders);
 </script>
 {% endblock %}
 {% block content %}
+
+{% if emergency %}
+<div class="banner emergency">EMERGENCY PAUSE is on. All instances are stopped.</div>
+{% endif %}
+
 <div class="split">
 <section>
   <h2>Instances</h2>
@@ -96,6 +107,12 @@ document.addEventListener("DOMContentLoaded", refreshOrders);
     </form>
     <form method="post" action="{{ url_for('control', action='pause') }}">
       <button type="submit" {% if paused %}disabled{% endif %}>Pause</button>
+    </form>
+    <form method="post" action="{{ url_for('emergency', action='on') }}">
+      <button type="submit" class="danger">Emergency Pause</button>
+    </form>
+    <form method="post" action="{{ url_for('emergency', action='off') }}">
+      <button type="submit">Resume All</button>
     </form>
     <form method="post" action="{{ url_for('control', action='exit') }}"
           onsubmit="return confirm('Exit the timer app on this machine?');">

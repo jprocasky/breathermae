@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 
 from jobs.tag_snapshot import PREFIX, TAG_META_KEYS, _normalize_tags
+from zoho import set_multi_tags
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +63,16 @@ def apply_tag_changes(conn, user_id: int, current: list[str], remove: list[str] 
     return kept
 
 
-def write_tag_changes(conn, user_id: int, current: list[str], remove: list[str] | None = None, add: list[str] | None = None) -> list[str]:
+def write_tag_changes(conn, user_id: int, current: list[str], remove: list[str] | None = None, add: list[str] | None = None, email: str | None = None) -> list[str]:
     """Apply changes and write both meta keys. Returns the new list."""
     new_tags = apply_tag_changes(conn, user_id, current, remove, add)
     if new_tags == current:
         return current
     set_user_tags(conn, user_id, new_tags)
     logger.info("user %s tags %s -> %s", user_id, len(current), len(new_tags))
+    # Also push to Zoho so WP Fusion does not restore the old list.
+    try:
+        set_multi_tags(email or "", new_tags)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Zoho update failed for user %s: %s", user_id, e)
     return new_tags

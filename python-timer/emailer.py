@@ -113,14 +113,24 @@ def _ensure_log(conn) -> None:
     conn.commit()
 
 
-def already_sent(conn, email: str, template_id: int) -> bool:
+def already_sent(conn, email: str, template_id: int, within_days: int | None = None) -> bool:
+    """True if this template was sent to the user.
+
+    within_days limits the check to recent sends (None = any time).
+    """
     sql = f"""
         SELECT 1 FROM {PREFIX}email_log
-        WHERE user_email = %s AND template_id = %s AND trigger_name <> 'test'
-        LIMIT 1
+        WHERE user_email = %s AND template_id = %s
+          AND trigger_name <> 'test'
+          AND status = 'sent'
     """
+    params: list = [email, template_id]
+    if within_days is not None:
+        sql += " AND sent_at >= DATE_SUB(NOW(), INTERVAL %s DAY)"
+        params.append(within_days)
+    sql += " LIMIT 1"
     with conn.cursor() as cur:
-        cur.execute(sql, (email, template_id))
+        cur.execute(sql, params)
         return cur.fetchone() is not None
 
 
@@ -180,7 +190,10 @@ def send(email: str, template_id: int, trigger: str = "event", first_name: str =
             msg = f"skipped {email}: {BLOCK_TAG}"
             logger.info(msg)
             return {"ok": True, "message": msg, "pending": 0}
-        if not is_test and not allow_resend and already_sent(conn, email, template_id):
+        # allow_resend still respects a 3-day floor so a stuck reset
+        # cannot mail the same template every cycle.
+        window = 3 if allow_resend else None
+        if not is_test and already_sent(conn, email, template_id, within_days=window):
             msg = f"already sent template {template_id} to {email}"
             logger.info(msg)
             return {"ok": True, "message": msg, "pending": 0}

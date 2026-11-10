@@ -76,7 +76,7 @@ def run():
             seen = {}
             for email, uid, completion, current in would_add:
                 base = seen.get(uid, current)
-                new_tags = write_tag_changes(conn, uid, base, add=[completion])
+                new_tags = write_tag_changes(conn, uid, base, add=[completion], email=email)
                 if completion in new_tags and completion not in base:
                     added += 1
                     seen[uid] = new_tags

@@ -75,10 +75,17 @@ def _ensure(conn) -> None:
                 owner_id VARCHAR(64) NULL,
                 owner_name VARCHAR(80) NULL,
                 expires DATETIME NULL,
-                taken_at DATETIME NULL
+                taken_at DATETIME NULL,
+                emergency_pause TINYINT NOT NULL DEFAULT 0
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """
         )
+        try:
+            cur.execute(
+                f"ALTER TABLE {PREFIX}bm_timer_lease ADD COLUMN emergency_pause TINYINT NOT NULL DEFAULT 0"
+            )
+        except Exception:
+            pass
         cur.execute(f"INSERT IGNORE INTO {PREFIX}bm_timer_lease (id) VALUES (1)")
     conn.commit()
 
@@ -179,6 +186,47 @@ def heartbeat(paused: bool = False) -> dict:
     finally:
         conn.close()
 
+
+
+
+def set_emergency_pause(on: bool) -> None:
+    """Set or clear the shared emergency pause. All instances honor it."""
+    conn = _connect()
+    try:
+        _ensure(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE {PREFIX}bm_timer_lease SET emergency_pause = %s WHERE id = 1",
+                (1 if on else 0,),
+            )
+            if on:
+                # Force the current holder to drop the lease.
+                cur.execute(
+                    f"""
+                    UPDATE {PREFIX}bm_timer_lease
+                    SET owner_id = NULL, owner_name = NULL,
+                        expires = NULL, taken_at = NULL
+                    WHERE id = 1
+                    """
+                )
+        conn.commit()
+        logger.info("Emergency pause %s", "ON" if on else "OFF")
+    finally:
+        conn.close()
+
+
+def emergency_paused() -> bool:
+    conn = _connect()
+    try:
+        _ensure(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                f"SELECT emergency_pause FROM {PREFIX}bm_timer_lease WHERE id = 1"
+            )
+            row = cur.fetchone() or {}
+        return bool(row.get("emergency_pause"))
+    finally:
+        conn.close()
 
 
 def holding_lease() -> bool:
